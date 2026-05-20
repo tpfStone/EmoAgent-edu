@@ -1,0 +1,1 @@
+"""EmoEdu FastAPI backend."""

@@ -1,0 +1,373 @@
+{
+  "_meta": {
+    "note": "情感教育系统测试语料完整集，共45条 = 5画像 × 3情境 × 3条。仅倾诉者(学生)的话，不含危机内容。本文件由 v1(15条)+v2(30条) 合并校正而成，是语料的单一可信来源（v1/v2 可弃）。",
+    "total": 45,
+    "grid": "5画像(压抑型/反刍型/回避型/外放型/适应型) × 3情境(学业压力/同伴关系/亲子摩擦) × 每格3条",
+    "persona_basis": "ERQ-CA 青少年情绪调节策略分型",
+    "gen_model": "手写基线（由Claude按画像扮演生成，作为后续LLM批量生成的质量标准）",
+    "gen_prompt_version": "v1",
+    "intended_use": "rag_pool | test_input （仅限RAG检索池+系统输入测试；禁止用作评估真值基准或无校验的DPO依据）"
+  },
+  "samples": [
+    {
+      "id": "syn_0001",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "学业压力",
+      "text": "这次月考掉了挺多名次的。不过没事吧，反正我也没太当回事。爸妈问起来我就说发挥失常，应该……应该下次就好了。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0002",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "同伴关系",
+      "text": "他们周末出去玩没叫我。无所谓啦，我本来也不太想去。一个人待着也挺好的，省得麻烦。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0003",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "亲子摩擦",
+      "text": "我妈又翻我手机了。算了，说了也没用，她不会听的。我习惯了，没什么好说的。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0004",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "学业压力",
+      "text": "我一直在想那道大题，明明考前还做对过的，为什么偏偏考试就错了。我是不是其实根本没学懂？是不是我就是比别人笨？越想越睡不着。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0005",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "同伴关系",
+      "text": "那天我是不是说错话了？她回我消息变得好冷淡。我反复看那段聊天记录看了好多遍，到底是哪句话让她不高兴了，是不是她其实一直都不喜欢我。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0006",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "亲子摩擦",
+      "text": "我爸说我那句话的时候表情特别失望。我一整天都在想他是不是对我很失望，是不是觉得我很没用。这种感觉甩都甩不掉。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0007",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "学业压力",
+      "text": "啊先不说成绩的事了……对了你看那个新出的游戏了吗。成绩什么的之后再说吧，现在不太想面对那些。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0008",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "同伴关系",
+      "text": "和朋友闹了点别扭，但也没什么大不了的吧。我这几天就没怎么去找他们了，绕着走就行，懒得处理这种事。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0009",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "亲子摩擦",
+      "text": "家里那点事就别提了。我现在放学就回房间关门，能不碰面就不碰面，眼不见为净嘛。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0010",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "学业压力",
+      "text": "这次考试太离谱了！题目根本没讲过好吗！老师上课就那样糊弄，出题倒是一个比一个难，凭什么啊！我真的气死了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0011",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "同伴关系",
+      "text": "她凭什么在背后说我坏话！我把她当最好的朋友的，她就这么对我？我越想越生气，真的不想再理她了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0012",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "亲子摩擦",
+      "text": "我妈每次都拿我跟别人家孩子比！烦死了！她根本不懂我，就知道说我这不好那不好，我做什么都是错的是吧！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0013",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "学业压力",
+      "text": "这次没考好，我有点失落。不过想了想，可能是我复习方法的问题，光看书没多做题。我想找你聊聊，看看有没有什么调整的办法。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0014",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "同伴关系",
+      "text": "我和朋友有点误会，心里挺难受的。但我觉得这事还是得说开，不然一直别扭着也不是办法。就是不太知道怎么开口，你能帮我想想吗？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0015",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "亲子摩擦",
+      "text": "我和我妈昨天吵了一架，当时挺气的。冷静下来我也明白她是担心我，只是表达方式让我不舒服。我想找个机会跟她好好谈谈，但有点紧张。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0016",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "学业压力",
+      "text": "作业有点多，不过还行吧，能写完的。我尽量不去想排名那些事，想了也没用，写就完事了。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0017",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "学业压力",
+      "text": "老师找我谈话说我最近状态不对。我说没事，可能就是有点累。其实……也确实没什么大不了的，过几天就好了。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0018",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "同伴关系",
+      "text": "同桌换了，新来的那个不太爱说话。无所谓啦，反正我也不是非要跟谁特别好，自己一个人也行。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0019",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "亲子摩擦",
+      "text": "我爸今天又说我玩手机。我没顶嘴，就把手机放下了。说什么呢，说了他也是那一套，不如不说。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0020",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "同伴关系",
+      "text": "他们建了个群没拉我。我看到了，但也没问。可能是忘了吧，或者……算了，无所谓的事。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0021",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "学业压力",
+      "text": "我数学又没考好。我一直在想是不是初一没打好基础，是不是从那时候开始我就落下了，会不会以后越来越差，根本追不上了。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0022",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "学业压力",
+      "text": "老师当着全班说了我的名字，说我退步明显。那一刻所有人都看我。我现在一进教室就觉得大家是不是都在想我很差，这种感觉一直在脑子里转。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0023",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "同伴关系",
+      "text": "我那天没回她消息，是不是她就因此觉得我不重视她。我反反复复地想，要不要去道歉，可又怕越描越黑，到底该怎么办啊。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0024",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "亲子摩擦",
+      "text": "我妈说了句'你怎么越来越不听话'，就这一句我想了一整晚。是不是我真的变差了，是不是我让她很失望，越想越难受。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0025",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "亲子摩擦",
+      "text": "爸妈昨天在房间里小声说话，我总觉得是在说我的事。他们是不是对我有什么不满没直接讲，我一直在猜，停不下来。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0026",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "学业压力",
+      "text": "月考卷子发下来了，我还没拆开看。先放着吧，晚点再说……要不咱聊点别的？我现在真的不太想看那个分数。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0027",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "学业压力",
+      "text": "马上要期中了，但我一看到复习资料就想干别的。刷会儿视频再说吧，反正现在看也看不进去，到时候再临时抱佛脚。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0028",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "同伴关系",
+      "text": "和同学有点小矛盾，我这几天午饭都自己一个人吃了。不想面对那种尴尬，躲一躲，过段时间可能自己就好了吧。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0029",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "同伴关系",
+      "text": "他找我说话我就装没看见。倒不是多生气，就是不想处理这事，能拖就拖呗，反正也不是什么大事。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0030",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "亲子摩擦",
+      "text": "我妈想跟我谈谈最近的事，我说我作业还没写完。其实写得差不多了……就是不想聊，一聊准吵，躲过去最好。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0031",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "学业压力",
+      "text": "凭什么我熬夜复习了还考这么点分！那些天天玩的反而比我高！这也太不公平了吧，我努力到底有什么用啊！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0032",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "学业压力",
+      "text": "这老师布置的作业根本写不完！一个个都当自己科目最重要，完全不管我们死活！我真的要被逼疯了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0033",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "同伴关系",
+      "text": "他居然把我跟他说的悄悄话告诉别人！太过分了！我以后再也不会相信他了，这种朋友不要也罢！气死我了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0034",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "同伴关系",
+      "text": "凭什么他们一起孤立我！我又没做错什么！就因为上次那点小事至于吗，一个个都那样对我，我真的受够了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0035",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "亲子摩擦",
+      "text": "我爸根本不听我解释就开始骂！每次都这样，他什么时候问过我的想法！在这个家我说什么都没用，烦透了！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0036",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "学业压力",
+      "text": "这次成绩不理想，我难过了一会儿。后来想想，至少知道了哪些章节是弱项。我打算列个计划补一补，你觉得先从哪科下手比较好？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0037",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "学业压力",
+      "text": "快考试了我有点紧张，心跳得厉害。不过紧张说明我在乎吧。我想找点缓解的办法，不然影响发挥，你有什么建议吗？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0038",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "同伴关系",
+      "text": "好朋友最近跟别人走得近，我心里有点酸。但我也知道她有交别的朋友的权利，我不该太占有欲。就是这种失落感怎么调整呢？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0039",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "同伴关系",
+      "text": "我和同桌因为值日的事有点不愉快。我觉得各退一步就好了，毕竟天天坐一起。我想主动找她聊聊，怎么说不会显得我在指责她？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0040",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "亲子摩擦",
+      "text": "我想让爸妈多给我一点自己安排时间的空间，但又怕一提他们就觉得我想偷懒。我想好好跟他们谈一次，你能帮我想想怎么开口吗？",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0041",
+      "persona": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "scenario": "亲子摩擦",
+      "text": "我考差了，但还没敢跟我妈说。等她问吧，到时候再说。说出来也是挨一顿，能拖一天是一天。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0042",
+      "persona": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "scenario": "同伴关系",
+      "text": "今天小组活动没人愿意跟我一组。是不是我平时太没存在感了，是不是大家都不喜欢跟我合作，我一直在想这个。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0043",
+      "persona": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "scenario": "亲子摩擦",
+      "text": "家里最近气氛怪怪的，我也不想问发生了什么。多一事不如少一事，我就当没注意到，专心做自己的事好了。",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0044",
+      "persona": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "scenario": "亲子摩擦",
+      "text": "我妈又擅自把我房间收拾了，东西全乱了位置！说过多少遍别动我的东西！一点都不尊重我的隐私，真的很烦！",
+      "human_checked": false
+    },
+    {
+      "id": "syn_0045",
+      "persona": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "scenario": "亲子摩擦",
+      "text": "我和爸妈在要不要报补习班这件事上有分歧。我能理解他们是为我好，但我也有自己的想法。我想心平气和地跟他们说说我的打算，又怕一聊就变成争论，你能帮我想想怎么表达吗？",
+      "human_checked": false
+    }
+  ]
+}
