@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 1000
 
     HISTORY_WINDOW_N: int = 6
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CHAT_HISTORY_TTL_SECONDS: int = 60 * 60 * 24 * 7
+    CHAT_FALLBACK_MESSAGE: str = "我现在有点没反应过来，要不你再说一次？"
     SAFETY_LLM_TEMPERATURE: float = 0.0
     SCENARIO_LLM_TEMPERATURE: float = 0.0
     GENERATOR_LLM_TEMPERATURE: float = 0.8

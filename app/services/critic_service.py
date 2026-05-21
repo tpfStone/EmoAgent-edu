@@ -14,7 +14,7 @@ from app.services.llm_client import LLMClientProtocol
 
 
 CRITIC_FALLBACK_MESSAGE = "所有候选回应均未通过边界检查，请转人工复核。"
-CASEL_WEIGHT = 0.5
+CASEL_TOTAL_WEIGHT = 0.5
 CASEL_RUBRIC = {
     "自我觉察引导": "是否帮孩子识别、命名情绪。0=无视或否定情绪；1=笼统提及；2=精准命名并确认具体情绪。",
     "自我管理引导": "是否引导可行的情绪调节。0=教孩子压抑/否认；1=泛泛建议；2=适龄、有据的调节策略。",
@@ -90,7 +90,7 @@ class CriticService:
             str(boundary_samples[0]["boundary_reason"]) if boundary_samples else ""
         )
         rationale = str(samples[0].get("rationale", ""))
-        weighted_total = float(er + ip + ex + CASEL_WEIGHT * sum(casel.values()))
+        weighted_total = float(er + ip + ex + self._casel_bonus(casel))
 
         return CandidateScore(
             candidate_id=candidate.candidate_id,
@@ -101,6 +101,12 @@ class CriticService:
             weighted_total=weighted_total,
             rationale=rationale,
         )
+
+    @staticmethod
+    def _casel_bonus(casel: dict[str, int]) -> float:
+        if not casel:
+            return 0.0
+        return CASEL_TOTAL_WEIGHT * (sum(casel.values()) / len(casel))
 
     async def _score_once(
         self, request: CriticEvaluateRequest, candidate: CandidateInput

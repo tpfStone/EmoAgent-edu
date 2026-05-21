@@ -196,7 +196,7 @@ async def test_non_empty_activated_casel_scores_enter_weighted_total(fake_llm_cl
         "自我觉察引导": 2,
         "关系技能培养": 1,
     }
-    assert response.scores[0].weighted_total == 4.5
+    assert response.scores[0].weighted_total == 3.75
 
 
 @pytest.mark.asyncio
@@ -252,11 +252,29 @@ async def test_casel_scores_can_change_winner_and_preference_pair(fake_llm_clien
     )
 
     assert response.scores[0].weighted_total == 3.0
-    assert response.scores[1].weighted_total == 5.0
+    assert response.scores[1].weighted_total == 4.0
     assert response.best_candidate_id == "c2"
     assert response.preference_pair is not None
     assert response.preference_pair.winner_id == "c2"
     assert response.preference_pair.loser_id == "c1"
+
+
+@pytest.mark.asyncio
+async def test_single_activated_casel_dimension_uses_mean_without_edge_case(
+    fake_llm_client,
+):
+    llm = fake_llm_client([_score(1, 1, 1, casel={"自我觉察引导": 2})])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [_candidate("c1", "听起来你很难受，也能感觉到你在努力撑着。")],
+            activated_casel=["自我觉察引导"],
+        )
+    )
+
+    assert response.scores[0].casel == {"自我觉察引导": 2}
+    assert response.scores[0].weighted_total == 4.0
 
 
 @pytest.mark.asyncio
