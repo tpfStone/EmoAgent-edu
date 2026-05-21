@@ -23,9 +23,27 @@
 - F2 情境分析会产出 `activated_casel`，并直接传给 F4。
 - 本轮将该项从待办推进为“编排层前置任务 A”：在串 MVP `/chat` 编排层前补齐 F4 CASEL 辅助评分。
 - MVP 实现选择：CASEL 评分并入现有 F4 judge prompt，不新增第二次 LLM 调用。
-- 仅评分 `activated_casel` 中的维度，量纲为 `0/1/2`，初始权重按规格采用每项 `0.5`。
+- 仅评分 `activated_casel` 中的维度，量纲为 `0/1/2`。2026-05-21 交叉审计后，CASEL 不再按每项 `0.5` 线性累加，改为整体平均后按 `CASEL_TOTAL_WEIGHT=0.5` 作为辅助 bonus 计入。
 - 代码侧约束：漏评维度补 `0`，未激活维度丢弃，非法分值按 `0` 处理。
 - critic service tests 需覆盖非空 `activated_casel` 时 `casel` 字段、总分和 preference pair 的变化。
+
+## 2026-05-21 编排层交叉审计记录
+
+以下问题来自编排层方案审计，记录为后续实现约束，不阻塞继续开发。
+
+1. F4 CASEL 权重存在维度数膨胀风险。
+   - 原口径 `ER + IP + EX + 0.5 * sum(casel_scores)` 与当时规格一致，但在激活 CASEL 维度较多时，辅助项总贡献会随维度数线性增长。
+   - 例如亲子摩擦可激活 4 个 CASEL 维度，CASEL 满分贡献为 `4 * 0.5 * 2 = 4`，已逼近 EPITOME 满分 `3 * 2 = 6`，削弱“EPITOME 主力、CASEL 辅助”的设计意图。
+   - 处理：F4 规格改为 `ER + IP + EX + 0.5 * mean(casel_scores)`；`activated_casel=[]` 时 CASEL bonus 为 `0`，保持 EPITOME-only。
+
+2. CASEL 与 EPITOME 合并到一次 judge prompt 是 MVP 取舍。
+   - 当前仓库规格选择“合并一次调用”，原因是降低成本和延迟，便于先跑通 MVP。
+   - 风险是 prompt 变长后 EPITOME 与 CASEL 打分可能互相干扰。
+   - 回退路标：若 F9 信度校验显示评分不稳，优先尝试将 CASEL 拆成第二次 judge 调用，并比较一致性。
+
+3. 单 CASEL 维度路径需要覆盖。
+   - F2 将情境判为“其他”时只激活保底维度“自我觉察引导”。
+   - F4 改用 mean 后，需要测试单维度和空维度路径，避免除零或空集合边界问题。
 
 ## 2026-05-20 本轮范围裁剪
 
