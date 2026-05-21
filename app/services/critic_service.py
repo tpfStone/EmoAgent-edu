@@ -14,6 +14,14 @@ from app.services.llm_client import LLMClientProtocol
 
 
 CRITIC_FALLBACK_MESSAGE = "所有候选回应均未通过边界检查，请转人工复核。"
+CASEL_WEIGHT = 0.5
+CASEL_RUBRIC = {
+    "自我觉察引导": "是否帮孩子识别、命名情绪。0=无视或否定情绪；1=笼统提及；2=精准命名并确认具体情绪。",
+    "自我管理引导": "是否引导可行的情绪调节。0=教孩子压抑/否认；1=泛泛建议；2=适龄、有据的调节策略。",
+    "社会觉察培养": "是否帮孩子理解他人视角。0=强化对立；1=不涉及或很空泛；2=引导换位思考且不评判。",
+    "关系技能培养": "是否给出可操作的人际应对。0=误导或破坏关系；1=空泛安慰；2=具体可执行的沟通方式。",
+    "负责任决策引导": "是否引导孩子自主权衡。0=替孩子下结论；1=给单一答案；2=引导自主权衡多选项。",
+}
 
 
 class CriticService:
@@ -75,18 +83,19 @@ class CriticService:
         er = int(median(sample["ER"] for sample in samples))
         ip = int(median(sample["IP"] for sample in samples))
         ex = int(median(sample["EX"] for sample in samples))
+        casel = self._median_casel_scores(samples, request.activated_casel)
         boundary_samples = [sample for sample in samples if sample["boundary_flag"]]
         boundary_flag = bool(boundary_samples)
         boundary_reason = (
             str(boundary_samples[0]["boundary_reason"]) if boundary_samples else ""
         )
         rationale = str(samples[0].get("rationale", ""))
-        weighted_total = float(er + ip + ex)
+        weighted_total = float(er + ip + ex + CASEL_WEIGHT * sum(casel.values()))
 
         return CandidateScore(
             candidate_id=candidate.candidate_id,
             epitome=EpitomeScore(ER=er, IP=ip, EX=ex),
-            casel={},
+            casel=casel,
             boundary_flag=boundary_flag,
             boundary_reason=boundary_reason,
             weighted_total=weighted_total,
@@ -113,6 +122,7 @@ class CriticService:
         self, request: CriticEvaluateRequest, candidate: CandidateInput
     ) -> str:
         history_text = "\n".join(f"{item.role}: {item.text}" for item in request.history)
+        casel_prompt = self._build_casel_prompt(request.activated_casel)
         return f"""你是一个情感教育系统的回应质量评估模块，面向中国初中生（12–15岁）。给定用户的倾诉和一条候选回应，你要按 EPITOME 框架为这条回应打分。你不改写回应，只打分。
 
 【EPITOME 三个维度，每维打 0 / 1 / 2】
@@ -125,10 +135,12 @@ class CriticService:
 2. 不要因为回应更长就给更高分。
 3. 三个维度各自独立打分。
 4. 同时检查：回应是否包含不适合初中生的内容、是否有事实编造、是否越界（如替代专业心理治疗、鼓励隐瞒家长老师）。若有，单独标记。
+{casel_prompt}
 
 请输出严格 JSON：
 {{
   "ER": 0/1/2, "IP": 0/1/2, "EX": 0/1/2,
+  "casel": {{"仅包含activated_casel中的维度名": 0/1/2}},
   "boundary_flag": true/false,
   "boundary_reason": "若flag为true，说明原因；否则空字符串",
   "rationale": "一句话中文理由"
@@ -145,10 +157,27 @@ class CriticService:
             "ER": self._score_value(data.get("ER")),
             "IP": self._score_value(data.get("IP")),
             "EX": self._score_value(data.get("EX")),
+            "casel": data.get("casel", {}),
             "boundary_flag": bool(data.get("boundary_flag", False)),
             "boundary_reason": str(data.get("boundary_reason", "")),
             "rationale": str(data.get("rationale", "")),
         }
+
+    @staticmethod
+    def _build_casel_prompt(activated_casel: list[str]) -> str:
+        active_rubric = [
+            f"- {dimension}：{CASEL_RUBRIC[dimension]}"
+            for dimension in activated_casel
+            if dimension in CASEL_RUBRIC
+        ]
+        if not active_rubric:
+            return ""
+        return f"""
+
+【CASEL 辅助维度，每维打 0 / 1 / 2】
+本轮只评以下被激活的维度，不要输出其他 CASEL 维度：
+{chr(10).join(active_rubric)}
+"""
 
     @staticmethod
     def _extract_json(raw_response: str) -> str:
@@ -165,12 +194,48 @@ class CriticService:
             raise ValueError("score out of range")
         return score
 
+    @classmethod
+    def _safe_casel_value(cls, value) -> int:
+        try:
+            return cls._score_value(value)
+        except (TypeError, ValueError):
+            return 0
+
+    @classmethod
+    def _normalize_casel(cls, raw_casel, activated_casel: list[str]) -> dict[str, int]:
+        if not activated_casel:
+            return {}
+        if not isinstance(raw_casel, dict):
+            raw_casel = {}
+        return {
+            dimension: cls._safe_casel_value(raw_casel.get(dimension, 0))
+            for dimension in activated_casel
+        }
+
+    @classmethod
+    def _median_casel_scores(
+        cls, samples: list[dict], activated_casel: list[str]
+    ) -> dict[str, int]:
+        if not activated_casel:
+            return {}
+        normalized_samples = [
+            cls._normalize_casel(sample.get("casel", {}), activated_casel)
+            for sample in samples
+        ]
+        return {
+            dimension: int(
+                median(sample[dimension] for sample in normalized_samples)
+            )
+            for dimension in activated_casel
+        }
+
     @staticmethod
     def _failed_score(reason: str) -> dict:
         return {
             "ER": 0,
             "IP": 0,
             "EX": 0,
+            "casel": {},
             "boundary_flag": True,
             "boundary_reason": reason,
             "rationale": reason,

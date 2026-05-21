@@ -7,8 +7,10 @@ from app.config import Settings
 from app.dao.critic_run_dao import CriticRunDAO
 from app.dao.safety_log_dao import SafetyLogDAO
 from app.database import get_db
+from app.services.generator_service import GeneratorService
 from app.services.critic_service import CriticService
 from app.services.llm_client import DeepSeekLLMClient, LLMClientProtocol, MockLLMClient
+from app.services.scenario_service import ScenarioService
 from app.services.safety_gate_service import SafetyGateService
 
 
@@ -56,6 +58,20 @@ def get_safety_gate_service(
     settings: Settings = Depends(get_settings),
 ) -> SafetyGateService:
     return SafetyGateService(llm_client, safety_log_dao, settings)
+
+
+def get_scenario_service(
+    llm_client: LLMClientProtocol = Depends(get_llm_client),
+    settings: Settings = Depends(get_settings),
+) -> ScenarioService:
+    return ScenarioService(llm_client, settings)
+
+
+def get_generator_service(
+    llm_client: LLMClientProtocol = Depends(get_llm_client),
+    settings: Settings = Depends(get_settings),
+) -> GeneratorService:
+    return GeneratorService(llm_client, settings)
 
 
 def get_critic_service(

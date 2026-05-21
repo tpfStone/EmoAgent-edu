@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     HISTORY_WINDOW_N: int = 6
     SAFETY_LLM_TEMPERATURE: float = 0.0
+    SCENARIO_LLM_TEMPERATURE: float = 0.0
+    GENERATOR_LLM_TEMPERATURE: float = 0.8
     CRITIC_LLM_TEMPERATURE: float = 0.1
     CRITIC_SAMPLE_COUNT: int = Field(default=3, ge=1)
 

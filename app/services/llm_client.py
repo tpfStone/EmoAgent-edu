@@ -25,9 +25,16 @@ class MockLLMClient:
         await asyncio.sleep(0)
         if "EPITOME" in prompt:
             return (
-                '{"ER": 1, "IP": 1, "EX": 1, "boundary_flag": false, '
+                '{"ER": 1, "IP": 1, "EX": 1, "casel": {}, "boundary_flag": false, '
                 '"boundary_reason": "", "rationale": "mock score"}'
             )
+        if "情境分类模块" in prompt:
+            return (
+                '{"scenario": "其他", "scenario_confidence": 0.5, '
+                '"rationale": "mock scenario"}'
+            )
+        if "情感教育陪伴者" in prompt:
+            return "我听见你现在有些不容易，我愿意继续听你慢慢说。"
         return (
             '{"risk_level": "green", "matched_signals": [], '
             '"rationale": "mock safety pass"}'

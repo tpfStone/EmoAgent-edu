@@ -21,12 +21,13 @@ def _request(candidates, activated_casel=None):
     )
 
 
-def _score(er, ip, ex, boundary=False, reason=""):
+def _score(er, ip, ex, boundary=False, reason="", casel=None):
     return json.dumps(
         {
             "ER": er,
             "IP": ip,
             "EX": ex,
+            "casel": casel or {},
             "boundary_flag": boundary,
             "boundary_reason": reason,
             "rationale": "测试理由",
@@ -164,3 +165,113 @@ async def test_empty_activated_casel_returns_empty_casel(fake_llm_client):
     )
 
     assert response.scores[0].casel == {}
+
+
+@pytest.mark.asyncio
+async def test_non_empty_activated_casel_scores_enter_weighted_total(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _score(
+                1,
+                1,
+                1,
+                casel={
+                    "自我觉察引导": 2,
+                    "关系技能培养": 1,
+                    "未激活维度": 2,
+                },
+            )
+        ]
+    )
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [_candidate("c1", "听起来你有点受伤，我们可以聊聊怎么和朋友说。")],
+            activated_casel=["自我觉察引导", "关系技能培养"],
+        )
+    )
+
+    assert response.scores[0].casel == {
+        "自我觉察引导": 2,
+        "关系技能培养": 1,
+    }
+    assert response.scores[0].weighted_total == 4.5
+
+
+@pytest.mark.asyncio
+async def test_missing_and_invalid_casel_values_are_zero(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _score(
+                2,
+                1,
+                1,
+                casel={
+                    "自我觉察引导": "bad",
+                    "社会觉察培养": 3,
+                },
+            )
+        ]
+    )
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [_candidate("c1", "也许可以想想对方当时可能怎么理解这件事。")],
+            activated_casel=["自我觉察引导", "社会觉察培养", "关系技能培养"],
+        )
+    )
+
+    assert response.scores[0].casel == {
+        "自我觉察引导": 0,
+        "社会觉察培养": 0,
+        "关系技能培养": 0,
+    }
+    assert response.scores[0].weighted_total == 4.0
+
+
+@pytest.mark.asyncio
+async def test_casel_scores_can_change_winner_and_preference_pair(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _score(1, 1, 1, casel={"自我觉察引导": 0, "关系技能培养": 0}),
+            _score(1, 1, 1, casel={"自我觉察引导": 2, "关系技能培养": 2}),
+        ]
+    )
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [
+                _candidate("c1", "我能理解你。"),
+                _candidate("c2", "听起来你很受伤，也可以想想怎么表达你的在意。"),
+            ],
+            activated_casel=["自我觉察引导", "关系技能培养"],
+        )
+    )
+
+    assert response.scores[0].weighted_total == 3.0
+    assert response.scores[1].weighted_total == 5.0
+    assert response.best_candidate_id == "c2"
+    assert response.preference_pair is not None
+    assert response.preference_pair.winner_id == "c2"
+    assert response.preference_pair.loser_id == "c1"
+
+
+@pytest.mark.asyncio
+async def test_casel_rubric_is_added_to_prompt_when_activated(fake_llm_client):
+    llm = fake_llm_client([_score(1, 1, 1, casel={"自我觉察引导": 2})])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    await service.evaluate(
+        _request(
+            [_candidate("c1", "听起来你很难受。")],
+            activated_casel=["自我觉察引导"],
+        )
+    )
+
+    prompt = llm.prompts[0]["prompt"]
+    assert "【CASEL 辅助维度" in prompt
+    assert "自我觉察引导" in prompt
+    assert '"casel"' in prompt
