@@ -63,7 +63,7 @@
   - `tests/test_handlers/test_chat_handler.py`
   - `tests/test_dao/test_chat_turn_dao.py`
   - `tests/test_alembic_env.py`
-- Modify `docs/issues/2026-05-20-f1-f4-development-issues.md` or add `docs/issues/2026-05-21-orchestrator-deferred-validation.md`
+- Modify `docs/issues/2026-05-20-f1-f4-development-issues.md` or add `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md`
   - Record deferred 45-corpus validation and manual review.
 
 ---
@@ -183,7 +183,7 @@ CASEL 是辅助项，不应随激活维度数量线性膨胀；因此对已激�
 
 - [ ] **Step 6: Record the prompt-splitting rollback marker**
 
-Add this note to `docs/issues/2026-05-21-orchestrator-deferred-validation.md` in Task 7:
+Add this note to `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md` in Task 7:
 
 ```markdown
 F4 judge prompt rollback marker:
@@ -710,7 +710,7 @@ Expected: PASS.
 ### Task 7: Record Deferred Validation
 
 **Files:**
-- Create: `docs/issues/2026-05-21-orchestrator-deferred-validation.md`
+- Create: `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md`
 
 - [ ] **Step 1: Add issue note**
 

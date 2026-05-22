@@ -5,6 +5,15 @@
 
 ---
 
+## 0. 规划文档分工
+
+- 本文是 MVP 集成与 post-MVP 开发顺序的主入口；新增跨模块规划优先收敛到本文。
+- `docs/overview/2026-05-21-orchestrator-mvp-implementation-plan.md` 是编排层实现计划，主要保留任务拆解和历史执行依据。
+- `docs/specs/` 保存 F1/F2/F3/F4 单模块规格；模块内接口和 prompt 约束优先写在对应 spec。
+- `docs/issues/` 保存已发现问题和开发过程记录；不作为长期路线图主入口。
+- `docs/acceptance/` 保存人工验收说明、延期验收项和本地运行产物结构。
+- `docs/corpus/` 保存语料来源、生成方法和样本，不承载系统路线图。
+
 ## 1. MVP 是什么 / 不是什么
 
 - **MVP = 一条能完整跑通的单轮对话链路**：用户说话 → 安全门 → 情境分析 → 两取向生成 → critic 择优 → 回复，并把候选与分数落库。
@@ -83,6 +92,15 @@ preference_pairs(id, turn_id, winner_id, loser_id, created_at)  -- 供 F7 DPO
 - [ ] 建 PostgreSQL 表（§3）、Redis 会话缓存
 - [ ] 准备好 EmoEdu-语料-45条.json 作测试输入
 
+### LLM 模型策略（MVP 验收）
+
+- MVP 正式人工验收先使用 `DEEPSEEK_MODEL=deepseek-chat`。原因是当前 `DeepSeekLLMClient` 只透传 `model`、`temperature`、`max_tokens`，而 `deepseek-chat` 当前兼容映射到 `deepseek-v4-flash` 的非思考模式，能保留 F3 的 temperature 设置且不需要先改客户端。
+- 不使用 `deepseek-reasoner` 做默认验收模型。它对应思考模式，适合复杂推理，不适合作为情感陪伴常规回复质量的默认基线；思考模式下 `temperature` 等采样参数不会生效。
+- 后续技术债：在 DeepSeek 兼容别名废弃前，将默认模型迁移到官方新 ID `deepseek-v4-flash`，并在 OpenAI SDK 调用中传 `extra_body={"thinking": {"type": "disabled"}}`，显式关闭思考模式。
+- 可选对照：`deepseek-v4-pro` 只用于小样本对比 F2/F4 稳定性和回复质量，不作为 MVP 默认模型，除非后续验收证明它的质量提升足以覆盖成本和延迟。
+
+依据：DeepSeek 官方文档显示，当前可用模型为 `deepseek-v4-flash` 和 `deepseek-v4-pro`；`deepseek-chat` / `deepseek-reasoner` 是兼容别名，分别对应 `deepseek-v4-flash` 的非思考与思考模式，并计划于 2026-07-24 停用。V4 思考模式默认开启，且不支持 `temperature` 等参数。
+
 ### 阶段 1：单模块各自跑通（可并行交 Codex）
 - [ ] F1 安全门 → 过自己的 8 个测试用例
 - [ ] F2 情境分析 → 用 45 条语料跑分类准确率
@@ -106,6 +124,7 @@ preference_pairs(id, turn_id, winner_id, loser_id, created_at)  -- 供 F7 DPO
 
 ### 阶段 3：MVP 之后
 - [ ] **F9 信度校验**：抽 30–50 条候选人工标 EPITOME 0/1/2，算与 F4 的一致性 → 这是 DPO 可信前提，也是论文证据
+- [ ] **DeepSeek 模型迁移**：将 `DEEPSEEK_MODEL` 从兼容别名 `deepseek-chat` 迁移到 `deepseek-v4-flash`，并在客户端显式传 `extra_body={"thinking": {"type": "disabled"}}`
 - [ ] **F6 RAG**：定向量库（pgvector 复用 PG / 独立库），批量生成 500–750 条 RAG 语料填池，接入 F3 的 rag_examples
 - [ ] **F7 DPO**：攒够 preference_pairs 后离线训练，更新 F3 底座
 - [ ] **F8 第三取向**（行动建议型）：视效果加
