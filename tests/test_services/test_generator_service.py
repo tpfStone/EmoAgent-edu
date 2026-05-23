@@ -39,8 +39,21 @@ async def test_generator_uses_orientation_prompts_rag_and_temperature(fake_llm_c
     await service.generate(_request(rag_examples=["参考回应：先接住情绪。"]))
 
     assert len(llm.prompts) == 2
-    assert "【你的取向：共情陪伴】" in llm.prompts[0]["prompt"]
-    assert "【你的取向：引导反思】" in llm.prompts[1]["prompt"]
+    assert "【你的取向：共情陪伴 —— 全程向内】" in llm.prompts[0]["prompt"]
+    assert "不要问任何问题" in llm.prompts[0]["prompt"]
+    assert '不要把"哇"或"其实你"作为默认开头' in llm.prompts[0]["prompt"]
+    assert "最终回复只包含直接对学生说的话" in llm.prompts[0]["prompt"]
+    assert "禁止内部提示外泄" in llm.prompts[0]["prompt"]
+    assert "不得编造用户未说的事实" in llm.prompts[0]["prompt"]
+    assert "少评价、少说教、少替第三方解释，多承接孩子感受" in llm.prompts[0]["prompt"]
+    assert "【你的取向：引导反思 —— 重心向外】" in llm.prompts[1]["prompt"]
+    assert "不要固定使用任何引导套话" in llm.prompts[1]["prompt"]
+    assert "不替朋友、同学、家长或老师解释动机" in llm.prompts[1]["prompt"]
+    assert "如果新角度需要猜他人的心里想法，就换成孩子自己的感受、需要或可控边界" in llm.prompts[1]["prompt"]
+    assert "如果新角度需要补充孩子没说过的事实" in llm.prompts[1]["prompt"]
+    assert "退回为关于孩子感受的轻问题" in llm.prompts[1]["prompt"]
+    assert "反趋同" in llm.prompts[1]["prompt"]
+    assert "避免模板化" in llm.prompts[1]["prompt"]
     assert "参考回应：先接住情绪。" in llm.prompts[0]["prompt"]
     assert "参考回应：先接住情绪。" in llm.prompts[1]["prompt"]
     assert llm.prompts[0]["temperature"] == 0.8

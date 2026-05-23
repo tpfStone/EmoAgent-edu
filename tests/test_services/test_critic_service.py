@@ -91,6 +91,54 @@ async def test_boundary_candidate_is_excluded(fake_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_internal_prompt_leak_candidate_is_excluded(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _score(2, 2, 2, boundary=True, reason="内部提示外泄"),
+            _score(1, 1, 1),
+        ]
+    )
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [
+                _candidate("c1", "如果孩子想继续，可以追问：你更讨厌哪一点？"),
+                _candidate("c2", "被比较的时候，心里那股委屈会很重。"),
+            ]
+        )
+    )
+
+    assert response.best_candidate_id == "c2"
+    assert response.scores[0].boundary_flag is True
+    assert response.scores[0].boundary_reason == "内部提示外泄"
+
+
+@pytest.mark.asyncio
+async def test_fabricated_fact_candidate_is_excluded(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _score(2, 2, 2, boundary=True, reason="事实编造"),
+            _score(1, 1, 1),
+        ]
+    )
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [
+                _candidate("c1", "你一口气把三科的作业都列出来排了顺序。"),
+                _candidate("c2", "这么多作业压过来，会觉得喘不过气。"),
+            ]
+        )
+    )
+
+    assert response.best_candidate_id == "c2"
+    assert response.scores[0].boundary_flag is True
+    assert response.scores[0].boundary_reason == "事实编造"
+
+
+@pytest.mark.asyncio
 async def test_all_boundary_candidates_return_fallback(fake_llm_client):
     llm = fake_llm_client(
         [
@@ -293,3 +341,23 @@ async def test_casel_rubric_is_added_to_prompt_when_activated(fake_llm_client):
     assert "【CASEL 辅助维度" in prompt
     assert "自我觉察引导" in prompt
     assert '"casel"' in prompt
+
+
+@pytest.mark.asyncio
+async def test_critic_prompt_marks_prompt_leaks_and_fabrication_as_boundaries(
+    fake_llm_client,
+):
+    llm = fake_llm_client([_score(1, 1, 1)])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    await service.evaluate(
+        _request([_candidate("c1", "如果孩子想继续，可以追问一下。")])
+    )
+
+    prompt = llm.prompts[0]["prompt"]
+    assert "内部提示外泄" in prompt
+    assert "prompt 痕迹" in prompt
+    assert "面向开发者或教师的元话术" in prompt
+    assert "事实编造" in prompt
+    assert "用户未提及的数量、科目、排序、具体行为、第三方动机" in prompt
+    assert "即使 ER/IP/EX 分数较高" in prompt
