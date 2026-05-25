@@ -1,0 +1,61 @@
+.aiWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 78%;
+  align-self: flex-start;
+}
+
+.aiLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.aiDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);          /* sage 点睛 */
+  flex-shrink: 0;
+}
+
+.aiBubble {
+  background: var(--ai-bubble-bg);
+  border-radius: var(--radius);
+  border-radius: 2px var(--radius) var(--radius) var(--radius);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-card);
+  font-size: var(--ai-font-size);
+  line-height: var(--ai-line-height);
+  color: var(--text-primary);
+}
+
+.aiBubble p {
+  margin: 0;
+}
+
+.aiBubble br + p {
+  margin-top: 0.5em;
+}
+
+/* 用户消息 */
+.userWrapper {
+  display: flex;
+  justify-content: flex-end;
+  align-self: flex-end;
+  max-width: 72%;
+}
+
+.userBubble {
+  background: var(--user-bubble);
+  border-radius: var(--radius) 2px var(--radius) var(--radius);
+  padding: 10px 16px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}

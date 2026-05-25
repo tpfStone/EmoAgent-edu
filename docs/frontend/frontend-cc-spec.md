@@ -1,0 +1,191 @@
+# 前端模块 · Claude Code 开发规格（学生端 + 研究分析台）
+
+> **交付对象**：Claude Code / 编码 agent。本文档自包含，实现前端无需阅读其他文档（后端接口契约见 §3，已与 F1–F4 现有 schema 对齐）。
+> **模块定位**：系统的两个前端入口。学生端是产品；研究分析台是离线工具。二者共享一个后端 `/chat`，但**物理分离、数据通路不同**。
+> **技术栈**：React 18 + Vite + TypeScript（建议）；后端复用现有 FastAPI（`POST /chat`）。无需新增后端端点即可跑通学生端。
+
+---
+
+## 1. 一句话职责
+
+把两个已设计好的 React 原型（`EmoAgentStudent.jsx`、`ResearchConsole.jsx`）接到真实 FastAPI：学生端只渲染 `reply_text` 与危机转介；研究分析台渲染全部分析字段（候选、EPITOME/CASEL 分数、择优、批量统计）。**学生端在代码层禁止 import 或渲染任何分析字段。**
+
+---
+
+## 2. 两个入口的边界（核心安全约束，必须遵守）
+
+| 维度 | 学生端 EmoAgent | 研究分析台 |
+|---|---|---|
+| 使用者 | 初中生（12–15） | 研究者 / 开发者 / 评委 |
+| 部署 | 独立前端，面向公网 | 独立前端，内网 / 离线 / 鉴权后 |
+| 渲染字段 | **仅** `reply_text`、`risk_level`（用于触发转介）、`session_id` | 全部：`candidates`、`scores`、`epitome`、`casel`、`weighted_total`、`boundary_flag`、`preference_pair`、批量统计 |
+| 数据通路 | 实时 `POST /chat` | `POST /chat`（单轮）+ 读落库的 `turns/candidates/scores/preference_pairs`（批量） |
+| 路由 | `/`（或独立域名） | `/console`（或独立域名 + 鉴权） |
+
+> **铁律**：学生端的类型定义只允许包含 `reply_text`、`risk_level`、`session_id` 三个字段。即使后端 `/chat` 返回了 `scores` 等字段，学生端也必须在类型层与渲染层双重丢弃，**绝不能有任何代码路径把分析数据带到学生界面**。这是儿童安全约束，不是工程偏好。
+
+---
+
+## 3. 后端接口契约（与现有 F1–F4 对齐，勿改）
+
+### 3.1 请求
+```json
+POST /chat
+{
+  "session_id": "string",       // 同一会话多轮复用同一 id（会话内记忆）
+  "current_message": "string"
+}
+```
+
+### 3.2 响应（`ChatResponse`，字段同现有后端）
+```json
+{
+  "session_id": "string",
+  "status": "answered | blocked_by_safety | all_candidates_blocked | module_failed",
+  "reply_text": "string",
+  "risk_level": "green | yellow | red",
+  "scenario": "学业压力 | 同伴关系 | 亲子摩擦 | 其他 | null",
+  "activated_casel": ["string"],
+  "best_candidate_id": "string | null",
+  "candidates": [
+    {"candidate_id": "c1", "orientation": "共情型", "text": "string"},
+    {"candidate_id": "c2", "orientation": "引导反思型", "text": "string"}
+  ],
+  "scores": [
+    {
+      "candidate_id": "c1",
+      "epitome": {"ER": 0, "IP": 0, "EX": 0},
+      "casel": {"自我觉察引导": 0},
+      "boundary_flag": false,
+      "boundary_reason": "",
+      "weighted_total": 0.0,
+      "rationale": "string"
+    }
+  ],
+  "preference_pair": {"winner_id": "c1", "loser_id": "c2"},
+  "failed_module": "string | null",
+  "failure_reason": ""
+}
+```
+
+### 3.3 学生端只用三个字段
+学生端从上面的响应里**只取** `reply_text`、`risk_level`、`session_id`。逻辑：
+- `risk_level === "green"` → 把 `reply_text` 作为一条 AI 消息渲染。
+- `risk_level !== "green"`（yellow/red）→ 渲染 `reply_text` 后，弹出固定转介面板（§5.3）。`status` 此时为 `blocked_by_safety`，无候选，正常。
+
+---
+
+## 4. 文件结构（建议）
+
+```
+frontend/
+  shared/
+    api.ts            # fetchChat()，类型见下；MOCK/LIVE 切换
+    types.ts          # ChatResponse 等共享类型
+    samples.ts        # 演示样例（含 syn_0007/0021/0032/crisis）
+  student/            # 独立可部署
+    EmoAgentStudent.tsx
+    main.tsx          # 仅挂载学生端
+  console/            # 独立可部署
+    ResearchConsole.tsx
+    main.tsx          # 仅挂载分析台
+```
+
+> 学生端与分析台**不共享组件**，只共享 `shared/`。`shared/types.ts` 里学生端用的窄类型与分析台用的全类型分开导出，从类型层强制 §2 铁律。
+
+---
+
+## 5. 学生端 EmoAgent 实现要点
+
+### 5.1 视觉设计（已锁定，勿自由发挥）
+- **暖白打底**（`#faf8f3`，非纯白），鼠尾草绿（`#6f9c80`）**仅作点睛**（logo 点、AI 标记、发送键、一处氛围光），**绝不大面积填充**。
+- AI 回复作为「被设计的对象」：带 `EmoAgent` 小标记、字号 17px、行距 1.85；用户消息是右侧低调浅灰气泡。
+- 不用纯黑（文字 `#33312c`）、阴影带色不用灰、圆角统一。
+- 设计依据见原型注释；改色前先读注释里的研究结论（高饱和暖色升焦虑、低饱和多 pastel + 暖中性为解）。
+
+### 5.2 会话与记忆
+- **会话内记忆（现在做）**：前端为每个会话生成 `session_id`，同一会话所有轮次复用它；后端 Redis 窗口（`HISTORY_WINDOW_N=6`）自动吃历史。前端把同 `session_id` 的多轮顺序渲染即可。
+- **侧边栏历史**：列出本地/后端已有会话（标题取首条用户消息）。「开启新对话」生成新 `session_id`。
+- **跨会话记忆（下一步，留接口）**：建议后端存**轻量画像**（情境分布、情绪基调趋势），**不存原文**。前端「情绪轨迹」面板消费此画像。必须满足三条：对孩子透明（明示「我记得这些」）、可删除（「让我忘记」按钮真实调用删除接口）、不用于制造与可信成年人的隔离。MVP 阶段画像可前端 mock，标注 TODO。
+
+### 5.3 危机转介（安全红线，固定不可改）
+- `risk_level` 为 yellow/red 时，渲染 `reply_text` 后弹出转介面板，**替换输入框**（禁止继续输入，呼应「红色绝不自行展开危机对话」）。
+- 面板含：标题、共情句、可执行引导（联系可信成年人）、两个可拨打按钮 `tel:12356` / `tel:12355`；red 额外提示 120/110。
+- 文案用原型 `REFERRAL` 常量，**号码硬编码**，不经任何动态生成。
+
+### 5.4 附加功能
+- **低门槛起手式**：空状态显示「今天有点累 / 想吐槽一件事 / 只是想有人在」等入口，点击即发送。
+- **情绪轨迹**：见 §5.2 跨会话记忆，消费画像数据。
+- **呼吸小工具**：纯前端动画（8s 一吸一呼），无后端依赖；对应 CASEL 自我管理。
+
+### 5.5 失败兜底
+- `/chat` 超时 / 异常 / `status==="module_failed"` → 显示安全兜底话术（「我现在有点没反应过来，要不你再说一次？」），**绝不向学生暴露原始错误或 `failure_reason`**。
+
+---
+
+## 6. 研究分析台实现要点
+
+### 6.1 三视图
+- **单轮追踪**：选一条样例 → 按 F1→F2→F3→F4 分阶段揭示（安全门分级 / 情境+激活 CASEL / 双候选 / critic 打分择优 / preference_pair）。头部显示学生输入，尾部显示学生最终收到的 `reply_text`，形成闭环。
+- **批量总览**：读一次 45 条验收 run 的聚合结果——情境分类准确率（总体 + 分情境）、落库计数、boundary 拦截、缺陷闭环记录。数据可来自落库查询或预生成的 summary JSON。
+- **框架对标**：C-SSRS 三级、EPITOME 三维（按情感/认知共情分组，标注 IP 可靠性 limitation）、CASEL 情境→维度映射。静态内容。
+
+### 6.2 数据来源
+- 单轮：实时 `POST /chat`，渲染完整响应。
+- 批量：建议后端提供一个只读聚合端点（如 `GET /console/runs/{run_id}/summary`）或直接读导出的 `summary.md`/`raw_results.json`。MVP 可先吃 `raw_results.json`。
+
+### 6.3 视觉
+- 与学生端**刻意不同**：editorial / 临床研究风（纸感暖底、衬线显示字、信息密度高）。这种反差本身是演示叙事的一部分（产品的温暖 vs 工具的严谨）。
+
+---
+
+## 7. MOCK / LIVE 切换
+
+```ts
+// shared/api.ts
+const MODE = import.meta.env.VITE_API_MODE ?? "mock"; // "mock" | "live"
+
+export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
+  if (MODE === "mock") return mockResolve(req);          // 用 samples.ts
+  const r = await fetch(`${BASE_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) throw new Error(`chat ${r.status}`);
+  return r.json();
+}
+```
+- 演示现场建议 **mock 优先**（DeepSeek + critic 多采样有数秒延迟，断网即崩），或预录真实响应回放。
+- `VITE_API_MODE=live` + `VITE_API_BASE` 指向 FastAPI 即接真后端，前端零改动。
+
+---
+
+## 8. 验收标准（DoD）
+
+学生端：
+- [ ] 仅渲染 `reply_text`；类型层不含任何分析字段（§2 铁律）。
+- [ ] green 正常回复；yellow/red 触发转介面板并锁输入，号码硬编码正确。
+- [ ] 同 `session_id` 多轮历史正确串联；「新对话」生成新 id。
+- [ ] 侧边栏、情绪轨迹、起手式、呼吸工具按 §5 就位。
+- [ ] 失败兜底不暴露原始错误。
+- [ ] 视觉符合 §5.1 锁定规范（暖白主、sage 仅点睛）。
+
+研究分析台：
+- [ ] 单轮追踪按 F1→F2→F3→F4 揭示，含输入/输出闭环。
+- [ ] `boundary_flag=true` 候选显式标为「出局」，且 `weighted_total` 划除、不参与择优展示。
+- [ ] 批量总览数字来自真实 run（非硬编码占位）。
+- [ ] 框架对标三块完整，EPITOME 标注 IP limitation。
+
+通用：
+- [ ] MOCK/LIVE 经环境变量切换，LIVE 直连 FastAPI 无需改组件。
+- [ ] 学生端与分析台可各自独立 build / 部署。
+
+---
+
+## 9. 不在本模块范围
+
+- 不改后端 F1–F4 逻辑与 `/chat` schema。
+- 不在学生端做任何分析/打分展示。
+- 跨会话记忆的后端存储与删除接口属后端任务；前端只消费并留好调用位。
+- 鉴权 / 监护人知情机制属后续，本规格只要求分析台路由可加鉴权中间件。

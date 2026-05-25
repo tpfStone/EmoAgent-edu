@@ -1,0 +1,62 @@
+.card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--stage-color, var(--border));
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.revealed {
+  border-left-color: var(--stage-color);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: default;
+}
+
+.card:not(.revealed) .header {
+  cursor: pointer;
+}
+
+.card:not(.revealed) .header:hover {
+  background: rgba(35, 32, 27, 0.03);
+}
+
+.stageTag {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--stage-color, var(--text-dark));
+  min-width: 80px;
+}
+
+.stageDesc {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  flex: 1;
+}
+
+.revealBtn {
+  font-size: 12px;
+  color: var(--stage-color, var(--text-soft));
+  padding: 4px 10px;
+  border: 1px solid var(--stage-color, var(--border));
+  border-radius: 20px;
+  transition: background 0.15s;
+}
+
+.revealBtn:hover {
+  background: var(--stage-color);
+  color: #fff;
+}
+
+.body {
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--border-light);
+}

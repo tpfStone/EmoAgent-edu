@@ -1,0 +1,89 @@
+.sidebar {
+  width: 200px;
+  height: 100%;
+  background: var(--console-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brandTitle {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.02em;
+}
+
+.brandSub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+.nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  gap: 2px;
+}
+
+.tabBtn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 12px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.tabBtn:hover:not(.active) {
+  background: rgba(35, 32, 27, 0.05);
+}
+
+.active {
+  background: var(--sidebar-active-bg);
+}
+
+.tabLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.active .tabLabel {
+  color: var(--sidebar-active-text);
+}
+
+.tabSub {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+}
+
+.active .tabSub {
+  color: rgba(244, 240, 232, 0.6);
+}
+
+.footer {
+  padding: 14px 16px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.04em;
+}

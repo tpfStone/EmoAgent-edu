@@ -1,0 +1,97 @@
+.container {
+  position: relative;
+}
+
+.trigger {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--sage-light);
+  border: 1.5px solid var(--border-light);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.trigger:hover,
+.triggerActive {
+  background: var(--sage);
+  border-color: var(--sage);
+}
+
+/* 呼吸面板（绝对定位浮层）*/
+.panel {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-warm), 0 4px 20px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  z-index: 100;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.05em;
+}
+
+/* 8s 周期呼吸圆：4s 膨胀（吸）+ 4s 收缩（呼）*/
+.breathCircle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--sage-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: breathOuter 8s ease-in-out infinite;
+}
+
+.innerCircle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--sage);           /* sage 点睛 */
+  animation: breathInner 8s ease-in-out infinite;
+  opacity: 0.75;
+}
+
+@keyframes breathOuter {
+  0%, 100%  { transform: scale(0.85); }
+  50%       { transform: scale(1.15); }
+}
+
+@keyframes breathInner {
+  0%, 100%  { transform: scale(0.9); opacity: 0.6; }
+  50%       { transform: scale(1.1); opacity: 0.9; }
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.closeBtn {
+  font-size: 13px;
+  color: var(--sage);
+  padding: 6px 16px;
+  border: 1.5px solid var(--sage);
+  border-radius: 20px;
+  transition: background var(--transition), color var(--transition);
+}
+
+.closeBtn:hover {
+  background: var(--sage);
+  color: #fff;
+}

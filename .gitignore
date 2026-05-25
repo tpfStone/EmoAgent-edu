@@ -22,6 +22,7 @@ ENV/
 
 # Logs and runtime files
 logs/
+docs/corpus/runs/
 *.log
 *.pid
 
@@ -35,6 +36,16 @@ build/
 dist/
 *.egg-info/
 
+# Frontend
+frontend/node_modules/
+frontend/student/node_modules/
+frontend/console/node_modules/
+frontend/shared/node_modules/
+frontend/student/dist/
+frontend/console/dist/
+frontend/**/.env.local
+*.tsbuildinfo
+
 # IDE/editor metadata
 .idea/
 .vscode/
@@ -44,4 +55,3 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
-

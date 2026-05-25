@@ -1,0 +1,129 @@
+.panel {
+  padding: 20px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--crisis-bg);
+  border-top: 1px solid var(--crisis-border);
+}
+
+.panelRed {
+  --crisis-bg: #fff5f2;
+  --crisis-border: #e5b4a0;
+}
+
+.lastReply {
+  font-size: 15px;
+  color: var(--text-soft);
+  line-height: 1.7;
+  padding: 0 4px;
+  border-left: 3px solid var(--crisis-border);
+  padding-left: 12px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--crisis-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--crisis-accent);
+  line-height: 1.4;
+}
+
+.empathy {
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.guide {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.hotlineRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 电话按钮 */
+.hotlineBtn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 16px;
+  background: var(--crisis-bg);
+  border: 1.5px solid var(--crisis-border);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.hotlineBtn:hover {
+  background: #fdeee6;
+  transform: translateY(-1px);
+}
+
+.hotlineBtn:active {
+  transform: translateY(0);
+}
+
+.hotlineLabel {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.hotlineTel {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--crisis-accent);
+  letter-spacing: 0.05em;
+}
+
+/* 紧急号码（red 专用）*/
+.emergencyNote {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.emergencyRow {
+  display: flex;
+  gap: 10px;
+}
+
+.emergencyBtn {
+  background: #fff0ec;
+  border-color: #e5b4a0;
+}
+
+.emergencyBtn .hotlineTel {
+  color: #c0392b;
+}
+
+/* 输入锁占位 */
+.inputLock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+  border: 1.5px dashed var(--crisis-border);
+  border-radius: var(--radius);
+  background: transparent;
+}
