@@ -1,5 +1,7 @@
 # MVP 集成规划与后续开发路线图
 
+> **归档说明**：本文是 2026-05-21 的历史路线图，已被 `docs/overview/emoedu-post-mvp-guide.md` 和各模块 `docs/specs/` 替代；仅用于回看当时的规划上下文。
+
 > **用途**：把 F1/F2/F3/F4 四个模块串成一条能跑的最小对话链路（MVP），并规划 MVP 之后的开发顺序。配套各模块 Codex 规格。
 > **技术栈**：FastAPI + PostgreSQL + Redis + LLM API（复用 emoagent）。
 
@@ -8,7 +10,7 @@
 ## 0. 规划文档分工
 
 - 本文是 MVP 集成与 post-MVP 开发顺序的主入口；新增跨模块规划优先收敛到本文。
-- `docs/overview/2026-05-21-orchestrator-mvp-implementation-plan.md` 是编排层实现计划，主要保留任务拆解和历史执行依据。
+- `docs/archive/2026-05-21/2026-05-21-orchestrator-mvp-implementation-plan.md` 是编排层实现计划，主要保留任务拆解和历史执行依据。
 - `docs/specs/` 保存 F1/F2/F3/F4 单模块规格；模块内接口和 prompt 约束优先写在对应 spec。
 - `docs/issues/` 保存已发现问题和开发过程记录；不作为长期路线图主入口。
 - `docs/acceptance/` 保存人工验收说明、延期验收项和本地运行产物结构。
