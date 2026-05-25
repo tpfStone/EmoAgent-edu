@@ -1,0 +1,23 @@
+{
+  "golden_sample_nos": [
+    3,
+    11,
+    16,
+    19,
+    22,
+    25,
+    27,
+    31,
+    40,
+    15
+  ],
+  "f9_rerun_rows": 40,
+  "llm_provider": "deepseek",
+  "deepseek_model": "deepseek-chat",
+  "critic_sample_count": 3,
+  "generated_scores_path": "docs\\corpus\\f9\\validation\\golden\\f9_golden_generated_scores.csv",
+  "old_candidate_scores_path": "docs\\corpus\\f9\\validation\\golden\\f9_golden_existing_f4_scores.csv",
+  "blind_annotation_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_blind_annotation.csv",
+  "f4_holdout_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_f4_scores_holdout.csv",
+  "rerun_scores_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_selected_scores.csv"
+}

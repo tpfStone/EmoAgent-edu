@@ -10,10 +10,19 @@
 ## Quick Start
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 python -m pytest tests -q
 uvicorn app.main:app --reload
+```
+
+若 PowerShell 拦截 `Activate.ps1`，可在当前窗口临时执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
 ```
 
 启动后访问：
@@ -53,4 +62,3 @@ python -m pytest tests -q
 - 合成语料：`docs/corpus/`
 - 论文配图：`docs/figures/`
 - 问题记录：`docs/issues/`
-
