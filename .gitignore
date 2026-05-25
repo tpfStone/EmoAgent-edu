@@ -35,6 +35,7 @@ docs/corpus/runs/
 build/
 dist/
 *.egg-info/
+.worktrees/
 
 # Frontend
 frontend/node_modules/
