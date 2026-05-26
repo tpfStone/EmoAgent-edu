@@ -1,0 +1,23 @@
+.shell {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(216, 207, 189, 0.42), transparent 38%),
+    var(--console-bg);
+}
+
+.workspace {
+  min-width: 0;
+  padding: 28px 32px 40px;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace {
+    padding: 18px 16px 32px;
+  }
+}
