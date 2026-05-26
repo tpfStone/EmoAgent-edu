@@ -1,0 +1,92 @@
+.panel {
+  display: grid;
+  min-height: 16rem;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 254, 251, 0.9);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+}
+
+.inlinePanel {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.breathCircle {
+  display: grid;
+  width: 7.8rem;
+  height: 7.8rem;
+  place-items: center;
+  border: 1px solid rgba(111, 156, 128, 0.26);
+  border-radius: 50%;
+  background: rgba(238, 243, 238, 0.62);
+  animation: breathExpand 8s var(--ease) infinite;
+}
+
+.breathCore {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 254, 251, 0.95) 0 42%, transparent 43%),
+    rgba(111, 156, 128, 0.32);
+  animation: breathCore 8s var(--ease) infinite;
+}
+
+.copy {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.copy strong,
+.copy p {
+  margin: 0;
+}
+
+.copy strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.copy p {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+@keyframes breathExpand {
+  0%,
+  100% {
+    transform: scale(0.86);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+}
+
+@keyframes breathCore {
+  0%,
+  100% {
+    transform: scale(0.82);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathCircle,
+  .breathCore {
+    animation: none;
+  }
+}

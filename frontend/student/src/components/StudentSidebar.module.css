@@ -1,0 +1,136 @@
+.sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.9rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 254, 251, 0.92);
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.header p,
+.header strong {
+  display: block;
+  margin: 0;
+}
+
+.header p {
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.header strong {
+  margin-top: 0.2rem;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  letter-spacing: 0;
+}
+
+.textButton {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
+.textButton:hover {
+  color: var(--text-primary);
+}
+
+.primaryButton,
+.clearButton {
+  min-height: 2.55rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.primaryButton {
+  border: 1px solid rgba(111, 156, 128, 0.34);
+  background: var(--sage-soft);
+  color: var(--sage-deep);
+}
+
+.primaryButton:hover {
+  border-color: rgba(111, 156, 128, 0.58);
+  background: #f5f8f3;
+}
+
+.sessionList {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.sessionButton {
+  display: grid;
+  width: 100%;
+  gap: 0.24rem;
+  padding: 0.72rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+}
+
+.sessionButton:hover,
+.sessionButtonActive {
+  border-color: var(--line);
+  background: var(--card-white);
+}
+
+.sessionButtonActive {
+  box-shadow: inset 3px 0 0 var(--sage);
+}
+
+.sessionTitle,
+.sessionPreview,
+.sessionTime {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionTitle {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.sessionPreview {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.sessionTime {
+  color: var(--text-faint);
+  font-size: 0.74rem;
+}
+
+.clearButton {
+  margin-top: auto;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.clearButton:hover {
+  border-color: rgba(192, 138, 106, 0.42);
+  background: rgba(192, 138, 106, 0.08);
+  color: var(--text-primary);
+}

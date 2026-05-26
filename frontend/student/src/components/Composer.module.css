@@ -1,0 +1,65 @@
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.input {
+  width: 100%;
+  min-height: 3.5rem;
+  max-height: 9rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card-white);
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.55;
+  outline: none;
+  padding: 0.78rem 0.9rem;
+  transition:
+    border-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.input:focus {
+  border-color: rgba(111, 156, 128, 0.48);
+  box-shadow: 0 0 0 3px rgba(111, 156, 128, 0.12);
+}
+
+.sendButton {
+  min-width: 5.2rem;
+  min-height: 3.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--card-white);
+  font-weight: 700;
+  transition:
+    background 160ms var(--ease),
+    opacity 160ms var(--ease);
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--sage-deep);
+}
+
+.sendButton:disabled,
+.input:disabled {
+  opacity: 0.58;
+}
+
+@media (max-width: 520px) {
+  .composer {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .sendButton {
+    width: 100%;
+    min-height: 2.8rem;
+  }
+}

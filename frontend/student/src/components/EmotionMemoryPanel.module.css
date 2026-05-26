@@ -1,0 +1,84 @@
+.panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 254, 251, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.dot {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
+.notice {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+}
+
+.summaryList {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.summary {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card-white);
+}
+
+.summary strong,
+.summary p,
+.empty {
+  margin: 0;
+}
+
+.summary strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary p,
+.empty {
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.clearButton {
+  min-height: 2.55rem;
+  border: 1px solid rgba(192, 138, 106, 0.42);
+  border-radius: var(--radius-sm);
+  background: rgba(192, 138, 106, 0.08);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.clearButton:hover {
+  background: rgba(192, 138, 106, 0.13);
+}
