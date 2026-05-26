@@ -219,6 +219,16 @@ def _make_llm_client(settings: Settings):
     return MockLLMClient()
 
 
+def _make_critic_llm_client(settings: Settings):
+    if settings.LLM_PROVIDER.lower() == "deepseek":
+        return DeepSeekLLMClient(
+            api_key=settings.DEEPSEEK_API_KEY,
+            base_url=settings.DEEPSEEK_BASE_URL,
+            model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+        )
+    return MockLLMClient()
+
+
 async def _generate_case(
     generator: GeneratorService,
     case: F9Case,
@@ -354,9 +364,10 @@ async def run_validation(
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
-    llm_client = _make_llm_client(settings)
-    generator = GeneratorService(llm_client, settings)
-    critic = CriticService(llm_client, None, settings)
+    generator_llm_client = _make_llm_client(settings)
+    critic_llm_client = _make_critic_llm_client(settings)
+    generator = GeneratorService(generator_llm_client, settings)
+    critic = CriticService(critic_llm_client, None, settings)
 
     golden_cases = load_cases(analysis_path, blind_path, GOLDEN_SAMPLE_NOS)
     generated_rows: list[dict[str, str]] = []
@@ -467,6 +478,7 @@ async def run_validation(
         "f9_rerun_rows": len(blind_rows),
         "llm_provider": settings.LLM_PROVIDER,
         "deepseek_model": settings.DEEPSEEK_MODEL,
+        "critic_deepseek_model": settings.CRITIC_DEEPSEEK_MODEL,
         "critic_sample_count": settings.CRITIC_SAMPLE_COUNT,
         "generated_scores_path": str(generated_path),
         "old_candidate_scores_path": str(old_path),
@@ -658,6 +670,7 @@ def build_report(
         "",
         f"- llm_provider: {manifest['llm_provider']}",
         f"- deepseek_model: {manifest['deepseek_model']}",
+        f"- critic_deepseek_model: {manifest.get('critic_deepseek_model', '')}",
         f"- critic_sample_count: {manifest['critic_sample_count']}",
         f"- golden_sample_nos: {manifest['golden_sample_nos']}",
         f"- f9_rerun_rows: {manifest['f9_rerun_rows']}",

@@ -238,7 +238,7 @@ def _make_llm_client(settings: Settings):
         return DeepSeekLLMClient(
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
-            model=settings.DEEPSEEK_MODEL,
+            model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
         )
     return MockLLMClient()
 
@@ -299,7 +299,8 @@ async def run_fixed_rescore(
                 "blind_path": str(blind_path),
                 "bucket": bucket or "",
                 "llm_provider": settings.LLM_PROVIDER,
-                "deepseek_model": settings.DEEPSEEK_MODEL,
+                "deepseek_model": settings.CRITIC_DEEPSEEK_MODEL
+                or settings.DEEPSEEK_MODEL,
                 "critic_sample_count": settings.CRITIC_SAMPLE_COUNT,
                 "repeats": repeats,
                 "input_rows": len(all_source_rows),
@@ -344,7 +345,7 @@ def main() -> None:
 
     settings_kwargs = {"CRITIC_SAMPLE_COUNT": args.critic_sample_count}
     if args.deepseek_model:
-        settings_kwargs["DEEPSEEK_MODEL"] = args.deepseek_model
+        settings_kwargs["CRITIC_DEEPSEEK_MODEL"] = args.deepseek_model
     settings = Settings(**settings_kwargs)
     run_path, summary_path = asyncio.run(
         run_fixed_rescore(

@@ -348,3 +348,43 @@ R9 执行结果：
 - `deepseek-v4-pro` 不能作为 drop-in F4 judge 直接升级。
 - 本轮不能得出“更好模型能有效缓解”的准确性结论；先要解决结构化输出/解析兼容性和运行成本。
 - 在这件事解决前，不修改 F3/F4 prompt，不修改 `32/40` gate，不启动正式人工 F9。
+
+## 2026-05-26：R10 F4 正式切换新模型
+
+R9 解析失败根因：
+
+- `deepseek-v4-pro` 初次失败不是因为模型无法判断，而是当前输出预算不足。
+- 原调用在较低 `max_tokens` 下返回 `finish_reason=length`，最终 `content` 为空，导致 `llm_parse_failure`。
+- 将 F4 max tokens 提高到 4096，并启用 JSON response format 后，可以得到可解析 JSON。
+
+代码改动：
+
+- `app/config.py`
+  - 新增 `CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro`。
+  - 新增 `CRITIC_LLM_MAX_TOKENS=4096`。
+  - 新增 `CRITIC_LLM_RESPONSE_FORMAT_JSON=True`。
+- `app/dependencies.py`
+  - 新增 critic 专用 LLM client。
+  - F3 generator/safety/scenario 继续使用 `DEEPSEEK_MODEL`。
+  - F4 critic 使用 `CRITIC_DEEPSEEK_MODEL`。
+- `app/services/critic_service.py`
+  - F4 调用使用 critic 专用 token budget。
+  - F4 调用启用 `response_format={"type": "json_object"}`。
+- `app/services/llm_client.py`
+  - `generate()` 支持可选 `response_format`。
+- F9 脚本同步使用 critic 专用模型配置。
+
+smoke 结果：
+
+- `docs/corpus/f9/validation-stability/model-eval/deepseek-v4-pro-json-smoke/`
+- priority 10 条，`CRITIC_SAMPLE_COUNT=1`，`repeats=1`。
+- 10/10 行无 `llm_parse_failure`。
+- 人工一致性对比：
+  - baseline `deepseek-chat`：10/20
+  - candidate `deepseek-v4-pro-json-smoke`：11/20
+
+当前结论：
+
+- 新模型现在能跑通，但只带来小幅改善。
+- 它主要缓解部分 IP 偏宽，ER 高分侧仍偏宽。
+- 不能把“换模型”当作 F9/F3/F4 的完整修复；下一步仍需在“扩大 v4-pro 验证”和“回修 F3 生成质量”之间决策。

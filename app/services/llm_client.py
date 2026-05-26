@@ -11,6 +11,7 @@ class LLMClientProtocol(Protocol):
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str: ...
 
 
@@ -21,6 +22,7 @@ class MockLLMClient:
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str:
         await asyncio.sleep(0)
         if "EPITOME" in prompt:
@@ -52,15 +54,19 @@ class DeepSeekLLMClient:
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str:
+        request_kwargs = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
         try:
             response = await asyncio.wait_for(
-                self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                ),
+                self.client.chat.completions.create(**request_kwargs),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:

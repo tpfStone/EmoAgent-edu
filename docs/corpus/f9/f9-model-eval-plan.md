@@ -137,7 +137,7 @@ fallback pilot：
 
 ## R9 后续决策
 
-本轮不能采纳 `deepseek-v4-pro` 结果：
+R9 初次不能采纳 `deepseek-v4-pro` 结果：
 
 - 0/0 分数来自 `llm_parse_failure` 兜底，不是有效判分。
 - fallback pilot 仍耗时较长，说明即便解决结构化输出问题，也需要评估成本。
@@ -152,6 +152,40 @@ fallback pilot：
 2. 暂停模型路线：
    - 回到 F3 生成策略。
    - 重点处理 priority 人工标注暴露的“语义重复、缺少安慰、提问像复盘”的候选质量问题。
+
+## R10 正式新模型接入结果
+
+根因诊断：
+
+- `deepseek-v4-pro` 初次 `llm_parse_failure` 的直接原因是输出预算不足。
+- 原调用在较小 `max_tokens` 下返回 `finish_reason=length`，且 `message.content` 为空。
+- 提高到 4096 token 并启用 `response_format={"type":"json_object"}` 后，`message.content` 能返回可解析 JSON；模型的思考内容在 `reasoning_content` 中，不应被当作最终 JSON。
+
+代码改动：
+
+- F3 generator 继续使用 `DEEPSEEK_MODEL=deepseek-chat`。
+- F4 critic 新增独立模型配置：
+  - `CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro`
+  - `CRITIC_LLM_MAX_TOKENS=4096`
+  - `CRITIC_LLM_RESPONSE_FORMAT_JSON=true`
+- 依赖层新增 critic 专用 LLM client，避免 F3/F4 共用同一个模型实例。
+- `f9_validation.py` 与 fixed rescore 脚本同步使用 critic 专用模型。
+
+smoke 验证：
+
+- 命令：priority 10 条，`CRITIC_SAMPLE_COUNT=1`，`repeats=1`。
+- 输出目录：`docs/corpus/f9/validation-stability/model-eval/deepseek-v4-pro-json-smoke/`
+- 结果：10/10 行无 `llm_parse_failure`。
+- 对比目录：`docs/corpus/f9/validation-stability/model-eval/json-smoke-comparison/`
+- baseline `deepseek-chat`：10/20 匹配人工 ER/IP。
+- candidate `deepseek-v4-pro-json-smoke`：11/20 匹配人工 ER/IP。
+
+解释：
+
+- 新模型已能作为 F4 judge 跑通。
+- 改善存在但很小，主要体现在部分 IP 从 2 降到 1。
+- ER 仍偏宽；sample 10 仍被新模型打到 ER/IP=2。
+- 这说明模型升级不是充分解法，后续仍需要处理 F3 候选质量或 F4 ER 判分锚点。
 
 ## 约束
 

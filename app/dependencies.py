@@ -39,12 +39,41 @@ def get_llm_client_cached(
     return MockLLMClient()
 
 
+@lru_cache
+def get_critic_llm_client_cached(
+    provider: str,
+    deepseek_api_key: str,
+    deepseek_base_url: str,
+    deepseek_model: str,
+    critic_deepseek_model: str,
+) -> LLMClientProtocol:
+    if provider.lower() == "deepseek":
+        return DeepSeekLLMClient(
+            api_key=deepseek_api_key,
+            base_url=deepseek_base_url,
+            model=critic_deepseek_model or deepseek_model,
+        )
+    return MockLLMClient()
+
+
 def get_llm_client(settings: Settings = Depends(get_settings)) -> LLMClientProtocol:
     return get_llm_client_cached(
         settings.LLM_PROVIDER,
         settings.DEEPSEEK_API_KEY,
         settings.DEEPSEEK_BASE_URL,
         settings.DEEPSEEK_MODEL,
+    )
+
+
+def get_critic_llm_client(
+    settings: Settings = Depends(get_settings),
+) -> LLMClientProtocol:
+    return get_critic_llm_client_cached(
+        settings.LLM_PROVIDER,
+        settings.DEEPSEEK_API_KEY,
+        settings.DEEPSEEK_BASE_URL,
+        settings.DEEPSEEK_MODEL,
+        settings.CRITIC_DEEPSEEK_MODEL,
     )
 
 
@@ -99,7 +128,7 @@ def get_generator_service(
 
 
 def get_critic_service(
-    llm_client: LLMClientProtocol = Depends(get_llm_client),
+    llm_client: LLMClientProtocol = Depends(get_critic_llm_client),
     critic_run_dao: CriticRunDAO = Depends(get_critic_run_dao),
     settings: Settings = Depends(get_settings),
 ) -> CriticService:
@@ -114,7 +143,7 @@ def get_chat_safety_gate_service(
 
 
 def get_chat_critic_service(
-    llm_client: LLMClientProtocol = Depends(get_llm_client),
+    llm_client: LLMClientProtocol = Depends(get_critic_llm_client),
     settings: Settings = Depends(get_settings),
 ) -> CriticService:
     return CriticService(llm_client, None, settings)

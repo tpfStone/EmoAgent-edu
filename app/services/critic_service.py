@@ -192,7 +192,12 @@ class CriticService:
                 prompt=self._build_prompt(request, candidate),
                 timeout=self.settings.LLM_TIMEOUT,
                 temperature=self.settings.CRITIC_LLM_TEMPERATURE,
-                max_tokens=self.settings.LLM_MAX_TOKENS,
+                max_tokens=self.settings.CRITIC_LLM_MAX_TOKENS,
+                response_format=(
+                    {"type": "json_object"}
+                    if self.settings.CRITIC_LLM_RESPONSE_FORMAT_JSON
+                    else None
+                ),
             )
             return self._parse_score(raw_response)
         except ValueError:

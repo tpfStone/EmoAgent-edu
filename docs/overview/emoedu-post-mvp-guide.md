@@ -188,3 +188,4 @@ P1 F9校验 ─→ [F9过?] ─是→ P-corpus放量 ─→ P2 DPO+消融 ─→
 - [ ] P-corpus 的 `overall_yield` 实测值填进去。
 - [ ] 用实测 yield 确认 1200 对目标要生成多少原始倾诉、各格 quota。
 - [ ] 若 probe 的 `pair_rate` 异常低（比如适应型/压抑型格趋近 0），评估是否要把目标从 1200 下调，或调整格子分配——这会反过来影响 P2 的 DPO 数据量预期。
+- [x] **Backend infrastructure acceptance gate (2026-05-26)**: PostgreSQL/Alembic migration, Redis history store, and `/chat` mock orchestrator integration were re-verified. Evidence: `docs/acceptance/backend-infrastructure/2026-05-26/backend-infrastructure-smoke.md`.

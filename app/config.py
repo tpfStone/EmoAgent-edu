@@ -9,8 +9,10 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     DEEPSEEK_MODEL: str = "deepseek-chat"
+    CRITIC_DEEPSEEK_MODEL: str = "deepseek-v4-pro"
     LLM_TIMEOUT: float = 10.0
     LLM_MAX_TOKENS: int = 1000
+    CRITIC_LLM_MAX_TOKENS: int = 4096
 
     HISTORY_WINDOW_N: int = 6
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -20,6 +22,7 @@ class Settings(BaseSettings):
     SCENARIO_LLM_TEMPERATURE: float = 0.0
     GENERATOR_LLM_TEMPERATURE: float = 0.8
     CRITIC_LLM_TEMPERATURE: float = 0.1
+    CRITIC_LLM_RESPONSE_FORMAT_JSON: bool = True
     CRITIC_SAMPLE_COUNT: int = Field(default=3, ge=1)
 
     API_TITLE: str = "EmoEdu F1/F4 API"

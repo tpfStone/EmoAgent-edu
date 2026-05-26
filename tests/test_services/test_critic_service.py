@@ -199,6 +199,28 @@ async def test_three_samples_use_median_scores(fake_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_critic_uses_critic_specific_token_budget_and_json_response_format(
+    fake_llm_client,
+):
+    llm = fake_llm_client([_score(1, 1, 1)])
+    service = CriticService(
+        llm,
+        None,
+        Settings(
+            CRITIC_SAMPLE_COUNT=1,
+            LLM_MAX_TOKENS=1000,
+            CRITIC_LLM_MAX_TOKENS=4096,
+            CRITIC_LLM_RESPONSE_FORMAT_JSON=True,
+        ),
+    )
+
+    await service.evaluate(_request([_candidate("c1", "我听见你很难受。")]))
+
+    assert llm.prompts[0]["max_tokens"] == 4096
+    assert llm.prompts[0]["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.asyncio
 async def test_long_empty_answer_receives_only_judge_scores(fake_llm_client):
     llm = fake_llm_client([_score(1, 0, 0)])
     service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
