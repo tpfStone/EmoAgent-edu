@@ -1,0 +1,6 @@
+packages:
+  - "shared"
+  - "student"
+  - "console"
+allowBuilds:
+  esbuild: true
