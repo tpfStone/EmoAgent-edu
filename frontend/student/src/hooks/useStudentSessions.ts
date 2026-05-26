@@ -1,0 +1,271 @@
+import { useMemo, useRef, useState } from "react";
+
+export interface StudentMessage {
+  id: string;
+  role: "student" | "agent";
+  text: string;
+  createdAt: number;
+}
+
+export interface SessionRecord {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: StudentMessage[];
+}
+
+const STORAGE_KEY = "emoagent.student.sessions.v1";
+const CURRENT_ID_KEY = "emoagent.student.currentSessionId.v1";
+const DEFAULT_TITLE = "新的对话";
+const TITLE_LIMIT = 20;
+
+function createId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function clipTitle(text: string): string {
+  const normalized = text.trim().replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return DEFAULT_TITLE;
+  }
+
+  return normalized.length > TITLE_LIMIT
+    ? `${normalized.slice(0, TITLE_LIMIT)}...`
+    : normalized;
+}
+
+function createSession(now = Date.now()): SessionRecord {
+  return {
+    id: createId(),
+    title: DEFAULT_TITLE,
+    createdAt: now,
+    updatedAt: now,
+    messages: [],
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFiniteTimestamp(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function normalizeMessage(value: unknown): StudentMessage | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const { id, role, text, createdAt } = value;
+
+  if (
+    typeof id !== "string" ||
+    (role !== "student" && role !== "agent") ||
+    typeof text !== "string" ||
+    !isFiniteTimestamp(createdAt)
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    role,
+    text,
+    createdAt,
+  };
+}
+
+function normalizeSession(value: unknown): SessionRecord | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const { id, title, createdAt, updatedAt, messages } = value;
+
+  if (
+    typeof id !== "string" ||
+    typeof title !== "string" ||
+    !isFiniteTimestamp(createdAt) ||
+    !isFiniteTimestamp(updatedAt) ||
+    !Array.isArray(messages)
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    createdAt,
+    updatedAt,
+    messages: messages
+      .map((message) => normalizeMessage(message))
+      .filter((message): message is StudentMessage => message !== null),
+  };
+}
+
+function readSessions(): SessionRecord[] {
+  if (typeof localStorage === "undefined") {
+    return [createSession()];
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const sessions = parsed
+        .map((session) => normalizeSession(session))
+        .filter((session): session is SessionRecord => session !== null);
+
+      if (sessions.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        return sessions;
+      }
+    }
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  return [createSession()];
+}
+
+function readCurrentId(sessions: SessionRecord[]): string {
+  if (typeof localStorage === "undefined") {
+    return sessions[0].id;
+  }
+
+  const stored = localStorage.getItem(CURRENT_ID_KEY);
+  const exists = sessions.some((session) => session.id === stored);
+
+  return exists && stored ? stored : sessions[0].id;
+}
+
+function persist(sessions: SessionRecord[], currentId: string): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  localStorage.setItem(CURRENT_ID_KEY, currentId);
+}
+
+export function useStudentSessions() {
+  const [sessions, setSessions] = useState<SessionRecord[]>(() => readSessions());
+  const [currentId, setCurrentId] = useState<string>(() => readCurrentId(sessions));
+  const sessionsRef = useRef(sessions);
+  const currentIdRef = useRef(currentId);
+
+  const currentSession = useMemo(
+    () => sessions.find((session) => session.id === currentId) ?? sessions[0],
+    [currentId, sessions],
+  );
+
+  function updateSessions(
+    updater: (previous: SessionRecord[]) => SessionRecord[],
+    nextCurrentId = currentIdRef.current,
+  ): void {
+    const next = updater(sessionsRef.current);
+
+    sessionsRef.current = next;
+    currentIdRef.current = nextCurrentId;
+    setSessions(next);
+    persist(next, nextCurrentId);
+  }
+
+  function appendMessage(
+    role: StudentMessage["role"],
+    text: string,
+    sessionId = currentIdRef.current,
+  ): StudentMessage | null {
+    const targetSessionId = sessionId;
+
+    if (!sessionsRef.current.some((session) => session.id === targetSessionId)) {
+      return null;
+    }
+
+    const now = Date.now();
+    const message: StudentMessage = {
+      id: createId(),
+      role,
+      text,
+      createdAt: now,
+    };
+
+    updateSessions((previous) =>
+      previous.map((session) => {
+        if (session.id !== targetSessionId) {
+          return session;
+        }
+
+        const isFirstStudentMessage =
+          role === "student" &&
+          !session.messages.some((item) => item.role === "student");
+
+        return {
+          ...session,
+          title: isFirstStudentMessage ? clipTitle(text) : session.title,
+          updatedAt: now,
+          messages: [...session.messages, message],
+        };
+      }),
+    );
+
+    return message;
+  }
+
+  function appendUserMessage(text: string, sessionId?: string): StudentMessage | null {
+    return appendMessage("student", text, sessionId);
+  }
+
+  function appendAgentMessage(text: string, sessionId?: string): StudentMessage | null {
+    return appendMessage("agent", text, sessionId);
+  }
+
+  function newSession(): SessionRecord {
+    const session = createSession();
+
+    setCurrentId(session.id);
+    currentIdRef.current = session.id;
+    updateSessions((previous) => [session, ...previous], session.id);
+
+    return session;
+  }
+
+  function switchSession(sessionId: string): void {
+    if (!sessions.some((session) => session.id === sessionId)) {
+      return;
+    }
+
+    setCurrentId(sessionId);
+    currentIdRef.current = sessionId;
+    persist(sessions, sessionId);
+  }
+
+  function clearSessions(): void {
+    const session = createSession();
+
+    setCurrentId(session.id);
+    setSessions([session]);
+    currentIdRef.current = session.id;
+    sessionsRef.current = [session];
+    persist([session], session.id);
+  }
+
+  return {
+    sessions,
+    currentId,
+    currentSession,
+    appendUserMessage,
+    appendAgentMessage,
+    newSession,
+    switchSession,
+    clearSessions,
+  };
+}
