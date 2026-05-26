@@ -733,7 +733,9 @@ git commit -m "feat: add student app foundation"
 
 **Files:**
 - Modify: `frontend/student/src/App.tsx`
+- Modify: `frontend/student/package.json`
 - Create: `frontend/student/src/App.module.css`
+- Create: `frontend/student/src/App.test.tsx`
 - Create: `frontend/student/src/components/StudentSidebar.tsx`
 - Create: `frontend/student/src/components/StudentSidebar.module.css`
 - Create: `frontend/student/src/components/StarterPrompts.tsx`
@@ -749,16 +751,24 @@ git commit -m "feat: add student app foundation"
 - Create: `frontend/student/src/components/ReferralPanel.tsx`
 - Create: `frontend/student/src/components/ReferralPanel.module.css`
 
-- [ ] **Step 1: Implement app layout**
+- [ ] **Step 1: Implement screenshot-aligned app layout**
 
 `App.tsx` should render:
 
-- A left desktop sidebar and mobile drawer trigger.
-- A centered chat column.
-- Top utility controls: `情绪轨迹` and `呼吸`.
-- Empty state via `StarterPrompts`.
-- Message list via `MessageList`.
+- A full-height two-column shell aligned with the provided reference image: a warm left sidebar and an unframed main conversation surface.
+- A mobile drawer trigger for the same sidebar content.
+- A quiet centered top title: `你可以慢慢说，我会认真听`.
+- No top utility controls. `情绪轨迹` and `呼吸` must not appear as chat-header buttons.
+- A single main-view state: `activeView: 'chat' | 'memory' | 'breathing'`.
+- In `chat`, render either `MessageList` or the opening agent message:
+  `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`
+- The chat opening state must not render a static breathing/presence indicator. This avoids visual overlap with the breathing tool.
+- The sidebar bottom tools open independent main views:
+  - `我的情绪轨迹` -> `EmotionMemoryPanel`
+  - `静一静 · 呼吸` -> `BreathingPanel`
+- `memory` and `breathing` replace the chat content area. They must not layer above chat, and they must not show the composer.
 - Composer unless `referralLocked`; `ReferralPanel` when locked.
+- New session and session switching both return to `activeView === 'chat'`.
 
 In the message scroll effect, use:
 
@@ -769,15 +779,15 @@ if (el) el.scrollTop = el.scrollHeight
 
 Do not use `scrollIntoView`.
 
-- [ ] **Step 2: Implement starter prompts without emoji icons**
+- [ ] **Step 2: Implement starter prompts as screenshot-style pills**
 
 Use these prompt labels:
 
 ```ts
-const prompts = ['今天有点累', '想吐槽一件事', '只是想有人在']
+const prompts = ['今天有点累', '想吐槽一件事', '只是想有人在', '有点开心，想分享']
 ```
 
-Each prompt button uses a small CSS color dot, not an emoji.
+Each prompt button is a rounded pill above the composer, matching the reference image. Do not use emoji icons or decorative color dots in the prompt labels.
 
 - [ ] **Step 3: Implement AI message hierarchy**
 
@@ -822,6 +832,8 @@ The panel text must say:
 
 The `让我忘记` button clears local student sessions through the session hook. It must not show an alert claiming a backend deletion happened.
 
+The sidebar must not include a second destructive memory action such as `清空本地记忆`. The only destructive memory action is `让我忘记` inside `EmotionMemoryPanel`.
+
 - [ ] **Step 6: Implement breathing panel**
 
 Use an 8-second CSS animation: 4 seconds expand, 4 seconds contract. Respect reduced motion:
@@ -835,6 +847,17 @@ Use an 8-second CSS animation: 4 seconds expand, 4 seconds contract. Respect red
 }
 ```
 
+The breathing panel is opened only from the sidebar tool `静一静 · 呼吸` and occupies the main area as its own view. It must not be duplicated in the initial chat screen.
+
+- [ ] **Step 6.5: Add student information-architecture regression tests**
+
+Create `frontend/student/src/App.test.tsx` and add tests proving:
+
+- The initial chat screen renders `你可以慢慢说，我会认真听` and the opening agent message.
+- The initial chat screen does not render `嗯，我在。`, `吸气四秒，呼气四秒。`, or a `呼吸练习` region.
+- Clicking `我的情绪轨迹` opens memory as a separate main view, shows `让我忘记`, and removes the message textbox.
+- Clicking `静一静 · 呼吸` opens breathing as a separate main view, renders breathing copy once, removes the opening chat message, and removes the message textbox.
+
 - [ ] **Step 7: Verify student behavior manually**
 
 Run:
@@ -846,7 +869,12 @@ pnpm --dir frontend --filter @emoedu/student dev
 Expected:
 
 - App opens on `http://localhost:5173`.
-- Empty state shows `嗯，我在。`.
+- Initial chat shows `你可以慢慢说，我会认真听`.
+- Initial chat shows `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`.
+- Initial chat does not show the breathing panel or static breathing/presence indicator.
+- `我的情绪轨迹` and `静一静 · 呼吸` are sidebar tools, not top-bar buttons.
+- Clicking `静一静 · 呼吸` replaces chat with the breathing view.
+- Clicking `我的情绪轨迹` replaces chat with the memory view.
 - Clicking starter prompt sends it and receives a mock reply.
 - Crisis sample can be triggered by sending `我最近真的不想活了，生活没有任何意义。`.
 - Crisis state locks the composer and shows hardcoded telephone links.
@@ -857,6 +885,7 @@ Run:
 
 ```powershell
 pnpm --dir frontend --filter @emoedu/student typecheck
+pnpm --dir frontend --filter @emoedu/student test
 pnpm --dir frontend --filter @emoedu/student build
 ```
 
