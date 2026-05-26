@@ -1,13 +1,13 @@
 import type { SessionRecord } from "../hooks/useStudentSessions";
-import styles from "./EmotionMemoryPanel.module.css";
+import styles from "./ConversationHistoryPanel.module.css";
 
-interface EmotionMemoryPanelProps {
+interface ConversationHistoryPanelProps {
   sessions: SessionRecord[];
   onClearSessions: () => void;
 }
 
 const notice =
-  "我现在只在这台设备上保留会话标题和消息，用来帮你回到刚才的话题。跨会话情绪画像还没有接入后端。";
+  '这里是你在这台设备上聊过的话题，方便你回到刚才的对话。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
 
 function summarize(session: SessionRecord): string {
   const latest = session.messages.at(-1);
@@ -20,17 +20,17 @@ function summarize(session: SessionRecord): string {
   return text.length > 48 ? `${text.slice(0, 48)}...` : text;
 }
 
-export function EmotionMemoryPanel({
+export function ConversationHistoryPanel({
   sessions,
   onClearSessions,
-}: EmotionMemoryPanelProps) {
+}: ConversationHistoryPanelProps) {
   const storedSessions = sessions.filter((session) => session.messages.length > 0);
 
   return (
-    <section className={styles.panel} aria-label="情绪轨迹">
+    <section className={styles.panel} aria-label="我聊过的">
       <div className={styles.header}>
         <span className={styles.dot} />
-        <strong>情绪轨迹</strong>
+        <strong>我聊过的</strong>
       </div>
       <p className={styles.notice}>{notice}</p>
 

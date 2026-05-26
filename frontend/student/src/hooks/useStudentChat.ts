@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { fetchStudentChat } from "@emoedu/shared";
 import type { ChatRequest, RiskLevel, StudentChatView } from "@emoedu/shared";
 
@@ -14,6 +14,8 @@ export function useStudentChat(sessionId: string) {
   );
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("green");
   const [referralLocked, setReferralLocked] = useState(false);
+  // Conservative fallback: transport/parser failures must not silently downgrade risk.
+  const lastKnownRisk = useRef<RiskLevel>("green");
   const loading = pendingSessionIds.has(sessionId);
 
   async function send(
@@ -35,6 +37,7 @@ export function useStudentChat(sessionId: string) {
       const view = await fetchStudentChat(request);
 
       if (options.isCurrent?.() ?? true) {
+        lastKnownRisk.current = view.risk_level;
         setRiskLevel(view.risk_level);
         setReferralLocked(view.risk_level !== "green");
       }
@@ -44,12 +47,12 @@ export function useStudentChat(sessionId: string) {
       const fallback: StudentChatView = {
         session_id: requestSessionId,
         reply_text: FALLBACK_TEXT,
-        risk_level: "green",
+        risk_level: lastKnownRisk.current,
       };
 
       if (options.isCurrent?.() ?? true) {
         setRiskLevel(fallback.risk_level);
-        setReferralLocked(false);
+        setReferralLocked(fallback.risk_level !== "green");
       }
 
       return fallback;
@@ -63,6 +66,7 @@ export function useStudentChat(sessionId: string) {
   }
 
   function resetReferral(): void {
+    lastKnownRisk.current = "green";
     setRiskLevel("green");
     setReferralLocked(false);
   }

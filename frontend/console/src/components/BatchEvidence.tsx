@@ -1,5 +1,8 @@
 import styles from "./BatchEvidence.module.css";
 
+const acceptanceDocPath =
+  "docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md";
+
 const summaryRows = [
   { label: "request/link success", value: "45/45" },
   { label: "scenario accuracy", value: "43/45", note: "95.6%" },
@@ -34,6 +37,7 @@ export function BatchEvidence() {
         <p className={styles.kicker}>Batch evidence</p>
         <h2>验收摘要</h2>
         <p>来源：real-llm-20260522-215717 验收摘要；非实时计算</p>
+        <p>文档：{acceptanceDocPath}</p>
       </header>
 
       <section className={styles.metrics} aria-label="Acceptance summary metrics">

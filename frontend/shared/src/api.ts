@@ -9,7 +9,16 @@ const mode = env.VITE_API_MODE ?? "mock";
 const baseUrl =
   env.VITE_API_BASE ?? env.VITE_API_BASE_URL ?? env.VITE_EMOEDU_API_BASE_URL ?? "";
 
-const CRISIS_KEYWORDS = ["不想活", "自杀", "自残"];
+// Mock-only demo routing. Real crisis classification stays in backend F1.
+const CRISIS_KEYWORDS = [
+  "不想活",
+  "不想存在",
+  "消失",
+  "结束这一切",
+  "活着没意思",
+  "自杀",
+  "自残",
+];
 
 const MESSAGE_HINTS: Record<string, string[]> = {
   syn_0007: ["作业", "考试", "压力", "学业"],

@@ -350,6 +350,14 @@ export interface StudentChatView {
 
 Create `frontend/shared/src/samples.ts` with four samples: `syn_0007`, `syn_0021`, `syn_0032`, and `crisis`. Use the exact response shape from `FullChatResponse`; for `crisis`, set `status: 'blocked_by_safety'`, `risk_level: 'red'`, empty `candidates`, empty `scores`, and `best_candidate_id: null`.
 
+Add this file header:
+
+```ts
+// 本文件所有样本（含 syn_xxxx 编号）均为全合成数据，
+// 不含任何真实未成年人对话或可识别个人信息。
+// syn_0032 为验收阶段发现的「事实编造」缺陷样本，保留用于演示 boundary 出局机制。
+```
+
 The `syn_0032` sample must include a blocked candidate score:
 
 ```ts
@@ -424,6 +432,8 @@ export async function fetchStudentChat(
 
 export const testOnly = { pickStudentView }
 ```
+
+Mock mode must route several crisis demo phrasings to the `crisis` sample (`不想活`, `不想存在`, `消失`, `结束这一切`, `活着没意思`, `自杀`, `自残`). Comment that this is mock-only demo routing; real crisis classification stays in backend F1.
 
 - [ ] **Step 4: Export the public shared API**
 
@@ -625,7 +635,7 @@ export interface StudentMessage {
 Create `frontend/student/src/hooks/useStudentChat.ts`:
 
 ```ts
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { fetchStudentChat } from '@emoedu/shared'
 import type { RiskLevel, StudentChatView } from '@emoedu/shared'
 
@@ -635,6 +645,8 @@ export function useStudentChat(sessionId: string) {
   const [loading, setLoading] = useState(false)
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('green')
   const [referralLocked, setReferralLocked] = useState(false)
+  // Conservative fallback: transport/parser failures must not silently downgrade risk.
+  const lastKnownRisk = useRef<RiskLevel>('green')
 
   const send = useCallback(
     async (text: string): Promise<StudentChatView> => {
@@ -644,15 +656,19 @@ export function useStudentChat(sessionId: string) {
           session_id: sessionId,
           current_message: text,
         })
+        lastKnownRisk.current = view.risk_level
         setRiskLevel(view.risk_level)
         setReferralLocked(view.risk_level !== 'green')
         return view
       } catch {
-        return {
+        const fallback = {
           session_id: sessionId,
           reply_text: fallbackText,
-          risk_level: 'green',
+          risk_level: lastKnownRisk.current,
         }
+        setRiskLevel(lastKnownRisk.current)
+        setReferralLocked(lastKnownRisk.current !== 'green')
+        return fallback
       } finally {
         setLoading(false)
       }
@@ -661,6 +677,7 @@ export function useStudentChat(sessionId: string) {
   )
 
   const resetReferral = useCallback(() => {
+    lastKnownRisk.current = 'green'
     setRiskLevel('green')
     setReferralLocked(false)
   }, [])
@@ -668,6 +685,8 @@ export function useStudentChat(sessionId: string) {
   return { loading, riskLevel, referralLocked, send, resetReferral }
 }
 ```
+
+Network or parsing failures intentionally keep the last known `risk_level`; they must not be represented as `green`. If the last known risk is yellow/red, the referral lock remains.
 
 - [ ] **Step 5: Create React entry**
 
@@ -746,8 +765,8 @@ git commit -m "feat: add student app foundation"
 - Create: `frontend/student/src/components/Composer.module.css`
 - Create: `frontend/student/src/components/BreathingPanel.tsx`
 - Create: `frontend/student/src/components/BreathingPanel.module.css`
-- Create: `frontend/student/src/components/EmotionMemoryPanel.tsx`
-- Create: `frontend/student/src/components/EmotionMemoryPanel.module.css`
+- Create: `frontend/student/src/components/ConversationHistoryPanel.tsx`
+- Create: `frontend/student/src/components/ConversationHistoryPanel.module.css`
 - Create: `frontend/student/src/components/ReferralPanel.tsx`
 - Create: `frontend/student/src/components/ReferralPanel.module.css`
 
@@ -758,15 +777,15 @@ git commit -m "feat: add student app foundation"
 - A full-height two-column shell aligned with the provided reference image: a warm left sidebar and an unframed main conversation surface.
 - A mobile drawer trigger for the same sidebar content.
 - A quiet centered top title: `你可以慢慢说，我会认真听`.
-- No top utility controls. `情绪轨迹` and `呼吸` must not appear as chat-header buttons.
-- A single main-view state: `activeView: 'chat' | 'memory' | 'breathing'`.
+- No top utility controls. `我聊过的` and `静一静 · 呼吸` must not appear as chat-header buttons.
+- A single main-view state: `activeView: 'chat' | 'history' | 'breathing'`.
 - In `chat`, render either `MessageList` or the opening agent message:
   `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`
 - The chat opening state must not render a static breathing/presence indicator. This avoids visual overlap with the breathing tool.
 - The sidebar bottom tools open independent main views:
-  - `我的情绪轨迹` -> `EmotionMemoryPanel`
+  - `我聊过的` -> `ConversationHistoryPanel`
   - `静一静 · 呼吸` -> `BreathingPanel`
-- `memory` and `breathing` replace the chat content area. They must not layer above chat, and they must not show the composer.
+- `history` and `breathing` replace the chat content area. They must not layer above chat, and they must not show the composer.
 - Composer unless `referralLocked`; `ReferralPanel` when locked.
 - New session and session switching both return to `activeView === 'chat'`.
 
@@ -822,17 +841,17 @@ const referral = {
 
 Render `120` and `110` only when `riskLevel === 'red'`. The panel replaces the composer and does not duplicate the last AI reply.
 
-- [ ] **Step 5: Implement emotion memory panel with honest local-only state**
+- [ ] **Step 5: Implement local conversation history panel**
 
 The panel text must say:
 
 ```text
-我现在只在这台设备上保留会话标题和消息，用来帮你回到刚才的话题。跨会话情绪画像还没有接入后端。
+这里是你在这台设备上聊过的话题，方便你回到刚才的对话。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。
 ```
 
 The `让我忘记` button clears local student sessions through the session hook. It must not show an alert claiming a backend deletion happened.
 
-The sidebar must not include a second destructive memory action such as `清空本地记忆`. The only destructive memory action is `让我忘记` inside `EmotionMemoryPanel`.
+The sidebar must not include a second destructive memory action such as `清空本地记忆`. The only destructive memory action is `让我忘记` inside `ConversationHistoryPanel`. Do not use `情绪轨迹` / `我的情绪轨迹` in student UI because that implies cross-session emotion tracking.
 
 - [ ] **Step 6: Implement breathing panel**
 
@@ -855,7 +874,7 @@ Create `frontend/student/src/App.test.tsx` and add tests proving:
 
 - The initial chat screen renders `你可以慢慢说，我会认真听` and the opening agent message.
 - The initial chat screen does not render `嗯，我在。`, `吸气四秒，呼气四秒。`, or a `呼吸练习` region.
-- Clicking `我的情绪轨迹` opens memory as a separate main view, shows `让我忘记`, and removes the message textbox.
+- Clicking `我聊过的` opens local conversation history as a separate main view, shows `让我忘记`, and removes the message textbox.
 - Clicking `静一静 · 呼吸` opens breathing as a separate main view, renders breathing copy once, removes the opening chat message, and removes the message textbox.
 
 - [ ] **Step 7: Verify student behavior manually**
@@ -872,9 +891,9 @@ Expected:
 - Initial chat shows `你可以慢慢说，我会认真听`.
 - Initial chat shows `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`.
 - Initial chat does not show the breathing panel or static breathing/presence indicator.
-- `我的情绪轨迹` and `静一静 · 呼吸` are sidebar tools, not top-bar buttons.
+- `我聊过的` and `静一静 · 呼吸` are sidebar tools, not top-bar buttons.
 - Clicking `静一静 · 呼吸` replaces chat with the breathing view.
-- Clicking `我的情绪轨迹` replaces chat with the memory view.
+- Clicking `我聊过的` replaces chat with the local conversation history view.
 - Clicking starter prompt sends it and receives a mock reply.
 - Crisis sample can be triggered by sending `我最近真的不想活了，生活没有任何意义。`.
 - Crisis state locks the composer and shows hardcoded telephone links.
@@ -1085,7 +1104,8 @@ git commit -m "feat: add console app foundation"
 - Sample select using `MOCK_SAMPLES`.
 - Custom input field.
 - Run button.
-- Progressive sections: F1, F2, F3, F4, final student output.
+- Progressive sections: F1, F2, F3, F4, and a console-only read-only preview named `学生实际看到的回复`.
+- The final preview uses `reply_text` from `FullChatResponse`; it must not import student components, share student state, write `localStorage`, or embed the student app in an iframe.
 
 Use these stage labels:
 
@@ -1130,6 +1150,7 @@ The view must visibly label the data source as:
 
 ```text
 来源：real-llm-20260522-215717 验收摘要；非实时计算
+文档：docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md
 ```
 
 - [ ] **Step 6: Implement framework map**
@@ -1290,6 +1311,14 @@ git commit -m "docs: document frontend rebuild"
 
 ---
 
+## Backlog From Review
+
+- **Soft tool suggestion:** 呼吸 / 静一静可在后端判断高压力情境后温和建议入口；MVP 不做，避免改后端与回复策略。
+- **Local font packaging:** student 与 console 的字体分化保留；比赛断网 fallback 可接受，后续再本地打包字体。
+- **More aggressive frontend crisis fallback:** 本轮不在真实学生端加入前端关键词判危机；如未来要做，需重新评估与“F1 在后端”的边界。
+
+---
+
 ## Self-Review
 
 Spec coverage:
@@ -1298,14 +1327,15 @@ Spec coverage:
 - Shared backend `/chat`: Task 2 implements mock/live wrappers.
 - Student three-field boundary: Task 2 projection test and Task 7 grep check cover it.
 - Student warm visual system: Tasks 3 and 4 define tokens and UI.
-- Crisis referral lock: Task 4 defines hardcoded panel and composer replacement.
+- Crisis referral lock: Task 4 defines hardcoded panel and composer replacement; Task 3 keeps fallback risk conservative.
 - Console three views: Task 6 implements single-turn trace, batch evidence, and framework map.
+- Console student-visible preview: Task 6 defines a read-only `reply_text` preview without importing student components.
 - Boundary candidate exclusion: Task 2 sample and Task 6 score matrix cover it.
 - MOCK/LIVE: Task 2 and Task 1 Vite proxy cover it.
 
 Placeholder scan:
 
-- The plan intentionally excludes backend profile deletion because baseline marks cross-session profile backend as future scope. Student memory copy must be honest about local-only storage.
+- The plan intentionally excludes backend profile deletion because the product decision is no cross-session profile persistence. Student history copy must be honest about local-only storage.
 - The plan uses no task that says “handle errors appropriately” without specific behavior.
 
 Type consistency:

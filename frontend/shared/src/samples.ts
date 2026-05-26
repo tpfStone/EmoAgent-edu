@@ -1,5 +1,8 @@
 import type { FullChatResponse } from "./types";
 
+// 本文件所有样本（含 syn_xxxx 编号）均为全合成数据，
+// 不含任何真实未成年人对话或可识别个人信息。
+// syn_0032 为验收阶段发现的「事实编造」缺陷样本，保留用于演示 boundary 出局机制。
 export const MOCK_SAMPLES: FullChatResponse[] = [
   {
     session_id: "syn_0007",

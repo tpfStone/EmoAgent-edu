@@ -157,12 +157,60 @@
   overflow-wrap: anywhere;
 }
 
-.reply {
+.studentPreview {
+  display: grid;
+  gap: 18px;
+  margin-top: 12px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--f1) 26%, var(--line));
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--paper) 92%, var(--f1-bg)),
+    color-mix(in srgb, var(--paper) 84%, var(--f1-bg))
+  );
+  box-shadow: 0 18px 44px rgba(35, 32, 27, 0.08);
+}
+
+.previewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.previewHeader h3,
+.previewHeader p {
   margin: 0;
-  max-width: 82ch;
+}
+
+.previewHeader h3 {
   color: var(--ink);
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.previewHeader span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--f1) 40%, var(--line));
+  border-radius: 999px;
+  color: var(--f1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.studentReply {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.95;
   text-wrap: pretty;
 }
 
@@ -180,5 +228,13 @@
 
   .topline h2 {
     font-size: 24px;
+  }
+
+  .previewHeader {
+    flex-direction: column;
+  }
+
+  .previewHeader span {
+    white-space: normal;
   }
 }

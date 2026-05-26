@@ -164,9 +164,16 @@ export function SingleTurnTrace() {
           />
         </StageBlock>
 
-        <StageBlock label="final student output" tone="final" summary="final student output">
-          <p className={styles.reply}>{activeResult.reply_text}</p>
-        </StageBlock>
+        <section className={styles.studentPreview} aria-label="学生实际看到的回复">
+          <header className={styles.previewHeader}>
+            <div>
+              <p className={styles.kicker}>Student-visible reply</p>
+              <h3>学生实际看到的回复</h3>
+            </div>
+            <span>只读预览，不连接学生端状态</span>
+          </header>
+          <p className={styles.studentReply}>{activeResult.reply_text}</p>
+        </section>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./App.module.css";
 import { BreathingPanel } from "./components/BreathingPanel";
 import { Composer } from "./components/Composer";
-import { EmotionMemoryPanel } from "./components/EmotionMemoryPanel";
+import { ConversationHistoryPanel } from "./components/ConversationHistoryPanel";
 import { MessageList } from "./components/MessageList";
 import { ReferralPanel } from "./components/ReferralPanel";
 import { StarterPrompts } from "./components/StarterPrompts";
@@ -83,8 +83,8 @@ export default function App() {
     setSidebarOpen(false);
   }
 
-  function handleOpenMemory() {
-    setActiveView("memory");
+  function handleOpenHistory() {
+    setActiveView("history");
     setSidebarOpen(false);
   }
 
@@ -105,7 +105,7 @@ export default function App() {
       currentId={currentId}
       sessions={sessions}
       onOpenBreathing={handleOpenBreathing}
-      onOpenMemory={handleOpenMemory}
+      onOpenHistory={handleOpenHistory}
       onNewSession={handleNewSession}
       onSwitchSession={handleSwitchSession}
     />
@@ -136,7 +136,7 @@ export default function App() {
             sessions={sessions}
             onClose={() => setSidebarOpen(false)}
             onOpenBreathing={handleOpenBreathing}
-            onOpenMemory={handleOpenMemory}
+            onOpenHistory={handleOpenHistory}
             onNewSession={handleNewSession}
             onSwitchSession={handleSwitchSession}
           />
@@ -182,8 +182,8 @@ export default function App() {
             </>
           ) : (
             <section className={styles.toolView} aria-label="辅助视图">
-              {activeView === "memory" ? (
-                <EmotionMemoryPanel
+              {activeView === "history" ? (
+                <ConversationHistoryPanel
                   sessions={sessions}
                   onClearSessions={handleClearSessions}
                 />

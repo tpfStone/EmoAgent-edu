@@ -21,10 +21,16 @@ describe("fetchStudentChat", () => {
     expect(view).not.toHaveProperty("failure_reason");
   });
 
-  it("returns the red crisis sample for crisis keywords in mock mode", async () => {
+  it.each([
+    "我最近真的不想活了。",
+    "我不想存在了。",
+    "我想直接消失。",
+    "我想结束这一切。",
+    "我觉得活着没意思。",
+  ])("returns the red crisis sample for mock crisis wording: %s", async (message) => {
     const view = await fetchStudentChat({
       session_id: "student-session",
-      current_message: "我最近真的不想活了。",
+      current_message: message,
     });
 
     expect(view.risk_level).toBe("red");
