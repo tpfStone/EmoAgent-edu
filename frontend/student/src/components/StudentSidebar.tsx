@@ -1,12 +1,16 @@
 import type { SessionRecord } from "../hooks/useStudentSessions";
 import styles from "./StudentSidebar.module.css";
 
+export type StudentMainView = "chat" | "memory" | "breathing";
+
 interface StudentSidebarProps {
+  activeView: StudentMainView;
   className?: string;
   currentId: string;
   sessions: SessionRecord[];
-  onClearSessions: () => void;
   onClose?: () => void;
+  onOpenBreathing: () => void;
+  onOpenMemory: () => void;
   onNewSession: () => void;
   onSwitchSession: (sessionId: string) => void;
 }
@@ -29,20 +33,22 @@ function preview(session: SessionRecord): string {
 }
 
 export function StudentSidebar({
+  activeView,
   className,
   currentId,
   sessions,
-  onClearSessions,
   onClose,
+  onOpenBreathing,
+  onOpenMemory,
   onNewSession,
   onSwitchSession,
 }: StudentSidebarProps) {
   return (
     <aside className={`${styles.sidebar} ${className ?? ""}`} aria-label="会话列表">
       <div className={styles.header}>
-        <div>
-          <p>EmoAgent</p>
-          <strong>学生空间</strong>
+        <div className={styles.brand}>
+          <span className={styles.brandDot} />
+          <strong>EmoAgent</strong>
         </div>
         {onClose ? (
           <button className={styles.textButton} type="button" onClick={onClose}>
@@ -52,12 +58,15 @@ export function StudentSidebar({
       </div>
 
       <button className={styles.primaryButton} type="button" onClick={onNewSession}>
-        新对话
+        <span aria-hidden="true">+</span>
+        开启新的对话
       </button>
 
+      <div className={styles.sectionLabel}>最近聊过</div>
+
       <div className={styles.sessionList} aria-label="本地会话">
-        {sessions.map((session) => {
-          const active = session.id === currentId;
+        {sessions.map((session, index) => {
+          const active = activeView === "chat" && session.id === currentId;
 
           return (
             <button
@@ -69,19 +78,40 @@ export function StudentSidebar({
               aria-current={active ? "true" : undefined}
               onClick={() => onSwitchSession(session.id)}
             >
+              <span className={`${styles.sessionDot} ${styles[`dot${index % 4}`]}`} />
               <span className={styles.sessionTitle}>{session.title}</span>
-              <span className={styles.sessionPreview}>{preview(session)}</span>
               <span className={styles.sessionTime}>
-                {formatter.format(session.updatedAt)}
+                {session.messages.length > 0
+                  ? formatter.format(session.updatedAt)
+                  : preview(session)}
               </span>
             </button>
           );
         })}
       </div>
 
-      <button className={styles.clearButton} type="button" onClick={onClearSessions}>
-        清空本地记忆
-      </button>
+      <nav className={styles.toolList} aria-label="学生工具">
+        <button
+          className={`${styles.toolButton} ${
+            activeView === "memory" ? styles.toolButtonActive : ""
+          }`}
+          type="button"
+          onClick={onOpenMemory}
+        >
+          <span className={styles.toolDot} />
+          <span>我的情绪轨迹</span>
+        </button>
+        <button
+          className={`${styles.toolButton} ${
+            activeView === "breathing" ? styles.toolButtonActive : ""
+          }`}
+          type="button"
+          onClick={onOpenBreathing}
+        >
+          <span className={styles.toolRing} />
+          <span>静一静 · 呼吸</span>
+        </button>
+      </nav>
     </aside>
   );
 }

@@ -43,18 +43,19 @@ export function Composer({
         aria-label="输入消息"
         className={styles.input}
         disabled={disabled || loading}
-        rows={2}
+        rows={1}
         value={value}
-        placeholder="慢慢说，我会听。"
+        placeholder="想说点什么..."
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
       />
       <button
+        aria-label={loading ? "正在回应" : "发送"}
         className={styles.sendButton}
         disabled={disabled || loading || value.trim().length === 0}
         type="submit"
       >
-        {loading ? "回应中" : "发送"}
+        <span aria-hidden="true">{loading ? "..." : "↑"}</span>
       </button>
     </form>
   );

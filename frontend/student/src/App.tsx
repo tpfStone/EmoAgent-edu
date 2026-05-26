@@ -6,14 +6,16 @@ import { EmotionMemoryPanel } from "./components/EmotionMemoryPanel";
 import { MessageList } from "./components/MessageList";
 import { ReferralPanel } from "./components/ReferralPanel";
 import { StarterPrompts } from "./components/StarterPrompts";
-import { StudentSidebar } from "./components/StudentSidebar";
+import {
+  StudentSidebar,
+  type StudentMainView,
+} from "./components/StudentSidebar";
 import { useStudentChat } from "./hooks/useStudentChat";
 import { useStudentSessions } from "./hooks/useStudentSessions";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [memoryOpen, setMemoryOpen] = useState(false);
-  const [breathingOpen, setBreathingOpen] = useState(false);
+  const [activeView, setActiveView] = useState<StudentMainView>("chat");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const {
     sessions,
@@ -39,7 +41,7 @@ export default function App() {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [currentSession?.messages.length]);
+  }, [currentSession?.messages.length, activeView]);
 
   async function handleSend(text: string) {
     const trimmed = text.trim();
@@ -65,6 +67,7 @@ export default function App() {
     const session = newSession();
     activeSessionIdRef.current = session.id;
     resetReferral();
+    setActiveView("chat");
     setSidebarOpen(false);
   }
 
@@ -75,6 +78,16 @@ export default function App() {
     setSidebarOpen(false);
   }
 
+  function handleOpenBreathing() {
+    setActiveView("breathing");
+    setSidebarOpen(false);
+  }
+
+  function handleOpenMemory() {
+    setActiveView("memory");
+    setSidebarOpen(false);
+  }
+
   function handleSwitchSession(sessionId: string) {
     if (!sessions.some((session) => session.id === sessionId)) {
       return;
@@ -82,8 +95,21 @@ export default function App() {
 
     activeSessionIdRef.current = sessionId;
     switchSession(sessionId);
+    setActiveView("chat");
     setSidebarOpen(false);
   }
+
+  const sidebar = (
+    <StudentSidebar
+      activeView={activeView}
+      currentId={currentId}
+      sessions={sessions}
+      onOpenBreathing={handleOpenBreathing}
+      onOpenMemory={handleOpenMemory}
+      onNewSession={handleNewSession}
+      onSwitchSession={handleSwitchSession}
+    />
+  );
 
   return (
     <div className={styles.app}>
@@ -104,11 +130,13 @@ export default function App() {
             onClick={() => setSidebarOpen(false)}
           />
           <StudentSidebar
+            activeView={activeView}
             className={styles.mobileSidebar}
             currentId={currentId}
             sessions={sessions}
-            onClearSessions={handleClearSessions}
             onClose={() => setSidebarOpen(false)}
+            onOpenBreathing={handleOpenBreathing}
+            onOpenMemory={handleOpenMemory}
             onNewSession={handleNewSession}
             onSwitchSession={handleSwitchSession}
           />
@@ -116,88 +144,54 @@ export default function App() {
       ) : null}
 
       <div className={styles.shell}>
-        <StudentSidebar
-          className={styles.desktopSidebar}
-          currentId={currentId}
-          sessions={sessions}
-          onClearSessions={handleClearSessions}
-          onNewSession={handleNewSession}
-          onSwitchSession={handleSwitchSession}
-        />
+        <div className={styles.desktopSidebar}>{sidebar}</div>
 
         <main className={styles.chatColumn}>
           <header className={styles.topBar}>
-            <div className={styles.sessionMeta}>
-              <span>学生对话</span>
-              <strong>{currentSession?.title ?? "新的对话"}</strong>
-            </div>
-            <div className={styles.utilityControls} aria-label="辅助工具">
-              <button
-                className={`${styles.utilityButton} ${
-                  memoryOpen ? styles.utilityButtonActive : ""
-                }`}
-                type="button"
-                onClick={() => setMemoryOpen((open) => !open)}
-              >
-                情绪轨迹
-              </button>
-              <button
-                className={`${styles.utilityButton} ${
-                  breathingOpen ? styles.utilityButtonActive : ""
-                }`}
-                type="button"
-                onClick={() => setBreathingOpen((open) => !open)}
-              >
-                呼吸
-              </button>
-            </div>
+            <p>你可以慢慢说，我会认真听</p>
           </header>
 
-          {(memoryOpen || breathingOpen) && (
-            <div className={styles.mobilePanels}>
-              {memoryOpen ? (
+          {activeView === "chat" ? (
+            <>
+              <div className={styles.chatScroll} ref={scrollRef}>
+                {hasMessages ? (
+                  <MessageList messages={messages} />
+                ) : (
+                  <section className={styles.openingState} aria-label="开始对话">
+                    <div className={styles.openingLabel}>
+                      <span className={styles.openingDot} />
+                      <strong>EmoAgent</strong>
+                    </div>
+                    <p className={styles.openingText}>
+                      嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。
+                    </p>
+                  </section>
+                )}
+              </div>
+
+              <div className={styles.composerArea}>
+                {!hasMessages && !referralLocked ? (
+                  <StarterPrompts disabled={loading} onPick={handlePrompt} />
+                ) : null}
+                {referralLocked ? (
+                  <ReferralPanel riskLevel={riskLevel} />
+                ) : (
+                  <Composer disabled={loading} loading={loading} onSend={handleSend} />
+                )}
+              </div>
+            </>
+          ) : (
+            <section className={styles.toolView} aria-label="辅助视图">
+              {activeView === "memory" ? (
                 <EmotionMemoryPanel
                   sessions={sessions}
                   onClearSessions={handleClearSessions}
                 />
               ) : null}
-              {breathingOpen ? <BreathingPanel /> : null}
-            </div>
+              {activeView === "breathing" ? <BreathingPanel /> : null}
+            </section>
           )}
-
-          <div className={styles.chatScroll} ref={scrollRef}>
-            {hasMessages ? (
-              <MessageList messages={messages} />
-            ) : (
-              <section className={styles.emptyState} aria-label="开始对话">
-                <BreathingPanel variant="inline" />
-                <div className={styles.emptyCopy}>
-                  <h1>我在这里听你说</h1>
-                  <p>可以从一句很小的话开始，不需要整理好再说。</p>
-                </div>
-                <StarterPrompts disabled={loading} onPick={handlePrompt} />
-              </section>
-            )}
-          </div>
-
-          <div className={styles.composerArea}>
-            {referralLocked ? (
-              <ReferralPanel riskLevel={riskLevel} />
-            ) : (
-              <Composer disabled={loading} loading={loading} onSend={handleSend} />
-            )}
-          </div>
         </main>
-
-        <aside className={styles.sidePanels} aria-label="辅助面板">
-          {memoryOpen ? (
-            <EmotionMemoryPanel
-              sessions={sessions}
-              onClearSessions={handleClearSessions}
-            />
-          ) : null}
-          {breathingOpen ? <BreathingPanel /> : null}
-        </aside>
       </div>
     </div>
   );
