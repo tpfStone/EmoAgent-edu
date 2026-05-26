@@ -6,6 +6,7 @@
     "dev:console": "pnpm --filter @emoedu/console dev",
     "build:student": "pnpm --filter @emoedu/student build",
     "build:console": "pnpm --filter @emoedu/console build",
+    "build:pages": "node scripts/build-pages.mjs",
     "build": "pnpm --filter @emoedu/student build && pnpm --filter @emoedu/console build",
     "typecheck": "pnpm --filter @emoedu/shared typecheck && pnpm --filter @emoedu/student typecheck && pnpm --filter @emoedu/console typecheck",
     "test": "pnpm -r --if-present test"

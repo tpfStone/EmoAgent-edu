@@ -45,6 +45,7 @@ frontend/console/node_modules/
 frontend/shared/node_modules/
 frontend/student/dist/
 frontend/console/dist/
+frontend/dist-pages/
 frontend/**/.env.local
 *.tsbuildinfo
 

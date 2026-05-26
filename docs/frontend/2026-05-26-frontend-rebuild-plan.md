@@ -765,8 +765,8 @@ git commit -m "feat: add student app foundation"
 - Create: `frontend/student/src/components/Composer.module.css`
 - Create: `frontend/student/src/components/BreathingPanel.tsx`
 - Create: `frontend/student/src/components/BreathingPanel.module.css`
-- Create: `frontend/student/src/components/ConversationHistoryPanel.tsx`
-- Create: `frontend/student/src/components/ConversationHistoryPanel.module.css`
+- Create: `frontend/student/src/components/RecordManagementPanel.tsx`
+- Create: `frontend/student/src/components/RecordManagementPanel.module.css`
 - Create: `frontend/student/src/components/ReferralPanel.tsx`
 - Create: `frontend/student/src/components/ReferralPanel.module.css`
 
@@ -777,15 +777,16 @@ git commit -m "feat: add student app foundation"
 - A full-height two-column shell aligned with the provided reference image: a warm left sidebar and an unframed main conversation surface.
 - A mobile drawer trigger for the same sidebar content.
 - A quiet centered top title: `你可以慢慢说，我会认真听`.
-- No top utility controls. `我聊过的` and `静一静 · 呼吸` must not appear as chat-header buttons.
-- A single main-view state: `activeView: 'chat' | 'history' | 'breathing'`.
+- No top utility controls. `整理记录` and `静一静 · 呼吸` must not appear as chat-header buttons.
+- A single main-view state: `activeView: 'chat' | 'records' | 'breathing'`.
 - In `chat`, render either `MessageList` or the opening agent message:
   `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`
 - The chat opening state must not render a static breathing/presence indicator. This avoids visual overlap with the breathing tool.
-- The sidebar bottom tools open independent main views:
-  - `我聊过的` -> `ConversationHistoryPanel`
+- The sidebar separates history lookup from record management:
+  - `最近聊过` only lists sessions for quickly returning to a conversation.
+  - `整理记录` stays in the bottom tool area and opens `RecordManagementPanel`.
   - `静一静 · 呼吸` -> `BreathingPanel`
-- `history` and `breathing` replace the chat content area. They must not layer above chat, and they must not show the composer.
+- `records` and `breathing` replace the chat content area. They must not layer above chat, and they must not show the composer.
 - Composer unless `referralLocked`; `ReferralPanel` when locked.
 - New session and session switching both return to `activeView === 'chat'`.
 
@@ -841,17 +842,17 @@ const referral = {
 
 Render `120` and `110` only when `riskLevel === 'red'`. The panel replaces the composer and does not duplicate the last AI reply.
 
-- [ ] **Step 5: Implement local conversation history panel**
+- [ ] **Step 5: Implement local record management panel**
 
 The panel text must say:
 
 ```text
-这里是你在这台设备上聊过的话题，方便你回到刚才的对话。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。
+这里只整理这台设备上的聊天记录，方便你回到刚才的话题。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。
 ```
 
 The `让我忘记` button clears local student sessions through the session hook. It must not show an alert claiming a backend deletion happened.
 
-The sidebar must not include a second destructive memory action such as `清空本地记忆`. The only destructive memory action is `让我忘记` inside `ConversationHistoryPanel`. Do not use `情绪轨迹` / `我的情绪轨迹` in student UI because that implies cross-session emotion tracking.
+The sidebar must not include a second destructive memory action such as `清空本地记忆`. The only destructive memory action is `让我忘记` inside `RecordManagementPanel`. Do not use `情绪轨迹` / `我的情绪轨迹` / `我聊过的` in student UI because those labels imply either cross-session emotion tracking or duplicate the `最近聊过` session list.
 
 - [ ] **Step 6: Implement breathing panel**
 
@@ -874,7 +875,8 @@ Create `frontend/student/src/App.test.tsx` and add tests proving:
 
 - The initial chat screen renders `你可以慢慢说，我会认真听` and the opening agent message.
 - The initial chat screen does not render `嗯，我在。`, `吸气四秒，呼气四秒。`, or a `呼吸练习` region.
-- Clicking `我聊过的` opens local conversation history as a separate main view, shows `让我忘记`, and removes the message textbox.
+- The initial sidebar shows `最近聊过` as the quick session list and `整理记录` as a bottom tool.
+- Clicking `整理记录` opens local record management as a separate main view, shows `让我忘记`, and removes the message textbox.
 - Clicking `静一静 · 呼吸` opens breathing as a separate main view, renders breathing copy once, removes the opening chat message, and removes the message textbox.
 
 - [ ] **Step 7: Verify student behavior manually**
@@ -891,9 +893,9 @@ Expected:
 - Initial chat shows `你可以慢慢说，我会认真听`.
 - Initial chat shows `嗨，我在这儿。今天有什么想说的，随便聊聊就好，不用着急。`.
 - Initial chat does not show the breathing panel or static breathing/presence indicator.
-- `我聊过的` and `静一静 · 呼吸` are sidebar tools, not top-bar buttons.
+- `整理记录` and `静一静 · 呼吸` are sidebar tools, not top-bar buttons.
 - Clicking `静一静 · 呼吸` replaces chat with the breathing view.
-- Clicking `我聊过的` replaces chat with the local conversation history view.
+- Clicking `整理记录` replaces chat with the local record management view.
 - Clicking starter prompt sends it and receives a mock reply.
 - Crisis sample can be triggered by sending `我最近真的不想活了，生活没有任何意义。`.
 - Crisis state locks the composer and shows hardcoded telephone links.

@@ -1,7 +1,7 @@
 import type { SessionRecord } from "../hooks/useStudentSessions";
 import styles from "./StudentSidebar.module.css";
 
-export type StudentMainView = "chat" | "history" | "breathing";
+export type StudentMainView = "chat" | "records" | "breathing";
 
 interface StudentSidebarProps {
   activeView: StudentMainView;
@@ -10,7 +10,7 @@ interface StudentSidebarProps {
   sessions: SessionRecord[];
   onClose?: () => void;
   onOpenBreathing: () => void;
-  onOpenHistory: () => void;
+  onOpenRecords: () => void;
   onNewSession: () => void;
   onSwitchSession: (sessionId: string) => void;
 }
@@ -39,7 +39,7 @@ export function StudentSidebar({
   sessions,
   onClose,
   onOpenBreathing,
-  onOpenHistory,
+  onOpenRecords,
   onNewSession,
   onSwitchSession,
 }: StudentSidebarProps) {
@@ -93,13 +93,13 @@ export function StudentSidebar({
       <nav className={styles.toolList} aria-label="学生工具">
         <button
           className={`${styles.toolButton} ${
-            activeView === "history" ? styles.toolButtonActive : ""
+            activeView === "records" ? styles.toolButtonActive : ""
           }`}
           type="button"
-          onClick={onOpenHistory}
+          onClick={onOpenRecords}
         >
           <span className={styles.toolDot} />
-          <span>我聊过的</span>
+          <span>整理记录</span>
         </button>
         <button
           className={`${styles.toolButton} ${

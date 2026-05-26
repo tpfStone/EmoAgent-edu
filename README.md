@@ -56,10 +56,15 @@ pnpm --dir frontend dev:student
 pnpm --dir frontend dev:console
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
+pnpm --dir frontend build:pages
 ```
 
 Student app: `http://localhost:5173`  
 Research console: `http://localhost:5174`
+
+GitHub Pages mock demo and local live instructions:
+
+- `docs/frontend/github-pages-mock-local-live.md`
 
 ## Documents
 

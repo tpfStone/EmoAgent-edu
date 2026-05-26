@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./App.module.css";
 import { BreathingPanel } from "./components/BreathingPanel";
 import { Composer } from "./components/Composer";
-import { ConversationHistoryPanel } from "./components/ConversationHistoryPanel";
 import { MessageList } from "./components/MessageList";
+import { RecordManagementPanel } from "./components/RecordManagementPanel";
 import { ReferralPanel } from "./components/ReferralPanel";
 import { StarterPrompts } from "./components/StarterPrompts";
 import {
@@ -83,8 +83,8 @@ export default function App() {
     setSidebarOpen(false);
   }
 
-  function handleOpenHistory() {
-    setActiveView("history");
+  function handleOpenRecords() {
+    setActiveView("records");
     setSidebarOpen(false);
   }
 
@@ -105,7 +105,7 @@ export default function App() {
       currentId={currentId}
       sessions={sessions}
       onOpenBreathing={handleOpenBreathing}
-      onOpenHistory={handleOpenHistory}
+      onOpenRecords={handleOpenRecords}
       onNewSession={handleNewSession}
       onSwitchSession={handleSwitchSession}
     />
@@ -136,7 +136,7 @@ export default function App() {
             sessions={sessions}
             onClose={() => setSidebarOpen(false)}
             onOpenBreathing={handleOpenBreathing}
-            onOpenHistory={handleOpenHistory}
+            onOpenRecords={handleOpenRecords}
             onNewSession={handleNewSession}
             onSwitchSession={handleSwitchSession}
           />
@@ -182,8 +182,8 @@ export default function App() {
             </>
           ) : (
             <section className={styles.toolView} aria-label="辅助视图">
-              {activeView === "history" ? (
-                <ConversationHistoryPanel
+              {activeView === "records" ? (
+                <RecordManagementPanel
                   sessions={sessions}
                   onClearSessions={handleClearSessions}
                 />

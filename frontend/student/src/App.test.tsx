@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
 
-const localHistoryNotice =
-  '这里是你在这台设备上聊过的话题，方便你回到刚才的对话。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
+const localRecordNotice =
+  '这里只整理这台设备上的聊天记录，方便你回到刚才的话题。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
 const breathingCopy = "吸气四秒，呼气四秒。";
 
 describe("student screenshot-style information architecture", () => {
@@ -28,15 +28,19 @@ describe("student screenshot-style information architecture", () => {
     expect(screen.getByRole("textbox", { name: "输入消息" })).toBeTruthy();
   });
 
-  it("uses local conversation history as the only destructive memory action", () => {
+  it("uses record management as the only destructive memory action", () => {
     render(<App />);
 
+    expect(screen.getByText("最近聊过")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "整理记录" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "清空本地记忆" })).toBeNull();
     expect(screen.queryByRole("button", { name: "我的情绪轨迹" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "我聊过的" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "我聊过的" }));
+    fireEvent.click(screen.getByRole("button", { name: "整理记录" }));
 
-    expect(screen.getByText(localHistoryNotice)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "整理记录" })).toBeTruthy();
+    expect(screen.getByText(localRecordNotice)).toBeTruthy();
     expect(screen.getByRole("button", { name: "让我忘记" })).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "输入消息" })).toBeNull();
   });

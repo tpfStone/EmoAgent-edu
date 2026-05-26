@@ -1,13 +1,13 @@
 import type { SessionRecord } from "../hooks/useStudentSessions";
-import styles from "./ConversationHistoryPanel.module.css";
+import styles from "./RecordManagementPanel.module.css";
 
-interface ConversationHistoryPanelProps {
+interface RecordManagementPanelProps {
   sessions: SessionRecord[];
   onClearSessions: () => void;
 }
 
 const notice =
-  '这里是你在这台设备上聊过的话题，方便你回到刚才的对话。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
+  '这里只整理这台设备上的聊天记录，方便你回到刚才的话题。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
 
 function summarize(session: SessionRecord): string {
   const latest = session.messages.at(-1);
@@ -20,17 +20,17 @@ function summarize(session: SessionRecord): string {
   return text.length > 48 ? `${text.slice(0, 48)}...` : text;
 }
 
-export function ConversationHistoryPanel({
+export function RecordManagementPanel({
   sessions,
   onClearSessions,
-}: ConversationHistoryPanelProps) {
+}: RecordManagementPanelProps) {
   const storedSessions = sessions.filter((session) => session.messages.length > 0);
 
   return (
-    <section className={styles.panel} aria-label="我聊过的">
+    <section className={styles.panel} aria-label="整理记录">
       <div className={styles.header}>
         <span className={styles.dot} />
-        <strong>我聊过的</strong>
+        <h2>整理记录</h2>
       </div>
       <p className={styles.notice}>{notice}</p>
 
