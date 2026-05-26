@@ -4,6 +4,20 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./student": {
+      "types": "./src/student.ts",
+      "default": "./src/student.ts"
+    },
+    "./console": {
+      "types": "./src/console.ts",
+      "default": "./src/console.ts"
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
