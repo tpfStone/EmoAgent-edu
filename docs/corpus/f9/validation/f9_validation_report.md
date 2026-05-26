@@ -10,13 +10,15 @@
 
 ## Gate Decision
 
-- decision: FAIL
+- decision: PASS
 - old_candidate_expectation_pass: 10/10 (门槛: >= 8/10)
 - old_candidate_ER_IP_2_2: 2/10 (上限: <= 2/10)
-- rerun_ER_2: 22/40 (上限: <= 32/40)
-- rerun_IP_2: 22/40 (上限: <= 32/40)
-- generated_detected_flags: 1 (门槛: 0)
-- rerun_detected_flags: 1 (门槛: 0)
+- rerun_ER_2: 31/40 (上限: <= 32/40)
+- rerun_IP_2: 31/40 (上限: <= 32/40)
+- generated_detected_flags: 0 (门槛: 0)
+- rerun_detected_flags: 0 (门槛: 0)
+- generated_global_quality_flagged_rows: 0/20 (上限: <= 2/20)
+- rerun_global_quality_flagged_rows: 0/40 (上限: <= 4/40)
 - generator_fallback_rows: 0 (门槛: 0)
 
 ## Automatic Gate Criteria
@@ -26,20 +28,21 @@
 - 重跑样本 ER=2 与 IP=2 的比例都不超过 80%，避免接近满分饱和。
 - F4 rationale 若识别模板化、第三方解释、事实补全、强行重构，分数必须实际降下来。
 - F3 golden 与重跑样本不得出现检测到的第三方事实/动机补全等 regression flags。
+- F3 全局品质化总结探针在 golden generated rows 中最多 2/20，在 rerun selected rows 中最多 4/40。
+- 样本级 hard regression flags 与全局 quality probes 分开统计；hard flags 必须为 0。
 - 生成器不得 fallback。
 
 ## Blocking Reasons
 
-- F3 golden 检测到 1 条 flagged rows，需清除第三方事实/动机补全等残留。
-- 重跑样本检测到 1 条 flagged rows，不应进入正式人工 F9。
+- 无；自动准入通过，可进入人工 F9 准备。
 
 ## Golden Generated Candidates
 
 - generated_candidate_rows: 20
-- f3_regression_pass_distribution: {'true': 19, 'false': 1}
-- rows_with_detected_flags: 1
+- f3_regression_pass_distribution: {'true': 20}
+- rows_with_detected_flags: 0
 - ER/IP_all_2: False
-- F4_distribution: {'ER': {'1': 9, '2': 11}, 'IP': {'1': 10, '2': 10}, 'EX': {'0': 16, '1': 3, '2': 1}}
+- F4_distribution: {'ER': {'2': 18, '1': 2}, 'IP': {'2': 19, '1': 1}, 'EX': {'0': 10, '2': 7, '1': 3}}
 
 ## Existing Bad Candidate F4 Re-score
 
@@ -54,19 +57,17 @@
 - blind_annotation_path: `docs\corpus\f9\validation\rerun\f9_rerun_blind_annotation.csv`
 - f4_holdout_path: `docs\corpus\f9\validation\rerun\f9_rerun_f4_scores_holdout.csv`
 - rerun_scores_path: `docs\corpus\f9\validation\rerun\f9_rerun_selected_scores.csv`
-- f3_detected_flags_in_selected_rows: 1
+- low_score_review_queue_path: `docs\corpus\f9\validation\rerun\f9_low_score_review_queue.csv`
+- low_score_review_queue_rows: 3
+- f3_detected_flags_in_selected_rows: 0
 - generator_fallback_rows: 0
 - ER/IP_all_2: False
-- F4_distribution: {'ER': {'2': 22, '1': 18}, 'IP': {'2': 22, '1': 18}, 'EX': {'1': 9, '0': 26, '2': 5}}
+- F4_distribution: {'ER': {'2': 31, '1': 9}, 'IP': {'2': 31, '1': 9}, 'EX': {'2': 14, '0': 21, '1': 5}}
 
-## Generated Flagged Rows
+## Manual Low-Score Review Queue
 
-| sample_no | candidate_id | flags |
-|---:|---|---|
-| 25 | c2 | contains:说明你 |
-
-## F9 Rerun Selected Flagged Rows
-
-| sample_no | flags |
-|---:|---|
-| 25 | contains:说明你 |
+| sample_no | candidate_id | F4_ER | F4_IP | F4_EX |
+|---:|---|---:|---:|---:|
+| 19 | c2 | 1 | 1 | 0 |
+| 25 | c2 | 1 | 1 | 1 |
+| 36 | c1 | 1 | 1 | 0 |

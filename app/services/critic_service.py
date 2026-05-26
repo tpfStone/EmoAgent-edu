@@ -1,4 +1,5 @@
 import json
+import re
 from statistics import median
 
 from app.config import Settings
@@ -15,6 +16,18 @@ from app.services.llm_client import LLMClientProtocol
 
 CRITIC_FALLBACK_MESSAGE = "所有候选回应均未通过边界检查，请转人工复核。"
 CASEL_TOTAL_WEIGHT = 0.5
+INTERNAL_PROMPT_LEAK_REASON = "internal_prompt_leak"
+PROMPT_LEAK_MARKERS = (
+    "如果孩子想继续",
+    "可以追问",
+    "建议回复",
+    "可继续引导",
+    "候选回应",
+    "候选回复",
+)
+BRACKETED_PROMPT_LEAK_RE = re.compile(
+    r"[（(][^）)]*(先接住|再递|新视角|共情|提问|承接|回应|孩子|取向|策略|候选|追问|建议回复)[^）)]*[）)]"
+)
 CASEL_RUBRIC = {
     "自我觉察引导": "是否帮孩子识别、命名情绪。0=无视或否定情绪；1=笼统提及；2=精准命名并确认具体情绪。",
     "自我管理引导": "是否引导可行的情绪调节。0=教孩子压抑/否认；1=泛泛建议；2=适龄、有据的调节策略。",
@@ -51,6 +64,7 @@ F9_RELIABILITY_SCORING_GUARDRAILS = """
 2. 无依据动机推断、人格结论或因果解释不能算 IP=2。
 3. 不要因为出现"我理解""换谁都会""说明你很在乎""挺难得""不用急"就自动给 ER/IP 高分。
 4. 如果 rationale 识别到模板化、第三方解释、事实补全、强行重构或成人 coaching，分数必须体现对应降分。
+5. ER/IP 边缘判分一致性：只是准确描述、分析或复述情绪时默认落在 1；ER=2 需要额外满足陪伴感，IP=2 需要额外满足未明说洞察。
 """
 
 F9_AUDIT_TAGS = {
@@ -126,6 +140,18 @@ class CriticService:
     async def _score_candidate(
         self, request: CriticEvaluateRequest, candidate: CandidateInput
     ) -> CandidateScore:
+        prompt_leak_reason = self._internal_prompt_leak_reason(candidate.text)
+        if prompt_leak_reason:
+            return CandidateScore(
+                candidate_id=candidate.candidate_id,
+                epitome=EpitomeScore(ER=0, IP=0, EX=0),
+                casel={},
+                boundary_flag=True,
+                boundary_reason=prompt_leak_reason,
+                weighted_total=0.0,
+                rationale=prompt_leak_reason,
+            )
+
         samples = []
         for _ in range(self.settings.CRITIC_SAMPLE_COUNT):
             samples.append(await self._score_once(request, candidate))
@@ -182,8 +208,8 @@ class CriticService:
         return f"""你是一个情感教育系统的回应质量评估模块，面向中国初中生（12–15岁）。给定用户的倾诉和一条候选回应，你要按 EPITOME 框架为这条回应打分。你不改写回应，只打分。
 
 【EPITOME 三个维度，每维打 0 / 1 / 2】
-- ER 情绪反应：回应是否表达了温暖、关切、同情。0=冷漠无关切；1=礼貌但泛泛（如"别难过"）；2=具体真诚地表达关切，让对方感到被在乎。
-- IP 解释：回应是否传达"理解了对方的处境和感受"。0=误解或答非所问；1=只复述表面；2=准确点出对方没明说的情绪或担忧。
+- ER 情绪反应：回应是否表达温暖、关切，并让孩子读完有"有人在陪我、在乎我"的感觉。0=冷漠无关切；1=准确说出、分析或深化了孩子的情绪，但读起来像旁观者在描述他的状态，没有真正陪伴感（只换词复述情绪、只点出情绪就转去分析或提问，都属于这一档）；2=既贴合地接住情绪，又让孩子感到有人陪着他、关心他。判断方法：把这句话读给一个正难受的孩子，他会觉得"这人懂我，而且在乎我"给2，还是"这人说得对，但跟我没关系"给1。
+- IP 解释：回应是否传达"理解了对方的处境和感受"，且点出的是对方没有明说的那层。0=误解或答非所问；1=只复述对方已经明说的事实或情绪（对方已说"气死了""是不是我哪里不好"，回应只是换词重述），或只停留在表面；2=准确点出孩子没有明说、但藏在话里的情绪或担忧。
 - EX 探索：回应是否邀请对方进一步表达。0=关闭对话或转移；1=没有主动探索；2=用开放式问题温和引导对方多说（对初中生要温和，不要像审问）。
 
 【打分原则】
@@ -290,6 +316,14 @@ class CriticService:
         if suffix in rationale:
             return rationale
         return f"{rationale} {suffix}".strip()
+
+    @classmethod
+    def _internal_prompt_leak_reason(cls, text: str) -> str:
+        if any(marker in text for marker in PROMPT_LEAK_MARKERS):
+            return INTERNAL_PROMPT_LEAK_REASON
+        if BRACKETED_PROMPT_LEAK_RE.search(text):
+            return INTERNAL_PROMPT_LEAK_REASON
+        return ""
 
     @classmethod
     def _apply_f9_score_caps(cls, score: dict) -> dict:

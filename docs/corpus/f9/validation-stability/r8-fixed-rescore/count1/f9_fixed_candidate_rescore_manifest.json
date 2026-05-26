@@ -1,0 +1,10 @@
+{
+  "input_scores_path": "docs\\corpus\\f9\\validation-stability\\post-erip-run-2\\rerun\\f9_rerun_selected_scores.csv",
+  "blind_path": "docs\\corpus\\f9\\baseline\\f9_blind_annotation.csv",
+  "critic_sample_count": 1,
+  "repeats": 3,
+  "run_rows": 120,
+  "summary_rows": 40,
+  "run_path": "docs\\corpus\\f9\\validation-stability\\r8-fixed-rescore\\count1\\f9_fixed_candidate_rescore_runs.csv",
+  "summary_path": "docs\\corpus\\f9\\validation-stability\\r8-fixed-rescore\\count1\\f9_fixed_candidate_rescore_summary.csv"
+}

@@ -4,7 +4,7 @@ import pytest
 
 from app.config import Settings
 from app.schemas.critic import CandidateInput, CriticEvaluateRequest
-from app.services.critic_service import CriticService
+from app.services.critic_service import CRITIC_FALLBACK_MESSAGE, CriticService
 
 
 def _candidate(candidate_id: str, text: str, orientation: str = "共情型"):
@@ -92,12 +92,7 @@ async def test_boundary_candidate_is_excluded(fake_llm_client):
 
 @pytest.mark.asyncio
 async def test_internal_prompt_leak_candidate_is_excluded(fake_llm_client):
-    llm = fake_llm_client(
-        [
-            _score(2, 2, 2, boundary=True, reason="内部提示外泄"),
-            _score(1, 1, 1),
-        ]
-    )
+    llm = fake_llm_client([_score(1, 1, 1)])
     service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
 
     response = await service.evaluate(
@@ -111,7 +106,29 @@ async def test_internal_prompt_leak_candidate_is_excluded(fake_llm_client):
 
     assert response.best_candidate_id == "c2"
     assert response.scores[0].boundary_flag is True
-    assert response.scores[0].boundary_reason == "内部提示外泄"
+    assert response.scores[0].boundary_reason == "internal_prompt_leak"
+
+
+@pytest.mark.asyncio
+async def test_prompt_stage_labels_force_boundary_without_llm(fake_llm_client):
+    llm = fake_llm_client([_score(2, 2, 2)])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [
+                _candidate(
+                    "c1",
+                    "（先接住你的场景）背了半天书被一句话浇灭，确实憋屈。（再递新视角）你有没有注意到你烦的是努力没被看见？",
+                )
+            ]
+        )
+    )
+
+    assert response.scores[0].boundary_flag is True
+    assert response.scores[0].boundary_reason == "internal_prompt_leak"
+    assert response.best_candidate_id is None
+    assert response.fallback_message == CRITIC_FALLBACK_MESSAGE
 
 
 @pytest.mark.asyncio
@@ -350,9 +367,7 @@ async def test_critic_prompt_marks_prompt_leaks_and_fabrication_as_boundaries(
     llm = fake_llm_client([_score(1, 1, 1)])
     service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
 
-    await service.evaluate(
-        _request([_candidate("c1", "如果孩子想继续，可以追问一下。")])
-    )
+    await service.evaluate(_request([_candidate("c1", "你心里那股委屈会很重。")]))
 
     prompt = llm.prompts[0]["prompt"]
     assert "内部提示外泄" in prompt
@@ -389,6 +404,11 @@ async def test_critic_prompt_contains_f9_reliability_guardrails(fake_llm_client)
     assert '例如："唯一的空档"' in prompt
     assert '例如："三科作业"' in prompt
     assert "先判定 audit_tags，再给 ER/IP/EX" in prompt
+    assert "旁观者在描述他的状态" in prompt
+    assert "有人在陪我、在乎我" in prompt
+    assert "气死了" in prompt
+    assert "是不是我哪里不好" in prompt
+    assert "孩子没有明说、但藏在话里的情绪或担忧" in prompt
 
 
 def test_f9_unsupported_fact_completion_caps_without_boundary():

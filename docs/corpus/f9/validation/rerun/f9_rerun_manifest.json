@@ -19,5 +19,7 @@
   "old_candidate_scores_path": "docs\\corpus\\f9\\validation\\golden\\f9_golden_existing_f4_scores.csv",
   "blind_annotation_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_blind_annotation.csv",
   "f4_holdout_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_f4_scores_holdout.csv",
-  "rerun_scores_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_selected_scores.csv"
+  "rerun_scores_path": "docs\\corpus\\f9\\validation\\rerun\\f9_rerun_selected_scores.csv",
+  "low_score_review_queue_path": "docs\\corpus\\f9\\validation\\rerun\\f9_low_score_review_queue.csv",
+  "low_score_review_queue_rows": 3
 }

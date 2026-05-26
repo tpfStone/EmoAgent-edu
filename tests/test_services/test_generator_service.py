@@ -88,6 +88,14 @@ async def test_generator_prompt_contains_f9_reliability_guardrails(fake_llm_clie
     assert "肯定只能落在孩子明确说出的动作、感受或表达本身" in empathic_prompt
     assert "不要把抱怨、愤怒、自责、沉默、反复确认改写成判断力、懂事、很有数或有主见" in reflective_prompt
     assert "换个角度看" not in reflective_prompt
+    assert "承接必须包含对孩子说出的那一件具体的事的复述" in empathic_prompt
+    assert "最多只能跟在具体复述后面作补充，绝不能单独充当承接" in empathic_prompt
+    assert "开头先用一句具体复述接住情绪" in reflective_prompt
+    assert "引导反思型的承接可以短，但不能空" in reflective_prompt
+    assert "一句具体复述即可" in reflective_prompt
+    assert "不要写括号式阶段标签" in reflective_prompt
+    assert "（先接住你的场景）" in reflective_prompt
+    assert "（再递新视角）" in reflective_prompt
 
 
 @pytest.mark.asyncio
