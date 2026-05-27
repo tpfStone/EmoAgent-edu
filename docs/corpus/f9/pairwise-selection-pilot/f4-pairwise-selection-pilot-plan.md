@@ -8,6 +8,8 @@
 
 2026-05-27 追加：10 对 smoke 已完成，结论是工具链可用但不足以判断 pairwise 优劣。下一步仍是 Phase A 修正重跑，不进入 Phase B；执行口径见 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`。
 
+2026-05-28 追加：Phase A rerun 已完成候选生成、pairwise judge 与正式 3-sample pointwise baseline；主 rerun 产物见 `docs/corpus/f9/pairwise-selection-pilot/inputs/phase-a-rerun/`、`runs/phase-a-rerun/`、`annotations/phase-a-rerun/`。当前 24 对主集场景均衡（亲子/同伴/学业各 8），pairwise stable 为 `14/24`、无 invalid，pointwise baseline 为 `24/24` 且 `pointwise_sample_count=3`。人工 A/B 标注尚未完成，因此还没有 go/no-go 结论，下一步是填写 `annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv` 后运行 eval。
+
 Claude 对 Codex 五条评审意见的回应合理，全部采纳：
 
 1. **调用形态不匹配**：采纳。pairwise 是 per-pair 调用形态，不是 per-candidate prompt 的局部追加。

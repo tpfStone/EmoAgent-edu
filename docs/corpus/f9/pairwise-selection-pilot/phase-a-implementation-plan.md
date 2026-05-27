@@ -261,6 +261,8 @@
 
 下一步仍属于 Phase A，不是 Phase B。后续按 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 执行 Phase A rerun / Phase A.2：先修 F3 prompt、补 provenance、改 eval 交集口径、显式化模型，再用修复后的真实 F3 重新生成 15-20 对 human-valid 主集。
 
+2026-05-28 更新：Phase A rerun 的执行前补丁和真实产物已完成。主 rerun 现有 24 对候选，场景分布为亲子摩擦/同伴关系/学业压力各 8；pairwise judge 为 `pairwise_sample_count=3`，结果 `pairwise_stable=14/24`、invalid `0/24`；pointwise baseline 已按正式 `CRITIC_SAMPLE_COUNT=3` 跑完 24 行。当前仍未进入 Phase B，也未得到 pairwise 优劣结论；下一步是人工填写 `docs/corpus/f9/pairwise-selection-pilot/annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv` 后运行 Phase A rerun eval。
+
 ### 试点（Pilot）验收流程
 
 1. 冒烟验证通过后，将输入包扩展到 30-40 对 human-valid 样本。

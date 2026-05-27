@@ -240,3 +240,42 @@ docs/corpus/f9/pairwise-selection-pilot/
   reports/f3-model-sidecar/
 ```
 
+## 9. 当前执行进展（2026-05-28）
+
+已完成：
+- 2.1-2.5 去噪代码已实现并提交，F3 spec 已同步。
+- 已新增 Phase A rerun 候选生成脚本 `scripts/corpus/f9_pairwise_rerun_generate.py`。
+- 已完成 F3 flash/pro sidecar 候选对照产物，位于：
+  - `docs/corpus/f9/pairwise-selection-pilot/runs/f3-model-sidecar/`
+  - `docs/corpus/f9/pairwise-selection-pilot/reports/f3-model-sidecar/`
+- 已用 `deepseek-v4-flash thinking=disabled` 生成主 rerun pair package：
+  - `docs/corpus/f9/pairwise-selection-pilot/inputs/phase-a-rerun/f9_pairwise_rerun_pairs.csv`
+  - `docs/corpus/f9/pairwise-selection-pilot/annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv`
+- 已完成正式 F4 pairwise judge 与 pointwise baseline：
+  - `docs/corpus/f9/pairwise-selection-pilot/runs/phase-a-rerun/f9_pairwise_judge_summary.csv`
+  - `docs/corpus/f9/pairwise-selection-pilot/runs/phase-a-rerun/f9_pairwise_pointwise_baseline.csv`
+
+当前产物口径：
+- 主 rerun pair 数：`24`
+- 场景分布：亲子摩擦 `8`、同伴关系 `8`、学业压力 `8`
+- provenance：完整
+- fallback pair：`0`
+- 重复 `user_text`：`0`
+- pairwise judge：`pairwise_sample_count=3`，F4=`deepseek-v4-pro thinking=enabled`
+- pairwise stable：`14/24`
+- pairwise invalid：`0/24`
+- pointwise baseline：`24/24`，`pointwise_sample_count=3`
+
+当前结论：
+- Phase A rerun 的代码准备、候选生成、pairwise judge、pointwise baseline 已完成。
+- 现在仍不能判断 pairwise 是否值得继续投入，因为人工 A/B 标注尚未完成，`reports/phase-a-rerun/` 的 eval 还未生成。
+- `14/24` pairwise stable 说明本轮仍有一定不稳定样本，但无 invalid；它只是后续样本流失的预警，不是 go/no-go 结论。
+
+下一步：
+1. 人工填写 `docs/corpus/f9/pairwise-selection-pilot/annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv`。标注时只看 `user_text`、`c1_text`、`c2_text`，不要参考 pairwise、pointwise 或 F4 分数。
+2. 可选人工查看 sidecar：`docs/corpus/f9/pairwise-selection-pilot/reports/f3-model-sidecar/f3_flash_pro_sidecar_comparison.csv`，只判断 pro 是否明显优于 flash，不混入主 rerun 指标。
+3. 人工标注完成后运行 eval：
+   ```powershell
+   C:\Python313\python.exe scripts\corpus\f9_pairwise_eval.py --pairwise-summary docs\corpus\f9\pairwise-selection-pilot\runs\phase-a-rerun\f9_pairwise_judge_summary.csv --human-annotations docs\corpus\f9\pairwise-selection-pilot\annotations\phase-a-rerun\f9_pairwise_rerun_human_ab.csv --pointwise-baseline docs\corpus\f9\pairwise-selection-pilot\runs\phase-a-rerun\f9_pairwise_pointwise_baseline.csv --output-dir docs\corpus\f9\pairwise-selection-pilot\reports\phase-a-rerun
+   ```
+4. 按第 6 节 go/no-go 规则解释 eval；若 `comparison_intersection_pairs < 12`，本轮只记为 inconclusive，优先分析样本流失。
