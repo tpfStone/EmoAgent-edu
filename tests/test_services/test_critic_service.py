@@ -132,6 +132,39 @@ async def test_prompt_stage_labels_force_boundary_without_llm(fake_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_whole_response_quote_wrapping_is_format_boundary(fake_llm_client):
+    llm = fake_llm_client([_score(1, 1, 1)])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request(
+            [
+                _candidate("c1", "“你刚才说的那件事，确实让人很难受。”"),
+                _candidate("c2", "你刚才说的那件事，确实让人很难受。"),
+            ]
+        )
+    )
+
+    assert response.best_candidate_id == "c2"
+    assert response.scores[0].boundary_flag is True
+    assert response.scores[0].boundary_reason == "format_artifact"
+    assert len(llm.prompts) == 1
+
+
+@pytest.mark.asyncio
+async def test_in_sentence_quote_is_not_format_boundary(fake_llm_client):
+    llm = fake_llm_client([_score(2, 2, 1)])
+    service = CriticService(llm, None, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    response = await service.evaluate(
+        _request([_candidate("c1", "你说“我真的很难受”的时候，那股委屈我听见了。")])
+    )
+
+    assert response.scores[0].boundary_flag is False
+    assert response.scores[0].weighted_total == 5
+
+
+@pytest.mark.asyncio
 async def test_fabricated_fact_candidate_is_excluded(fake_llm_client):
     llm = fake_llm_client(
         [

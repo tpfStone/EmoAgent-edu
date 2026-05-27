@@ -5,6 +5,7 @@ import json
 import math
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -13,7 +14,11 @@ from app.schemas.critic import CandidateInput, CandidateScore, CriticEvaluateReq
 from app.schemas.generator import GeneratorGenerateRequest, GeneratorOrientation
 from app.schemas.safety import ConversationMessage
 from app.services.critic_service import CriticService
-from app.services.generator_service import GENERATOR_FALLBACK_TEXT, GeneratorService
+from app.services.generator_service import (
+    GENERATOR_FALLBACK_TEXT,
+    GeneratorService,
+    f3_prompt_bundle_hash,
+)
 from app.services.llm_client import DeepSeekLLMClient, MockLLMClient
 
 
@@ -215,6 +220,7 @@ def _make_llm_client(settings: Settings):
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.DEEPSEEK_MODEL,
+            thinking_type=settings.DEEPSEEK_THINKING,
         )
     return MockLLMClient()
 
@@ -225,6 +231,7 @@ def _make_critic_llm_client(settings: Settings):
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+            thinking_type=settings.CRITIC_DEEPSEEK_THINKING,
         )
     return MockLLMClient()
 
@@ -267,7 +274,9 @@ def _score_row(
     text: str,
     score: CandidateScore,
     source: str,
+    provenance: dict[str, str] | None = None,
 ) -> dict[str, str]:
+    provenance = provenance or {}
     sample_flags = detect_f3_regression_flags(case.sample_no, text)
     global_flags = detect_f3_global_quality_flags(text)
     return {
@@ -278,6 +287,11 @@ def _score_row(
         "orientation": orientation,
         "用户倾诉": case.user_message,
         "候选文本": text,
+        "generator_run_id": provenance.get("generator_run_id", ""),
+        "generated_at": provenance.get("generated_at", ""),
+        "generator_model": provenance.get("generator_model", ""),
+        "generator_thinking": provenance.get("generator_thinking", ""),
+        "f3_prompt_bundle_hash": provenance.get("f3_prompt_bundle_hash", ""),
         "issue_types": case.issue_types,
         "template_flags": case.template_flags,
         "detected_flags": ";".join(sample_flags),
@@ -313,6 +327,11 @@ def _score_fieldnames() -> list[str]:
         "orientation",
         "用户倾诉",
         "候选文本",
+        "generator_run_id",
+        "generated_at",
+        "generator_model",
+        "generator_thinking",
+        "f3_prompt_bundle_hash",
         "issue_types",
         "template_flags",
         "detected_flags",
@@ -363,6 +382,15 @@ async def run_validation(
 ) -> dict[str, Path]:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    generated_at = datetime.now(timezone.utc).isoformat()
+    run_id = f"f9-validation-{generated_at}"
+    generator_provenance = {
+        "generator_run_id": run_id,
+        "generated_at": generated_at,
+        "generator_model": settings.DEEPSEEK_MODEL,
+        "generator_thinking": settings.DEEPSEEK_THINKING,
+        "f3_prompt_bundle_hash": f3_prompt_bundle_hash(),
+    }
 
     generator_llm_client = _make_llm_client(settings)
     critic_llm_client = _make_critic_llm_client(settings)
@@ -390,6 +418,7 @@ async def run_validation(
                     candidate.text,
                     scores_by_id[candidate.candidate_id],
                     "generated",
+                    generator_provenance,
                 )
             )
 
@@ -458,6 +487,7 @@ async def run_validation(
                 selected.text,
                 score,
                 "f9_rerun_selected",
+                generator_provenance,
             )
         )
 
@@ -478,8 +508,13 @@ async def run_validation(
         "f9_rerun_rows": len(blind_rows),
         "llm_provider": settings.LLM_PROVIDER,
         "deepseek_model": settings.DEEPSEEK_MODEL,
+        "deepseek_thinking": settings.DEEPSEEK_THINKING,
         "critic_deepseek_model": settings.CRITIC_DEEPSEEK_MODEL,
+        "critic_deepseek_thinking": settings.CRITIC_DEEPSEEK_THINKING,
         "critic_sample_count": settings.CRITIC_SAMPLE_COUNT,
+        "generator_run_id": run_id,
+        "generated_at": generated_at,
+        "f3_prompt_bundle_hash": generator_provenance["f3_prompt_bundle_hash"],
         "generated_scores_path": str(generated_path),
         "old_candidate_scores_path": str(old_path),
         "blind_annotation_path": str(blind_output_path),
@@ -670,8 +705,11 @@ def build_report(
         "",
         f"- llm_provider: {manifest['llm_provider']}",
         f"- deepseek_model: {manifest['deepseek_model']}",
+        f"- deepseek_thinking: {manifest.get('deepseek_thinking', '')}",
         f"- critic_deepseek_model: {manifest.get('critic_deepseek_model', '')}",
+        f"- critic_deepseek_thinking: {manifest.get('critic_deepseek_thinking', '')}",
         f"- critic_sample_count: {manifest['critic_sample_count']}",
+        f"- f3_prompt_bundle_hash: {manifest.get('f3_prompt_bundle_hash', '')}",
         f"- golden_sample_nos: {manifest['golden_sample_nos']}",
         f"- f9_rerun_rows: {manifest['f9_rerun_rows']}",
         "",

@@ -149,10 +149,15 @@ def _make_pairwise_service(settings: Settings) -> CriticPairwiseService:
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+            thinking_type=settings.CRITIC_DEEPSEEK_THINKING,
         )
     else:
         llm_client = MockLLMClient()
     return CriticPairwiseService(llm_client, settings)
+
+
+def _unique_values(rows: list[dict[str, str]], column: str) -> list[str]:
+    return sorted({str(row.get(column, "")).strip() for row in rows if row.get(column)})
 
 
 async def run_pairwise_judge(
@@ -193,6 +198,16 @@ async def run_pairwise_judge(
         "input_pairs": len(pair_rows),
         "judged_pairs": len(summary_rows),
         "pairwise_sample_count": pairwise_sample_count,
+        "llm_provider": settings.LLM_PROVIDER,
+        "critic_model": settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+        "critic_thinking": settings.CRITIC_DEEPSEEK_THINKING,
+        "llm_timeout": settings.LLM_TIMEOUT,
+        "critic_temperature": settings.CRITIC_LLM_TEMPERATURE,
+        "generator_run_ids": _unique_values(pair_rows, "generator_run_id"),
+        "generated_at_values": _unique_values(pair_rows, "generated_at"),
+        "generator_models": _unique_values(pair_rows, "generator_model"),
+        "generator_thinking_values": _unique_values(pair_rows, "generator_thinking"),
+        "f3_prompt_bundle_hashes": _unique_values(pair_rows, "f3_prompt_bundle_hash"),
         "runs_path": str(run_path),
         "summary_path": str(summary_path),
     }

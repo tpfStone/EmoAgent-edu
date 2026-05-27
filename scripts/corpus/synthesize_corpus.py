@@ -122,6 +122,7 @@ def _build_llm_from_settings() -> LLMClientProtocol:
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.DEEPSEEK_MODEL,
+            thinking_type=settings.DEEPSEEK_THINKING,
         )
     return MockLLMClient()
 

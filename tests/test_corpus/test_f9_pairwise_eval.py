@@ -36,8 +36,14 @@ def _human(pair_id: str, preference: str) -> dict[str, str]:
     }
 
 
-def _pointwise(pair_id: str, winner: str) -> dict[str, str]:
-    return {"pair_id": pair_id, "pointwise_winner": winner}
+def _pointwise(
+    pair_id: str, winner: str, *, sample_count: str = "3"
+) -> dict[str, str]:
+    return {
+        "pair_id": pair_id,
+        "pointwise_winner": winner,
+        "pointwise_sample_count": sample_count,
+    }
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -77,10 +83,31 @@ def test_build_eval_rows_excludes_human_ties_and_invalid_pairwise_from_main_agre
     assert summary["critic_valid_pairs"] == 2
     assert summary["pairwise_matches"] == 1
     assert summary["critic_human_agreement"] == "0.500"
-    assert summary["pointwise_valid_pairs"] == 3
-    assert summary["pointwise_matches"] == 2
-    assert summary["pointwise_human_agreement"] == "0.667"
-    assert summary["agreement_delta_vs_pointwise"] == "-0.167"
+    assert summary["pointwise_valid_pairs"] == 2
+    assert summary["pointwise_matches"] == 1
+    assert summary["pointwise_human_agreement"] == "0.500"
+    assert summary["agreement_delta_vs_pointwise"] == "0.000"
+    assert summary["comparison_intersection_pairs"] == 2
+    assert summary["pairwise_valid_pairs_all"] == 2
+    assert summary["pointwise_valid_pairs_all"] == 3
+    assert summary["attrition_human_tie_or_invalid"] == 1
+    assert summary["attrition_pairwise_unstable_or_invalid"] == 1
+    assert summary["attrition_pointwise_invalid_or_nonformal"] == 0
+
+
+def test_eval_marks_delta_unavailable_without_formal_pointwise_baseline():
+    eval_rows = build_eval_rows(
+        pairwise_rows=[_pairwise("sample-1", "c1")],
+        human_rows=[_human("sample-1", "c1")],
+        pointwise_rows=[_pointwise("sample-1", "c2", sample_count="1")],
+    )
+    summary = summarize_eval_rows(eval_rows)
+
+    assert eval_rows[0]["main_exclusion_reason"] == "pointwise_invalid_or_nonformal"
+    assert summary["critic_valid_pairs"] == 0
+    assert summary["pointwise_valid_pairs"] == 0
+    assert summary["comparison_intersection_pairs"] == 0
+    assert summary["agreement_delta_vs_pointwise"] == "unavailable"
 
 
 def test_write_eval_outputs_writes_csv_summary_and_markdown(tmp_path):
@@ -98,3 +125,4 @@ def test_write_eval_outputs_writes_csv_summary_and_markdown(tmp_path):
     assert list(_read_csv(paths["eval"])[0].keys()) == EVAL_COLUMNS
     assert "critic_human_agreement: 1.000" in paths["report"].read_text(encoding="utf-8")
     assert "agreement_delta_vs_pointwise: 1.000" in report
+    assert "样本流失分解" in report

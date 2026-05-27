@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ BASELINE_COLUMNS = [
     "c2_boundary_flag",
     "pointwise_winner",
     "pointwise_tie",
+    "pointwise_sample_count",
 ]
 
 
@@ -51,6 +53,7 @@ def _make_critic_service(settings: Settings) -> CriticService:
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+            thinking_type=settings.CRITIC_DEEPSEEK_THINKING,
         )
     else:
         llm_client = MockLLMClient()
@@ -76,11 +79,12 @@ async def run_pointwise_baseline(
     output_path: Path,
     critic_service=None,
     settings: Settings | None = None,
-) -> Path:
+) -> dict[str, Path]:
     settings = settings or Settings()
     critic_service = critic_service or _make_critic_service(settings)
+    pair_rows = _read_csv(pair_package_path)
     rows = []
-    for pair_row in _read_csv(pair_package_path):
+    for pair_row in pair_rows:
         response = await critic_service.evaluate(
             CriticEvaluateRequest(
                 session_id=f"pointwise-{pair_row['pair_id']}",
@@ -113,9 +117,35 @@ async def run_pointwise_baseline(
                 "c2_boundary_flag": _bool_text(scores_by_id["c2"].boundary_flag),
                 "pointwise_winner": winner,
                 "pointwise_tie": _bool_text(tie),
+                "pointwise_sample_count": str(settings.CRITIC_SAMPLE_COUNT),
             }
         )
-    return _write_csv(output_path, rows)
+    baseline_path = _write_csv(output_path, rows)
+    manifest_path = output_path.with_name(f"{output_path.stem}_manifest.json")
+    manifest = {
+        "pair_package_path": str(pair_package_path),
+        "baseline_path": str(baseline_path),
+        "input_pairs": len(pair_rows),
+        "pointwise_rows": len(rows),
+        "llm_provider": settings.LLM_PROVIDER,
+        "critic_model": settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+        "critic_thinking": settings.CRITIC_DEEPSEEK_THINKING,
+        "llm_timeout": settings.LLM_TIMEOUT,
+        "critic_temperature": settings.CRITIC_LLM_TEMPERATURE,
+        "pointwise_sample_count": settings.CRITIC_SAMPLE_COUNT,
+        "f3_prompt_bundle_hashes": sorted(
+            {
+                str(row.get("f3_prompt_bundle_hash", "")).strip()
+                for row in pair_rows
+                if row.get("f3_prompt_bundle_hash")
+            }
+        ),
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return {"baseline": baseline_path, "manifest": manifest_path}
 
 
 def main() -> None:

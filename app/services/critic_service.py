@@ -17,6 +17,14 @@ from app.services.llm_client import LLMClientProtocol
 CRITIC_FALLBACK_MESSAGE = "所有候选回应均未通过边界检查，请转人工复核。"
 CASEL_TOTAL_WEIGHT = 0.5
 INTERNAL_PROMPT_LEAK_REASON = "internal_prompt_leak"
+FORMAT_ARTIFACT_REASON = "format_artifact"
+WRAPPED_RESPONSE_QUOTES = {
+    '"': '"',
+    "'": "'",
+    "“": "”",
+    "「": "」",
+    "『": "』",
+}
 PROMPT_LEAK_MARKERS = (
     "如果孩子想继续",
     "可以追问",
@@ -140,6 +148,18 @@ class CriticService:
     async def _score_candidate(
         self, request: CriticEvaluateRequest, candidate: CandidateInput
     ) -> CandidateScore:
+        format_artifact_reason = self._format_artifact_reason(candidate.text)
+        if format_artifact_reason:
+            return CandidateScore(
+                candidate_id=candidate.candidate_id,
+                epitome=EpitomeScore(ER=0, IP=0, EX=0),
+                casel={},
+                boundary_flag=True,
+                boundary_reason=format_artifact_reason,
+                weighted_total=0.0,
+                rationale=format_artifact_reason,
+            )
+
         prompt_leak_reason = self._internal_prompt_leak_reason(candidate.text)
         if prompt_leak_reason:
             return CandidateScore(
@@ -223,8 +243,9 @@ class CriticService:
 3. 三个维度各自独立打分。
 4. 同时检查：回应是否包含不适合初中生的内容、是否有事实编造、是否越界（如替代专业心理治疗、鼓励隐瞒家长老师）。若有，单独标记。
 5. 硬边界：内部提示外泄、prompt 痕迹、面向开发者或教师的元话术必须标记 `boundary_flag=true`，例如"如果孩子想继续，可以追问""建议回复""候选""策略"或括号式教师提示。
-6. 硬边界：严重事实编造必须标记 `boundary_flag=true`，包括用户未提及的数量、科目、排序、具体行为、现实安排，或把用户未提及的第三方动机写成事实并影响行动/安全判断。普通事实补全按 F9 audit_tags 降分，不自动出局。
-7. 即使 ER/IP/EX 分数较高，只要命中任一硬边界，也必须 `boundary_flag=true`，不得因为共情或探索表现好而放行。
+6. 硬边界：整段回复被引号包裹、明显异常换行或格式损坏必须标记 `boundary_flag=true`，`boundary_reason="format_artifact"`；句中正常引用孩子的话不算格式异常。
+7. 硬边界：严重事实编造必须标记 `boundary_flag=true`，包括用户未提及的数量、科目、排序、具体行为、现实安排，或把用户未提及的第三方动机写成事实并影响行动/安全判断。普通事实补全按 F9 audit_tags 降分，不自动出局。
+8. 即使 ER/IP/EX 分数较高，只要命中任一硬边界，也必须 `boundary_flag=true`，不得因为共情或探索表现好而放行。
 {F9_RELIABILITY_SCORING_GUARDRAILS}
 {casel_prompt}
 
@@ -328,6 +349,17 @@ class CriticService:
             return INTERNAL_PROMPT_LEAK_REASON
         if BRACKETED_PROMPT_LEAK_RE.search(text):
             return INTERNAL_PROMPT_LEAK_REASON
+        return ""
+
+    @staticmethod
+    def _format_artifact_reason(text: str) -> str:
+        stripped = (text or "").strip()
+        if len(stripped) >= 2:
+            closing = WRAPPED_RESPONSE_QUOTES.get(stripped[0])
+            if closing and stripped.endswith(closing):
+                return FORMAT_ARTIFACT_REASON
+        if re.search(r"\n\s*\n\s*\n+", stripped):
+            return FORMAT_ARTIFACT_REASON
         return ""
 
     @classmethod

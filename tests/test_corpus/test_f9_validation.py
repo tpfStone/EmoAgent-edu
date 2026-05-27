@@ -123,6 +123,16 @@ def test_golden_sample_order_keeps_positive_controls():
     assert GOLDEN_SAMPLE_NOS == [3, 11, 16, 19, 22, 25, 27, 31, 40, 15]
 
 
+def test_score_fieldnames_include_generator_provenance():
+    fieldnames = _score_fieldnames()
+
+    assert "generator_run_id" in fieldnames
+    assert "generated_at" in fieldnames
+    assert "generator_model" in fieldnames
+    assert "generator_thinking" in fieldnames
+    assert "f3_prompt_bundle_hash" in fieldnames
+
+
 def _report_row(
     sample_no: int,
     *,
@@ -158,7 +168,10 @@ def _report_row(
 def _manifest(row_count: int = 40) -> dict:
     return {
         "llm_provider": "deepseek",
-        "deepseek_model": "deepseek-chat",
+        "deepseek_model": "deepseek-v4-flash",
+        "deepseek_thinking": "disabled",
+        "critic_deepseek_model": "deepseek-v4-pro",
+        "critic_deepseek_thinking": "enabled",
         "critic_sample_count": 3,
         "golden_sample_nos": GOLDEN_SAMPLE_NOS,
         "f9_rerun_rows": row_count,

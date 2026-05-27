@@ -1,8 +1,10 @@
 import csv
+import json
 from pathlib import Path
 
 import pytest
 
+from app.config import Settings
 from app.schemas.critic import CandidateScore, CriticEvaluateResponse, EpitomeScore
 from scripts.corpus.f9_pairwise_pointwise_baseline import (
     BASELINE_COLUMNS,
@@ -44,6 +46,11 @@ def _write_pairs(path: Path):
         "c2_orientation",
         "c2_text",
         "source_run",
+        "generator_run_id",
+        "generated_at",
+        "generator_model",
+        "generator_thinking",
+        "f3_prompt_bundle_hash",
         "notes",
     ]
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
@@ -61,6 +68,11 @@ def _write_pairs(path: Path):
                 "c2_orientation": "引导反思型",
                 "c2_text": "候选二",
                 "source_run": "generated",
+                "generator_run_id": "run-1",
+                "generated_at": "2026-05-27T00:00:00+00:00",
+                "generator_model": "deepseek-v4-flash",
+                "generator_thinking": "disabled",
+                "f3_prompt_bundle_hash": "hash-1",
                 "notes": "",
             }
         )
@@ -84,21 +96,29 @@ async def test_run_pointwise_baseline_writes_weighted_total_winner(tmp_path):
         )
     )
 
-    written = await run_pointwise_baseline(
+    paths = await run_pointwise_baseline(
         pair_package_path=pair_path,
         output_path=output_path,
         critic_service=critic,
+        settings=Settings(CRITIC_SAMPLE_COUNT=3),
     )
-    rows = _read_csv(written)
+    rows = _read_csv(paths["baseline"])
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
 
-    assert written == output_path
+    assert paths["baseline"] == output_path
     assert output_path.read_bytes().startswith(b"\xef\xbb\xbf")
     assert list(rows[0].keys()) == BASELINE_COLUMNS
     assert rows[0]["pair_id"] == "sample-3"
+    assert rows[0]["pointwise_sample_count"] == "3"
     assert rows[0]["c1_weighted_total"] == "3.000"
     assert rows[0]["c2_weighted_total"] == "4.000"
     assert rows[0]["pointwise_winner"] == "c2"
     assert rows[0]["pointwise_tie"] == "false"
+    assert manifest["critic_model"] == "deepseek-v4-pro"
+    assert manifest["critic_thinking"] == "enabled"
+    assert manifest["pointwise_sample_count"] == 3
+    assert manifest["llm_timeout"] == 10.0
+    assert manifest["f3_prompt_bundle_hashes"] == ["hash-1"]
     assert critic.requests[0].candidates[0].candidate_id == "c1"
 
 

@@ -124,6 +124,7 @@ def _build_safety_service() -> SafetyGateService:
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.DEEPSEEK_MODEL,
+            thinking_type=settings.DEEPSEEK_THINKING,
         )
     else:
         llm_client = MockLLMClient()

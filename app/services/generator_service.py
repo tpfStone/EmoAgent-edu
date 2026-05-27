@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import re
 
 from app.config import Settings
 from app.schemas.generator import (
@@ -11,6 +13,13 @@ from app.services.llm_client import LLMClientProtocol
 
 
 GENERATOR_FALLBACK_TEXT = "我听见你现在有些不容易，我在这里陪你。你愿意再多说一点吗？"
+WRAPPED_RESPONSE_QUOTES = {
+    '"': '"',
+    "'": "'",
+    "“": "”",
+    "「": "」",
+    "『": "』",
+}
 
 COMMON_PROMPT = """你是一个面向中国初中生（12–15岁）的情感陪伴者。目标不是替孩子解决问题，而是让他感到被理解，并慢慢学会认识、表达自己的情绪。
 
@@ -40,7 +49,7 @@ F9_RELIABILITY_GUARDRAILS = """【F9 信度修订后的额外约束】
 - 不要把抱怨、愤怒、自责、沉默、反复确认改写成判断力、懂事、很有数或有主见。
 - 肯定只能落在孩子明确说出的动作、感受或表达本身，例如“你把这件事说得很具体”“你把那股不公平感讲出来了”；不要替孩子下人格结论。
 - 轻量稳定感可以使用，但前面必须已经具体回应当前倾诉；不要用“说明你很在乎”“你已经很不容易”“先缓一缓也没关系”替代真正回应。
-- 可以使用具体、低压、学生能直接回答的二选一问题，例如“是更气那句话，还是更难受他没站你这边”；但二选一问题的前提不能替第三方解释动机，也不能替学生下人格或关系结论。
+- 二选一问题必须同时满足：两个选项都是孩子真实面临的处境、彼此互斥、任一答案都能推进孩子继续表达；不满足就不要发问，退回成“补一个孩子没注意到的、关于他自己感受/需要/可控边界的可能性陈述”。不要把因果关系硬拆成二选一，也不要替第三方解释动机、替学生下人格或关系结论。
 - 涉及朋友、同学、家长、老师时，只说孩子感受到的影响和可控边界，不替对方找理由，不把冲动断关系、报复、羞辱包装成“有主见”。
 """
 
@@ -50,7 +59,7 @@ ORIENTATION_PROMPTS: dict[GeneratorOrientation, str] = {
 - 以一句具体承接开头，先接住他话里最具体的情绪、场景（必须让他认出是他刚说的那件事）；可以轻轻肯定“愿意说出来”或“把事情讲清楚”，但不要开头就评价他的品质、能力或人格。
 - 然后把他此刻的感受往深里说一点：替他把那层没说出口、但藏在话里的心情说出来。
 - 全程只停在"此刻"。不要问任何问题，不要给任何建议、方法或新角度，不要任何"往前看""换个想法"的成分。
-- 收尾给他一句兜底的安稳感（"这样也没什么不对""先顾好自己没问题"），让他可以继续待在当下，不被推动。
+- 先识别主导情绪再决定收尾：难过、委屈、孤独时，可以给轻轻的安稳感；愤怒或不公感很强时，认可这股气的正当性，例如“这股气是有道理的”，不要用“停在这里也没关系”“这样也没什么不对”这类安抚收尾。
 成功的标志：孩子读完心里"嗯，对，就是这样"，并松一口气。
 """,
     "引导反思型": """【你的取向：引导反思 —— 重心向外】
@@ -59,7 +68,7 @@ ORIENTATION_PROMPTS: dict[GeneratorOrientation, str] = {
 - 承接落地之后，再转向新视角；如果你发现自己写的承接套在任何同类孩子身上都成立，说明它还没接住眼前这个孩子，先把那一句改具体，再往下写。前半没接住，后面的问题读起来就是审问，不是陪伴。
 - 重心放在自然地给孩子打开一个新角度：不要固定使用任何引导套话，尤其不要反复使用"我想轻轻递给你一个想法"、"不过你有没有注意到"。可以根据语境选择更自然的承接方式，例如把两种感受并列、回到孩子的需要或可控边界，或用一个低压力二选一问题。重点是让孩子感觉视角被轻轻打开，而不是听到一段固定话术。
 - 新角度只能基于孩子说出的内容和孩子自己的感受，不替朋友、同学、家长或老师解释动机、找理由或开脱；涉及他人时，只描述孩子感受到的影响。
-- 这个新角度必须从孩子刚说的话里自然长出来。如果你想不到贴切、不生硬的角度，就退回成一个低门槛的小问题（优先"是A还是B"这种好答的问法，绝不用"你觉得呢""你怎么想"这种又大又空的问题），并且全程最多只问一个。
+- 这个新角度必须从孩子刚说的话里自然长出来。如果你想不到贴切、不生硬的角度，就退回成一个低门槛的小问题；但问题必须通过二选一门控：两个选项都是孩子真实面临的、彼此互斥、任一答案都能推进对话。任一不满足就不要发问，改成关于孩子自己感受、需要或可控边界的可能性陈述。绝不用"你觉得呢""你怎么想"这种又大又空的问题，并且全程最多只问一个。
 - 姿态是陪他站在原地一起看，不是拉他往前跑。绝不追问他想回避的事实细节。
 - 生成前自检：如果新角度需要猜他人的心里想法，就换成孩子自己的感受、需要或可控边界；不要写"她其实也……""他可能只是……""大人也许……"这类句子。
 - 生成前自检：如果新角度需要补充孩子没说过的事实、数量、科目、顺序或行为，就退回为关于孩子感受的轻问题。
@@ -75,6 +84,29 @@ ORIENTATION_ORDER: list[tuple[str, GeneratorOrientation]] = [
     ("c1", "共情型"),
     ("c2", "引导反思型"),
 ]
+
+
+def clean_generator_output(raw_text: str) -> str:
+    text = (raw_text or "").strip()
+    if len(text) >= 2:
+        closing = WRAPPED_RESPONSE_QUOTES.get(text[0])
+        if closing and text.endswith(closing):
+            text = text[1:-1].strip()
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"\n\s*\n+", "\n", text)
+    return "\n".join(line.strip() for line in text.split("\n") if line.strip())
+
+
+def f3_prompt_bundle_text() -> str:
+    orientation_text = "\n".join(
+        f"{orientation}\n{prompt}"
+        for orientation, prompt in sorted(ORIENTATION_PROMPTS.items())
+    )
+    return f"{COMMON_PROMPT}\n{F9_RELIABILITY_GUARDRAILS}\n{orientation_text}"
+
+
+def f3_prompt_bundle_hash() -> str:
+    return hashlib.sha256(f3_prompt_bundle_text().encode("utf-8")).hexdigest()
 
 
 class GeneratorService:
@@ -106,7 +138,7 @@ class GeneratorService:
                 temperature=self.settings.GENERATOR_LLM_TEMPERATURE,
                 max_tokens=self.settings.LLM_MAX_TOKENS,
             )
-            text = raw_response.strip()
+            text = clean_generator_output(raw_response)
             if not text:
                 raise ValueError("empty generator response")
         except Exception:

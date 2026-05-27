@@ -29,12 +29,14 @@ def get_llm_client_cached(
     deepseek_api_key: str,
     deepseek_base_url: str,
     deepseek_model: str,
+    deepseek_thinking: str,
 ) -> LLMClientProtocol:
     if provider.lower() == "deepseek":
         return DeepSeekLLMClient(
             api_key=deepseek_api_key,
             base_url=deepseek_base_url,
             model=deepseek_model,
+            thinking_type=deepseek_thinking,
         )
     return MockLLMClient()
 
@@ -46,12 +48,14 @@ def get_critic_llm_client_cached(
     deepseek_base_url: str,
     deepseek_model: str,
     critic_deepseek_model: str,
+    critic_deepseek_thinking: str,
 ) -> LLMClientProtocol:
     if provider.lower() == "deepseek":
         return DeepSeekLLMClient(
             api_key=deepseek_api_key,
             base_url=deepseek_base_url,
             model=critic_deepseek_model or deepseek_model,
+            thinking_type=critic_deepseek_thinking,
         )
     return MockLLMClient()
 
@@ -62,6 +66,7 @@ def get_llm_client(settings: Settings = Depends(get_settings)) -> LLMClientProto
         settings.DEEPSEEK_API_KEY,
         settings.DEEPSEEK_BASE_URL,
         settings.DEEPSEEK_MODEL,
+        settings.DEEPSEEK_THINKING,
     )
 
 
@@ -74,6 +79,7 @@ def get_critic_llm_client(
         settings.DEEPSEEK_BASE_URL,
         settings.DEEPSEEK_MODEL,
         settings.CRITIC_DEEPSEEK_MODEL,
+        settings.CRITIC_DEEPSEEK_THINKING,
     )
 
 

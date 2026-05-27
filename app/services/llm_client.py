@@ -56,9 +56,16 @@ class MockLLMClient:
 
 
 class DeepSeekLLMClient:
-    def __init__(self, api_key: str, base_url: str, model: str):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        thinking_type: str | None = None,
+    ):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
+        self.thinking_type = thinking_type
 
     async def generate(
         self,
@@ -76,6 +83,8 @@ class DeepSeekLLMClient:
         }
         if response_format is not None:
             request_kwargs["response_format"] = response_format
+        if self.thinking_type:
+            request_kwargs["extra_body"] = {"thinking": {"type": self.thinking_type}}
         try:
             response = await asyncio.wait_for(
                 self.client.chat.completions.create(**request_kwargs),

@@ -14,7 +14,20 @@ PAIR_PACKAGE_COLUMNS = [
     "c2_orientation",
     "c2_text",
     "source_run",
+    "generator_run_id",
+    "generated_at",
+    "generator_model",
+    "generator_thinking",
+    "f3_prompt_bundle_hash",
     "notes",
+]
+
+PROVENANCE_COLUMNS = [
+    "generator_run_id",
+    "generated_at",
+    "generator_model",
+    "generator_thinking",
+    "f3_prompt_bundle_hash",
 ]
 
 HUMAN_ANNOTATION_COLUMNS = [
@@ -44,6 +57,16 @@ def _first_value(row: dict[str, str], columns: tuple[str, ...]) -> str:
         if value:
             return value
     return ""
+
+
+def _provenance_value(c1: dict[str, str], c2: dict[str, str], column: str) -> str:
+    c1_value = str(c1.get(column, "")).strip()
+    c2_value = str(c2.get(column, "")).strip()
+    if c1_value and c2_value and c1_value != c2_value:
+        raise ValueError(
+            f"sample {c1.get('sample_no') or c2.get('sample_no')} has mismatched {column}"
+        )
+    return c1_value or c2_value
 
 
 def build_pair_rows(source_rows: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -83,10 +106,38 @@ def build_pair_rows(source_rows: list[dict[str, str]]) -> list[dict[str, str]]:
                 or c2.get("source")
                 or c1.get("review_bucket")
                 or c2.get("review_bucket", ""),
+                "generator_run_id": _provenance_value(c1, c2, "generator_run_id"),
+                "generated_at": _provenance_value(c1, c2, "generated_at"),
+                "generator_model": _provenance_value(c1, c2, "generator_model"),
+                "generator_thinking": _provenance_value(c1, c2, "generator_thinking"),
+                "f3_prompt_bundle_hash": _provenance_value(
+                    c1, c2, "f3_prompt_bundle_hash"
+                ),
                 "notes": "",
             }
         )
     return pair_rows
+
+
+def validate_pair_provenance(
+    pair_rows: list[dict[str, str]],
+    expected_f3_prompt_bundle_hash: str | None = None,
+) -> None:
+    for row in pair_rows:
+        missing = [column for column in PROVENANCE_COLUMNS if not row.get(column, "")]
+        if missing:
+            raise ValueError(
+                f"pair {row.get('pair_id', '')} missing provenance: {', '.join(missing)}"
+            )
+        if (
+            expected_f3_prompt_bundle_hash
+            and row.get("f3_prompt_bundle_hash") != expected_f3_prompt_bundle_hash
+        ):
+            raise ValueError(
+                f"pair {row.get('pair_id', '')} f3_prompt_bundle_hash "
+                f"{row.get('f3_prompt_bundle_hash', '')!r} does not match "
+                f"{expected_f3_prompt_bundle_hash!r}"
+            )
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -142,9 +193,13 @@ def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--annotation-output", type=Path)
+    parser.add_argument("--require-provenance", action="store_true")
+    parser.add_argument("--expected-f3-prompt-bundle-hash")
     args = parser.parse_args()
 
     pair_rows = build_pair_rows(read_csv(args.input))
+    if args.require_provenance or args.expected_f3_prompt_bundle_hash:
+        validate_pair_provenance(pair_rows, args.expected_f3_prompt_bundle_hash)
     write_pair_package(args.output, pair_rows)
     if args.annotation_output is not None:
         write_annotation_template(args.annotation_output, build_annotation_rows(pair_rows))

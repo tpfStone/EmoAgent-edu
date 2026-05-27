@@ -239,6 +239,7 @@ def _make_llm_client(settings: Settings):
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
             model=settings.CRITIC_DEEPSEEK_MODEL or settings.DEEPSEEK_MODEL,
+            thinking_type=settings.CRITIC_DEEPSEEK_THINKING,
         )
     return MockLLMClient()
 

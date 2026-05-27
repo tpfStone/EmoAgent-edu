@@ -34,6 +34,11 @@ def _write_pairs(path: Path):
         "c2_orientation",
         "c2_text",
         "source_run",
+        "generator_run_id",
+        "generated_at",
+        "generator_model",
+        "generator_thinking",
+        "f3_prompt_bundle_hash",
         "notes",
     ]
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
@@ -51,6 +56,11 @@ def _write_pairs(path: Path):
                 "c2_orientation": "引导反思型",
                 "c2_text": "候选二",
                 "source_run": "generated",
+                "generator_run_id": "run-1",
+                "generated_at": "2026-05-27T00:00:00+00:00",
+                "generator_model": "deepseek-v4-flash",
+                "generator_thinking": "disabled",
+                "f3_prompt_bundle_hash": "hash-1",
                 "notes": "",
             }
         )
@@ -98,5 +108,12 @@ async def test_run_pairwise_judge_writes_runs_summary_and_manifest(tmp_path):
     assert manifest["input_pairs"] == 1
     assert manifest["judged_pairs"] == 1
     assert manifest["pairwise_sample_count"] == 3
+    assert manifest["critic_model"] == "deepseek-v4-pro"
+    assert manifest["critic_thinking"] == "enabled"
+    assert manifest["llm_timeout"] == 10.0
+    assert manifest["generator_models"] == ["deepseek-v4-flash"]
+    assert manifest["generator_thinking_values"] == ["disabled"]
+    assert manifest["f3_prompt_bundle_hashes"] == ["hash-1"]
+    assert manifest["generator_run_ids"] == ["run-1"]
     assert service.calls[0][0].history[0].text == "前文"
     assert service.calls[0][1].candidate_id == "c1"

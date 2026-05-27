@@ -82,8 +82,16 @@ async def test_generator_prompt_contains_f9_reliability_guardrails(fake_llm_clie
     reflective_prompt = llm.prompts[1]["prompt"]
     assert "未充分承接情绪前，不要把痛苦、自责、愤怒或不信任直接重构成优点、主见、判断力或在乎别人" in empathic_prompt
     assert "轻量稳定感可以使用，但前面必须已经具体回应当前倾诉" in empathic_prompt
-    assert "可以使用具体、低压、学生能直接回答的二选一问题" in reflective_prompt
-    assert "二选一问题的前提不能替第三方解释动机，也不能替学生下人格或关系结论" in reflective_prompt
+    assert "愤怒或不公感" in empathic_prompt
+    assert "不要用“停在这里也没关系”“这样也没什么不对”这类安抚收尾" in empathic_prompt
+    assert "这股气是有道理的" in empathic_prompt
+    assert "二选一问题必须同时满足" in reflective_prompt
+    assert "两个选项都是孩子真实面临的" in reflective_prompt
+    assert "彼此互斥" in reflective_prompt
+    assert "任一答案都能推进孩子继续表达" in reflective_prompt
+    assert "不满足就不要发问" in reflective_prompt
+    assert "不要把因果关系硬拆成二选一" in reflective_prompt
+    assert '优先"是A还是B"' not in reflective_prompt
     assert "不要用“说明你”“可见你”“这本身”把孩子的痛苦总结成品质、能力或优点" in empathic_prompt
     assert "肯定只能落在孩子明确说出的动作、感受或表达本身" in empathic_prompt
     assert "不要把抱怨、愤怒、自责、沉默、反复确认改写成判断力、懂事、很有数或有主见" in reflective_prompt
@@ -96,6 +104,17 @@ async def test_generator_prompt_contains_f9_reliability_guardrails(fake_llm_clie
     assert "不要写括号式阶段标签" in reflective_prompt
     assert "（先接住你的场景）" in reflective_prompt
     assert "（再递新视角）" in reflective_prompt
+
+
+@pytest.mark.asyncio
+async def test_generator_cleans_wrapped_quotes_and_abnormal_newlines(fake_llm_client):
+    llm = fake_llm_client(["“第一句。\n\n第二句。”", "他说“那一刻很难受”。"])
+    service = GeneratorService(llm, Settings())
+
+    response = await service.generate(_request())
+
+    assert response.candidates[0].text == "第一句。\n第二句。"
+    assert response.candidates[1].text == "他说“那一刻很难受”。"
 
 
 @pytest.mark.asyncio
