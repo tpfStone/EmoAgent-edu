@@ -101,7 +101,30 @@ def _score_row_by_candidate_id(response) -> dict[str, object]:
     return {score.candidate_id: score for score in response.scores}
 
 
-async def _candidate_rows_for_case(case, generator, critic, provenance) -> list[dict[str, str]]:
+def _unscored_candidate_row(case, candidate, provenance) -> dict[str, str]:
+    return {
+        "sample_no": str(case.sample_no),
+        "source": "phase-a-rerun",
+        "candidate_id": candidate.candidate_id,
+        "scenario": case.scenario,
+        "orientation": candidate.orientation,
+        "user_text": case.user_message,
+        "history_json": case.history_json,
+        "candidate_text": candidate.text,
+        "boundary_flag": "false",
+        "boundary_reason": "",
+        "F4_ER": "",
+        "F4_IP": "",
+        "F4_EX": "",
+        "weighted_total": "",
+        "rationale": "",
+        **provenance,
+    }
+
+
+async def _candidate_rows_for_case(
+    case, generator, critic, provenance, score_candidates: bool
+) -> list[dict[str, str]]:
     generated = await generator.generate(
         GeneratorGenerateRequest(
             session_id=f"f9-pairwise-rerun-{case.sample_no}",
@@ -111,6 +134,12 @@ async def _candidate_rows_for_case(case, generator, critic, provenance) -> list[
             rag_examples=[],
         )
     )
+    if not score_candidates:
+        return [
+            _unscored_candidate_row(case, candidate, provenance)
+            for candidate in generated.candidates
+        ]
+
     candidates = [
         CandidateInput(
             candidate_id=candidate.candidate_id,
@@ -247,6 +276,7 @@ async def run_pairwise_rerun_generation(
     settings: Settings,
     target_pair_count: int = 24,
     sample_nos: list[int] | None = None,
+    score_candidates: bool = True,
     generator_service=None,
     critic_service=None,
     run_id: str | None = None,
@@ -264,14 +294,16 @@ async def run_pairwise_rerun_generation(
         "f3_prompt_bundle_hash": prompt_bundle_hash,
     }
     generator = generator_service or _make_generator_service(settings)
-    critic = critic_service or _make_critic_service(settings)
+    critic = critic_service or (_make_critic_service(settings) if score_candidates else None)
     sample_nos = sample_nos or [int(row["sample_no"]) for row in _read_csv(analysis_path)]
     cases = load_cases(analysis_path, blind_path, sample_nos)
 
     candidate_rows: list[dict[str, str]] = []
     for case in cases:
         candidate_rows.extend(
-            await _candidate_rows_for_case(case, generator, critic, provenance)
+            await _candidate_rows_for_case(
+                case, generator, critic, provenance, score_candidates
+            )
         )
 
     pair_rows, excluded_counts = build_filtered_pair_rows(
@@ -294,6 +326,7 @@ async def run_pairwise_rerun_generation(
         "selected_pairs": len(pair_rows),
         "target_pair_count": target_pair_count,
         "source_sample_nos": sample_nos,
+        "score_candidates": score_candidates,
         "excluded_counts": excluded_counts,
         "llm_provider": settings.LLM_PROVIDER,
         "generator_model": settings.DEEPSEEK_MODEL,
@@ -330,6 +363,11 @@ def main() -> None:
         "--sample-nos",
         help="Comma-separated sample numbers to generate, e.g. 1,2,3. Defaults to all analysis rows.",
     )
+    parser.add_argument(
+        "--skip-critic",
+        action="store_true",
+        help="Generate candidates without F4 pre-scoring; intended for F3 sidecar only.",
+    )
     args = parser.parse_args()
     sample_nos = (
         [int(item.strip()) for item in args.sample_nos.split(",") if item.strip()]
@@ -345,6 +383,7 @@ def main() -> None:
             settings=Settings(),
             target_pair_count=args.target_pair_count,
             sample_nos=sample_nos,
+            score_candidates=not args.skip_critic,
         )
     )
     for key, path in paths.items():

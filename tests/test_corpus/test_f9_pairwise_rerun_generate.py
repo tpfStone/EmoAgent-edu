@@ -302,3 +302,51 @@ async def test_run_pairwise_rerun_generation_can_limit_sample_nos(tmp_path):
         "f9-pairwise-rerun-3",
     ]
     assert manifest["source_sample_nos"] == [1, 3]
+
+
+class FailingCriticService:
+    async def evaluate(self, request):
+        raise AssertionError("critic should not be called when score_candidates=False")
+
+
+@pytest.mark.asyncio
+async def test_run_pairwise_rerun_generation_can_skip_critic_for_sidecar(tmp_path):
+    analysis_path = tmp_path / "analysis.csv"
+    blind_path = tmp_path / "blind.csv"
+    output_root = tmp_path / "pairwise-selection-pilot"
+    _write_csv(
+        analysis_path,
+        ["sample_no", "scenario", "orientation", "用户倾诉", "候选文本"],
+        [
+            {
+                "sample_no": "1",
+                "scenario": "学业压力",
+                "orientation": "共情型",
+                "用户倾诉": "作业太多了。",
+                "候选文本": "old",
+            }
+        ],
+    )
+    _write_csv(blind_path, ["sample_no", "对话历史"], [{"sample_no": "1", "对话历史": "[]"}])
+
+    paths = await run_pairwise_rerun_generation(
+        analysis_path=analysis_path,
+        blind_path=blind_path,
+        output_root=output_root,
+        settings=Settings(_env_file=None, LLM_PROVIDER="mock"),
+        target_pair_count=1,
+        sample_nos=[1],
+        score_candidates=False,
+        generator_service=FakeGeneratorService(),
+        critic_service=FailingCriticService(),
+        run_id="run-test",
+        generated_at="2026-05-27T00:00:00+00:00",
+        prompt_bundle_hash="hash-test",
+    )
+
+    candidates = _read_csv(paths["candidates"])
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+
+    assert candidates[0]["boundary_flag"] == "false"
+    assert candidates[0]["F4_ER"] == ""
+    assert manifest["score_candidates"] is False
