@@ -1,0 +1,11 @@
+﻿pair_id,sample_no,c1_weighted_total,c2_weighted_total,c1_boundary_flag,c2_boundary_flag,pointwise_winner,pointwise_tie
+sample-3,3,5.000,5.000,false,false,tie,true
+sample-11,11,5.000,5.000,false,false,tie,true
+sample-16,16,5.000,6.000,false,false,c2,false
+sample-19,19,3.000,3.000,false,false,tie,true
+sample-22,22,3.000,4.000,false,false,c2,false
+sample-25,25,2.000,3.000,false,false,c2,false
+sample-27,27,4.000,4.000,false,false,tie,true
+sample-31,31,3.000,4.000,false,false,c2,false
+sample-40,40,3.000,3.000,false,false,tie,true
+sample-15,15,4.000,5.000,false,false,c2,false

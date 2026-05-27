@@ -16,6 +16,9 @@ class LLMClientProtocol(Protocol):
 
 
 class MockLLMClient:
+    def __init__(self):
+        self._pairwise_call_count = 0
+
     async def generate(
         self,
         prompt: str,
@@ -25,6 +28,15 @@ class MockLLMClient:
         response_format: dict | None = None,
     ) -> str:
         await asyncio.sleep(0)
+        if "回应A" in prompt and "回应B" in prompt:
+            self._pairwise_call_count += 1
+            winner = "A" if self._pairwise_call_count % 2 == 1 else "B"
+            return (
+                '{"winner": "'
+                + winner
+                + '", "reason": "mock pairwise", '
+                '"boundary_concern": false, "boundary_reason": ""}'
+            )
         if "EPITOME" in prompt:
             return (
                 '{"ER": 1, "IP": 1, "EX": 1, "casel": {}, "boundary_flag": false, '
