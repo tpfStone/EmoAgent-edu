@@ -1,0 +1,29 @@
+{
+  "analysis_path": "docs\\corpus\\f9\\error-analysis\\f9_error_analysis_draft.csv",
+  "blind_path": "docs\\corpus\\f9\\baseline\\f9_blind_annotation.csv",
+  "generated_candidate_rows": 12,
+  "selected_pairs": 6,
+  "target_pair_count": 6,
+  "source_sample_nos": [
+    6,
+    7,
+    2,
+    3,
+    1,
+    11
+  ],
+  "score_candidates": false,
+  "excluded_counts": {},
+  "llm_provider": "deepseek",
+  "generator_model": "deepseek-v4-pro",
+  "generator_thinking": "enabled",
+  "critic_model": "deepseek-v4-pro",
+  "critic_thinking": "enabled",
+  "critic_sample_count": 3,
+  "llm_timeout": 60.0,
+  "pair_package_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\f3-model-sidecar\\pro\\inputs\\phase-a-rerun\\f9_pairwise_rerun_pairs.csv",
+  "annotation_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\f3-model-sidecar\\pro\\annotations\\phase-a-rerun\\f9_pairwise_rerun_human_ab.csv",
+  "generator_run_id": "phase-a-rerun-2026-05-27T14:28:06.812700+00:00",
+  "generated_at": "2026-05-27T14:28:06.812700+00:00",
+  "f3_prompt_bundle_hash": "0752505ef8bef781e51e2bce279a2605038e7d12b10f6b1b5a54d2430a991b35"
+}

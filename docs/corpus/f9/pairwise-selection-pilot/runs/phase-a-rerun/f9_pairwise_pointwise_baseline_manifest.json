@@ -1,0 +1,15 @@
+{
+  "pair_package_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun\\f9_pairwise_rerun_pairs.csv",
+  "baseline_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\phase-a-rerun\\f9_pairwise_pointwise_baseline.csv",
+  "input_pairs": 24,
+  "pointwise_rows": 24,
+  "llm_provider": "deepseek",
+  "critic_model": "deepseek-v4-pro",
+  "critic_thinking": "enabled",
+  "llm_timeout": 60.0,
+  "critic_temperature": 0.1,
+  "pointwise_sample_count": 3,
+  "f3_prompt_bundle_hashes": [
+    "0752505ef8bef781e51e2bce279a2605038e7d12b10f6b1b5a54d2430a991b35"
+  ]
+}
