@@ -234,3 +234,71 @@ async def test_run_pairwise_rerun_generation_writes_outputs_and_manifest(tmp_pat
     assert manifest["critic_model"] == "deepseek-v4-pro"
     assert manifest["critic_thinking"] == "enabled"
     assert manifest["excluded_counts"] == {}
+
+
+@pytest.mark.asyncio
+async def test_run_pairwise_rerun_generation_can_limit_sample_nos(tmp_path):
+    analysis_path = tmp_path / "analysis.csv"
+    blind_path = tmp_path / "blind.csv"
+    output_root = tmp_path / "pairwise-selection-pilot"
+    _write_csv(
+        analysis_path,
+        ["sample_no", "scenario", "orientation", "用户倾诉", "候选文本"],
+        [
+            {
+                "sample_no": "1",
+                "scenario": "学业压力",
+                "orientation": "共情型",
+                "用户倾诉": "作业太多了。",
+                "候选文本": "old",
+            },
+            {
+                "sample_no": "2",
+                "scenario": "同伴关系",
+                "orientation": "共情型",
+                "用户倾诉": "朋友没叫我。",
+                "候选文本": "old",
+            },
+            {
+                "sample_no": "3",
+                "scenario": "亲子摩擦",
+                "orientation": "共情型",
+                "用户倾诉": "我妈误会我。",
+                "候选文本": "old",
+            },
+        ],
+    )
+    _write_csv(
+        blind_path,
+        ["sample_no", "对话历史"],
+        [
+            {"sample_no": "1", "对话历史": "[]"},
+            {"sample_no": "2", "对话历史": "[]"},
+            {"sample_no": "3", "对话历史": "[]"},
+        ],
+    )
+    generator = FakeGeneratorService()
+
+    paths = await run_pairwise_rerun_generation(
+        analysis_path=analysis_path,
+        blind_path=blind_path,
+        output_root=output_root,
+        settings=Settings(_env_file=None, LLM_PROVIDER="mock"),
+        target_pair_count=2,
+        sample_nos=[1, 3],
+        generator_service=generator,
+        critic_service=FakeCriticService(),
+        run_id="run-test",
+        generated_at="2026-05-27T00:00:00+00:00",
+        prompt_bundle_hash="hash-test",
+    )
+
+    pairs = _read_csv(paths["pairs"])
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+
+    assert [row["sample_no"] for row in pairs] == ["1", "3"]
+    assert [request.session_id for request in generator.requests] == [
+        "f9-pairwise-rerun-1",
+        "f9-pairwise-rerun-3",
+    ]
+    assert manifest["source_sample_nos"] == [1, 3]

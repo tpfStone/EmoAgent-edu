@@ -246,6 +246,7 @@ async def run_pairwise_rerun_generation(
     output_root: Path,
     settings: Settings,
     target_pair_count: int = 24,
+    sample_nos: list[int] | None = None,
     generator_service=None,
     critic_service=None,
     run_id: str | None = None,
@@ -264,7 +265,7 @@ async def run_pairwise_rerun_generation(
     }
     generator = generator_service or _make_generator_service(settings)
     critic = critic_service or _make_critic_service(settings)
-    sample_nos = [int(row["sample_no"]) for row in _read_csv(analysis_path)]
+    sample_nos = sample_nos or [int(row["sample_no"]) for row in _read_csv(analysis_path)]
     cases = load_cases(analysis_path, blind_path, sample_nos)
 
     candidate_rows: list[dict[str, str]] = []
@@ -292,6 +293,7 @@ async def run_pairwise_rerun_generation(
         "generated_candidate_rows": len(candidate_rows),
         "selected_pairs": len(pair_rows),
         "target_pair_count": target_pair_count,
+        "source_sample_nos": sample_nos,
         "excluded_counts": excluded_counts,
         "llm_provider": settings.LLM_PROVIDER,
         "generator_model": settings.DEEPSEEK_MODEL,
@@ -324,7 +326,16 @@ def main() -> None:
     parser.add_argument("--blind-path", type=Path, default=DEFAULT_BLIND_PATH)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--target-pair-count", type=int, default=24)
+    parser.add_argument(
+        "--sample-nos",
+        help="Comma-separated sample numbers to generate, e.g. 1,2,3. Defaults to all analysis rows.",
+    )
     args = parser.parse_args()
+    sample_nos = (
+        [int(item.strip()) for item in args.sample_nos.split(",") if item.strip()]
+        if args.sample_nos
+        else None
+    )
 
     paths = asyncio.run(
         run_pairwise_rerun_generation(
@@ -333,6 +344,7 @@ def main() -> None:
             output_root=args.output_root,
             settings=Settings(),
             target_pair_count=args.target_pair_count,
+            sample_nos=sample_nos,
         )
     )
     for key, path in paths.items():
