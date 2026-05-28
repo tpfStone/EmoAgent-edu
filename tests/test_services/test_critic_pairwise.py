@@ -44,6 +44,44 @@ def _judge(winner: str, reason: str = "A 更具体"):
 
 
 @pytest.mark.asyncio
+async def test_judge_sample_prompt_swaps_candidate_texts(fake_llm_client):
+    llm = fake_llm_client([_judge("tie"), _judge("tie")])
+    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    await service.judge_sample(
+        _context(),
+        _candidate("c1", "AAA"),
+        _candidate("c2", "BBB", "reflection"),
+        sample_no=1,
+    )
+
+    first_prompt = llm.prompts[0]["prompt"]
+    second_prompt = llm.prompts[1]["prompt"]
+    assert first_prompt.index("AAA") < first_prompt.index("BBB")
+    assert second_prompt.index("BBB") < second_prompt.index("AAA")
+
+
+@pytest.mark.asyncio
+async def test_judge_sample_prompt_hides_candidate_metadata(fake_llm_client):
+    llm = fake_llm_client([_judge("tie"), _judge("tie")])
+    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    await service.judge_sample(
+        _context(),
+        _candidate("c1-secret", "AAA", "empathy-secret"),
+        _candidate("c2-secret", "BBB", "reflection-secret"),
+        sample_no=1,
+    )
+
+    combined_prompts = "\n".join(item["prompt"] for item in llm.prompts)
+    assert "c1-secret" not in combined_prompts
+    assert "c2-secret" not in combined_prompts
+    assert "empathy-secret" not in combined_prompts
+    assert "reflection-secret" not in combined_prompts
+    assert "呈现顺序" in combined_prompts
+
+
+@pytest.mark.asyncio
 async def test_judge_sample_maps_two_independent_orders_to_same_candidate(
     fake_llm_client,
 ):
@@ -86,6 +124,68 @@ async def test_judge_sample_marks_position_conflict_unstable(fake_llm_client):
     assert result.judgment_2_winner_id == "c2"
     assert result.stable is False
     assert result.stable_winner_id is None
+    assert result.invalid is False
+
+
+@pytest.mark.asyncio
+async def test_judge_sample_marks_b_position_conflict_unstable(fake_llm_client):
+    llm = fake_llm_client([_judge("B"), _judge("B")])
+    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    result = await service.judge_sample(
+        _context(),
+        _candidate("c1", "candidate one"),
+        _candidate("c2", "candidate two", "reflection"),
+        sample_no=1,
+    )
+
+    assert result.judgment_1_winner_id == "c2"
+    assert result.judgment_2_winner_id == "c1"
+    assert result.stable is False
+    assert result.stable_winner_id is None
+    assert result.invalid is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    (
+        "first_raw_winner",
+        "second_raw_winner",
+        "expected_first_id",
+        "expected_second_id",
+        "expected_stable",
+        "expected_stable_winner_id",
+    ),
+    [
+        ("A", "B", "c1", "c1", True, "c1"),
+        ("B", "A", "c2", "c2", True, "c2"),
+        ("A", "A", "c1", "c2", False, None),
+        ("B", "B", "c2", "c1", False, None),
+    ],
+)
+async def test_judge_sample_raw_ab_truth_table(
+    fake_llm_client,
+    first_raw_winner,
+    second_raw_winner,
+    expected_first_id,
+    expected_second_id,
+    expected_stable,
+    expected_stable_winner_id,
+):
+    llm = fake_llm_client([_judge(first_raw_winner), _judge(second_raw_winner)])
+    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
+
+    result = await service.judge_sample(
+        _context(),
+        _candidate("c1", "candidate one"),
+        _candidate("c2", "candidate two", "reflection"),
+        sample_no=1,
+    )
+
+    assert result.judgment_1_winner_id == expected_first_id
+    assert result.judgment_2_winner_id == expected_second_id
+    assert result.stable is expected_stable
+    assert result.stable_winner_id == expected_stable_winner_id
     assert result.invalid is False
 
 

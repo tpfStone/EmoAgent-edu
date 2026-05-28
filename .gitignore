@@ -48,6 +48,7 @@ frontend/**/.env.local
 *.tsbuildinfo
 
 # IDE/editor metadata
+.claude/
 .idea/
 .vscode/
 *.swp

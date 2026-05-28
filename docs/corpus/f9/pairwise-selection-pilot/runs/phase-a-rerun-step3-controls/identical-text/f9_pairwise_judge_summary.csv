@@ -1,0 +1,13 @@
+﻿pair_id,sample_no,scenario,c1_orientation,c2_orientation,pairwise_sample_count,stable_votes_c1,stable_votes_c2,unstable_count,invalid_count,winner_id,pairwise_stable,pairwise_confidence,selection_method,c1_text,c2_text
+sample-1-identical,1,亲子摩擦,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,你爸一说你，你没辩解，直接就把手机放下了。那一瞬间你心里肯定挺堵的吧——明明不是第一次被说，但你还是选择了不开口，因为知道说了也是那几句来回转，没意思。那股“算了，说了也白说”的闷劲儿，我懂。,你爸一说你，你没辩解，直接就把手机放下了。那一瞬间你心里肯定挺堵的吧——明明不是第一次被说，但你还是选择了不开口，因为知道说了也是那几句来回转，没意思。那股“算了，说了也白说”的闷劲儿，我懂。
+sample-11-identical,11,亲子摩擦,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,唉，周六下午被占掉，连那点喘口气的时间都没了，换谁都会觉得憋屈。你本来作业就堆成山，还要硬塞一个补习班，连自己调整的余地都没有——那股“凭什么”的劲儿我听得出来，不是不想学，是真的被压得透不过气了。你跟我说这些，比闷在心里好多了。,唉，周六下午被占掉，连那点喘口气的时间都没了，换谁都会觉得憋屈。你本来作业就堆成山，还要硬塞一个补习班，连自己调整的余地都没有——那股“凭什么”的劲儿我听得出来，不是不想学，是真的被压得透不过气了。你跟我说这些，比闷在心里好多了。
+sample-2-identical,2,同伴关系,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,是啊，明明演算了好多遍，就最后一步写岔了，老师那句话一出来，旁边还有人笑，换谁脸上都挂不住。那股“凭什么就点我”的不公平感，听着都替你憋屈。,是啊，明明演算了好多遍，就最后一步写岔了，老师那句话一出来，旁边还有人笑，换谁脸上都挂不住。那股“凭什么就点我”的不公平感，听着都替你憋屈。
+sample-3-identical,3,同伴关系,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,"你翻了好几遍，确认了好几遍——那个反复翻群的动作，本身就说明你有多在意这件事。
+然后你开始往回找原因：“是不是我说错话了？”“是不是他们觉得我没意思？”——那种一边翻一边心里往下沉的感觉，挺难受的。","你翻了好几遍，确认了好几遍——那个反复翻群的动作，本身就说明你有多在意这件事。
+然后你开始往回找原因：“是不是我说错话了？”“是不是他们觉得我没意思？”——那种一边翻一边心里往下沉的感觉，挺难受的。"
+sample-6-identical,6,学业压力,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,是啊，数学三张卷子、语文作文、英语单词全堆一块儿，换谁看到这一堆都会觉得头大。你那种“明明时间就这么多，凭什么每科都觉得自己最重要”的憋屈感，真的挺真实的——这股气是有道理的。,是啊，数学三张卷子、语文作文、英语单词全堆一块儿，换谁看到这一堆都会觉得头大。你那种“明明时间就这么多，凭什么每科都觉得自己最重要”的憋屈感，真的挺真实的——这股气是有道理的。
+sample-7-identical,7,学业压力,hidden_identical,hidden_identical,3,0,0,3,0,,false,unstable,pointwise_tiebreak,"试卷发下来那一下不敢看，那个瞬间我能感觉到你心里是沉的……憋着一股说不出的压力。
+现在你一边想着那个分数，一边已经在脑补爸妈知道后可能会说的话了，光是想到那个场景就觉得累。
+那股不想被唠叨、又躲不掉的感觉，确实很让人堵得慌。","试卷发下来那一下不敢看，那个瞬间我能感觉到你心里是沉的……憋着一股说不出的压力。
+现在你一边想着那个分数，一边已经在脑补爸妈知道后可能会说的话了，光是想到那个场景就觉得累。
+那股不想被唠叨、又躲不掉的感觉，确实很让人堵得慌。"

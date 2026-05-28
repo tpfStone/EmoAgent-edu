@@ -192,6 +192,7 @@ class CriticPairwiseService:
 4. 语气是否像可信任、稍年长的朋友，而不是居高临下。
 
 只根据回应文本判断，不脑补没写出的内容，不因为更长就认为更好。
+请忽略回应 A/B 的呈现顺序，只比较两条回应文本本身。
 
 请输出严格 JSON：
 {{
@@ -203,8 +204,8 @@ class CriticPairwiseService:
 
 【用户倾诉】{context.user_message}
 【对话历史】{history_text}
-【回应A】({first.candidate_id}, {first.orientation}) {first.text}
-【回应B】({second.candidate_id}, {second.orientation}) {second.text}
+【回应A】{first.text}
+【回应B】{second.text}
 """
 
 
