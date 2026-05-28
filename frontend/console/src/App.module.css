@@ -12,6 +12,10 @@
   padding: 28px 32px 40px;
 }
 
+.mainTransition {
+  width: 100%;
+}
+
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;

@@ -27,6 +27,14 @@ pnpm --dir frontend build:pages
 - Mock mode: default.
 - Live mode: set `VITE_API_MODE=live`; Vite proxies `/chat` to `http://localhost:8000`.
 
+## Motion Contract
+
+- Student and console apps each own their transition components; nothing visual is shared through `shared`.
+- Module switches use CSS Modules plus small React state machines, not a heavy animation runtime.
+- Motion is limited to `opacity` and `transform` except tightly scoped composer/referral replacement.
+- `prefers-reduced-motion: reduce` must be respected.
+- Do not use browser auto-scroll helpers; message lists use container `scrollTop`.
+
 ## GitHub Pages Mock Demo
 
 `pnpm --dir frontend build:pages` builds a static mock demo into `frontend/dist-pages`:

@@ -4,6 +4,7 @@ import { BatchEvidence } from "./components/BatchEvidence";
 import { ConsoleRail, type ConsoleTab } from "./components/ConsoleRail";
 import { FrameworkMap } from "./components/FrameworkMap";
 import { SingleTurnTrace } from "./components/SingleTurnTrace";
+import { TransitionSlot } from "./components/TransitionSlot";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ConsoleTab>("single");
@@ -12,9 +13,11 @@ export default function App() {
     <main className={styles.shell}>
       <ConsoleRail activeTab={activeTab} onTabChange={setActiveTab} />
       <section className={styles.workspace} aria-label="Research console workspace">
-        {activeTab === "single" && <SingleTurnTrace />}
-        {activeTab === "batch" && <BatchEvidence />}
-        {activeTab === "framework" && <FrameworkMap />}
+        <TransitionSlot viewKey={activeTab} className={styles.mainTransition}>
+          {activeTab === "single" && <SingleTurnTrace />}
+          {activeTab === "batch" && <BatchEvidence />}
+          {activeTab === "framework" && <FrameworkMap />}
+        </TransitionSlot>
       </section>
     </main>
   );

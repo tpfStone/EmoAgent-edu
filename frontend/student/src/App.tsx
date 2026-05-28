@@ -10,6 +10,7 @@ import {
   StudentSidebar,
   type StudentMainView,
 } from "./components/StudentSidebar";
+import { TransitionSlot } from "./components/TransitionSlot";
 import { useStudentChat } from "./hooks/useStudentChat";
 import { useStudentSessions } from "./hooks/useStudentSessions";
 
@@ -151,8 +152,9 @@ export default function App() {
             <p>你可以慢慢说，我会认真听</p>
           </header>
 
-          {activeView === "chat" ? (
-            <>
+          <TransitionSlot viewKey={activeView} className={styles.mainTransition}>
+            {activeView === "chat" ? (
+              <>
               <div className={styles.chatScroll} ref={scrollRef}>
                 {hasMessages ? (
                   <MessageList messages={messages} />
@@ -179,8 +181,8 @@ export default function App() {
                   <Composer disabled={loading} loading={loading} onSend={handleSend} />
                 )}
               </div>
-            </>
-          ) : (
+              </>
+            ) : (
             <section className={styles.toolView} aria-label="辅助视图">
               {activeView === "records" ? (
                 <RecordManagementPanel
@@ -189,8 +191,9 @@ export default function App() {
                 />
               ) : null}
               {activeView === "breathing" ? <BreathingPanel /> : null}
-            </section>
-          )}
+              </section>
+            )}
+          </TransitionSlot>
         </main>
       </div>
     </div>

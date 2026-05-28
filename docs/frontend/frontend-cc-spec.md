@@ -141,6 +141,17 @@ frontend/
 
 ---
 
+## 6.5 模块切换动效
+
+- 学生端与分析台各自实现本地 `TransitionSlot`，不得放入 `shared/`，避免跨端组件耦合。
+- 动效只服务模块切换的连续性：学生端用于聊天/记录/呼吸主视图、移动侧栏、composer 与转介面板替换；分析台用于单轮追踪/批量证据/框架对标三视图切换。
+- 优先使用 CSS Modules 的 `opacity` + `transform` 过渡；不引入 Framer Motion、GSAP 或 Lottie。
+- 过渡时长控制在 140ms–320ms，学生端可更柔和，分析台应克制，保证表格和证据阅读稳定。
+- 必须支持 `prefers-reduced-motion: reduce`，降级到近似无动画。
+- 继续禁止 `scrollIntoView`，消息滚动仍使用容器 `scrollTop = scrollHeight`。
+
+---
+
 ## 7. MOCK / LIVE 切换
 
 ```ts
@@ -182,6 +193,7 @@ export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
 通用：
 - [ ] MOCK/LIVE 经环境变量切换，LIVE 直连 FastAPI 无需改组件。
 - [ ] 学生端与分析台可各自独立 build / 部署。
+- [ ] 模块切换通过本地 transition 容器完成，尊重 reduced motion，且 `rg "scrollIntoView" frontend` 无匹配。
 
 ---
 

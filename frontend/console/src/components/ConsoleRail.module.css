@@ -51,21 +51,24 @@
   text-align: left;
   cursor: pointer;
   transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .tab:hover {
   border-color: var(--line);
   background: rgba(255, 254, 251, 0.48);
   color: var(--ink);
+  transform: translateX(2px);
 }
 
 .activeTab {
   border-color: var(--ink);
   background: var(--paper);
   color: var(--ink);
+  transform: translateX(3px);
 }
 
 .tab span,

@@ -1199,6 +1199,96 @@ git add frontend/console
 git commit -m "feat: rebuild research console"
 ```
 
+### Task 6.5: Add Module Transition System
+
+**Goal:** Make module switches feel continuous without changing information architecture or importing a heavy animation runtime. Use local React state for mount/exit timing and CSS Modules for the actual motion.
+
+**Files:**
+- Modify: `docs/frontend/2026-05-26-frontend-rebuild-plan.md`
+- Modify: `docs/frontend/frontend-cc-spec.md`
+- Modify: `frontend/README.md`
+- Modify: `frontend/student/src/styles/tokens.css`
+- Modify: `frontend/student/src/styles/global.css`
+- Modify: `frontend/student/src/App.tsx`
+- Modify: `frontend/student/src/App.module.css`
+- Modify: `frontend/student/src/App.test.tsx`
+- Create: `frontend/student/src/components/TransitionSlot.tsx`
+- Create: `frontend/student/src/components/TransitionSlot.module.css`
+- Modify: `frontend/console/src/styles/tokens.css`
+- Modify: `frontend/console/src/styles/global.css`
+- Modify: `frontend/console/src/App.tsx`
+- Modify: `frontend/console/src/App.module.css`
+- Modify: `frontend/console/src/App.test.tsx`
+- Create: `frontend/console/src/components/TransitionSlot.tsx`
+- Create: `frontend/console/src/components/TransitionSlot.module.css`
+
+- [ ] **Step 1: Document the motion contract**
+
+Record these constraints in `frontend-cc-spec.md` and `frontend/README.md`:
+
+- Do not share transition components between `student` and `console`.
+- Prefer CSS transitions and small React state machines over Framer Motion / GSAP.
+- Animate `opacity` and `transform`; avoid layout-heavy properties except tightly scoped composer height/visibility changes.
+- Respect `prefers-reduced-motion: reduce`.
+- Do not use `scrollIntoView`.
+
+- [ ] **Step 2: Add failing tests first**
+
+Student app:
+
+- Switching from chat to records or breathing keeps the workspace under a transition container.
+- The active transition container exposes `data-transition-state`.
+
+Console app:
+
+- Switching from single-turn trace to batch/framework renders through a transition container.
+- The active tab panel exposes `data-transition-state`.
+
+- [ ] **Step 3: Add local transition primitives**
+
+Create one `TransitionSlot` per app. It accepts:
+
+```ts
+interface TransitionSlotProps {
+  viewKey: string
+  className?: string
+  children: React.ReactNode
+}
+```
+
+Behavior:
+
+- On first render, show `children` in `entered` state.
+- When `viewKey` changes, keep the previous child in an `exiting` state for one animation frame, then render the new child in `entering` and finally `entered`.
+- Use a short timeout aligned with CSS duration; avoid external dependencies.
+- Expose `data-transition-state` for tests and debugging.
+
+- [ ] **Step 4: Wire student transitions**
+
+- Wrap the chat/tool workspace with `TransitionSlot` keyed by `activeView`.
+- Add drawer backdrop/sidebar enter motion.
+- Add `composerArea` transitions for starter prompts, composer, and referral panel replacement.
+- Keep the existing `scrollTop = scrollHeight` logic; do not introduce `scrollIntoView`.
+
+- [ ] **Step 5: Wire console transitions**
+
+- Wrap `SingleTurnTrace`, `BatchEvidence`, and `FrameworkMap` with `TransitionSlot` keyed by `activeTab`.
+- Add subtle panel reveal motion.
+- Keep analysis-table motion restrained; readability wins over spectacle.
+
+- [ ] **Step 6: Verify**
+
+Run:
+
+```powershell
+pnpm --dir frontend test
+pnpm --dir frontend typecheck
+pnpm --dir frontend build
+rg "scrollIntoView" frontend
+```
+
+Expected: tests, typecheck, and build exit 0; `scrollIntoView` has no matches.
+
 ---
 
 ### Task 7: Integration, Safety Checks, and Documentation
