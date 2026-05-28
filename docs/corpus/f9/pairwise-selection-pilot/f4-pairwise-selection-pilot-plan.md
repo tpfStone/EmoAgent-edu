@@ -4,13 +4,13 @@
 
 ## 0. 当前结论
 
-`docs/specs/f4-pairwise-selection-codex-spec.md` 的方向成立，但不能直接按原文实现。原文把 pairwise 改造写成“在现有 pointwise prompt 后追加一段”的增量改造；实际代码中 F4 critic 是逐候选独立打分，再用 `weighted_total` 做 argmax 择优。因此，这一轮必须先做 **离线 pairwise pilot + 人工 A/B 验证**，在证据达标前不切换 `/chat` 的默认择优器。
+`docs/specs/f4-pairwise-selection.md` 的方向成立，但不能直接按原文实现。原文把 pairwise 改造写成“在现有 pointwise prompt 后追加一段”的增量改造；实际代码中 F4 critic 是逐候选独立打分，再用 `weighted_total` 做 argmax 择优。因此，这一轮必须先做 **离线 pairwise pilot + 人工 A/B 验证**，在证据达标前不切换 `/chat` 的默认择优器。
 
-2026-05-27 追加：10 对 smoke 已完成，结论是工具链可用但不足以判断 pairwise 优劣。下一步仍是 Phase A 修正重跑，不进入 Phase B；执行口径见 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`。
+2026-05-27 追加：Phase A.1 的 10 对 smoke 已完成，结论是工具链可用但不足以判断 pairwise 优劣。下一步仍是 Phase A 修正重跑，不进入 Phase B；执行口径见 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`。
 
-2026-05-28 追加：Phase A rerun 已完成候选生成、pairwise judge 与正式 3-sample pointwise baseline；主 rerun 产物见 `docs/corpus/f9/pairwise-selection-pilot/inputs/phase-a-rerun/`、`runs/phase-a-rerun/`、`annotations/phase-a-rerun/`。当前 24 对主集场景均衡（亲子/同伴/学业各 8），pairwise stable 为 `14/24`、无 invalid，pointwise baseline 为 `24/24` 且 `pointwise_sample_count=3`。人工 A/B 标注尚未完成，因此还没有 go/no-go 结论，下一步是填写 `annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv` 后运行 eval。
+2026-05-28 追加：Phase A.2 rerun 已完成候选生成、人工 A/B 标注、pairwise judge、正式 3-sample pointwise baseline 和 eval。主 rerun 24 对，三方交集 `comparison_intersection_pairs=7`，低于计划下限 `12`；`critic_human_agreement=0.429`，`agreement_delta_vs_pointwise=0.000`。本轮结论为 `inconclusive`，不能进入 Phase B，也不能切换 `/chat` 默认择优器。当前状态以 `docs/corpus/f9/pairwise-selection-pilot/README.md`、`phase-a-rerun-plan.md` 和 `reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md` 为准。
 
-Claude 对 Codex 五条评审意见的回应合理，全部采纳：
+上一轮五条评审意见的回应合理，全部采纳：
 
 1. **调用形态不匹配**：采纳。pairwise 是 per-pair 调用形态，不是 per-candidate prompt 的局部追加。
 2. **单次调用不能干净抵消位置偏见**：采纳。pilot 默认使用两次独立调用，先求验证干净，再评估降本。
@@ -370,7 +370,7 @@ C:\Python313\python.exe -m pytest -q
 
 ## 9. 与原 pairwise 草案的关系
 
-`docs/specs/f4-pairwise-selection-codex-spec.md` 保留为方向性草案；本文件是阶段 A 初版执行基准。10 对 smoke 后的下一轮执行以 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 为准。若三者冲突，优先级为：`phase-a-rerun-plan.md` > 本文件 > 原 spec。
+`docs/specs/f4-pairwise-selection.md` 保留为方向性草案；本文件是阶段 A 大轮试验方案。Phase A.1 的工具链和 smoke 记录以 `phase-a-implementation-plan.md` 为准；Phase A.2 的 rerun 计划、结果和下一步以 `phase-a-rerun-plan.md` 为准。若文档冲突，优先级为：`README.md` 当前状态 > `phase-a-rerun-plan.md` > `phase-a-implementation-plan.md` > 本文件 > 原 spec。
 
 - 以两次独立调用为 pilot 默认，而不是单次调用双排序。
 - 以离线 pilot 验证为前置，而不是直接改 runtime 默认择优。
