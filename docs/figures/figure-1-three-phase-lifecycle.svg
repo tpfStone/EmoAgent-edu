@@ -18,18 +18,18 @@
 <text class="th" x="130" y="84" text-anchor="middle">阶段一：setup</text>
 <text class="ts" x="130" y="108" text-anchor="middle">专家定情感维度+量表</text>
 <text class="ts" x="130" y="128" text-anchor="middle">冷启动：构建对话语料</text>
-<text class="ts" x="130" y="148" text-anchor="middle">填充 RAG 记忆库</text>
+<text class="ts" x="130" y="148" text-anchor="middle">RAG 记忆库为规划项</text>
 
 <rect class="purple" x="250" y="60" width="180" height="110" rx="12" stroke-width="1"/>
 <text class="th" x="340" y="84" text-anchor="middle">阶段二：生成+把关</text>
 <text class="ts" x="340" y="108" text-anchor="middle">多 agent 生成候选回应</text>
-<text class="ts" x="340" y="128" text-anchor="middle">critic 多维评估+择优</text>
+<text class="ts" x="340" y="128" text-anchor="middle">critic 成对比较择优</text>
 <text class="ts" x="340" y="148" text-anchor="middle">安全门前置否决</text>
 
 <rect class="coral" x="460" y="60" width="180" height="110" rx="12" stroke-width="1"/>
 <text class="th" x="550" y="84" text-anchor="middle">阶段三：离线优化</text>
-<text class="ts" x="550" y="108" text-anchor="middle">DPO 训练 teacher</text>
-<text class="ts" x="550" y="128" text-anchor="middle">人在环偏好标注</text>
+<text class="ts" x="550" y="108" text-anchor="middle">F9/pairwise gate</text>
+<text class="ts" x="550" y="128" text-anchor="middle">稳定偏好对 → DPO</text>
 <text class="ts" x="550" y="148" text-anchor="middle">异步，攒够才训</text>
 
 <line x1="220" y1="115" x2="248" y2="115" class="arr" marker-end="url(#a)"/>
@@ -47,5 +47,5 @@
 <line x1="130" y1="242" x2="130" y2="172" class="arr" marker-end="url(#a)"/>
 
 <rect class="green" x="120" y="300" width="440" height="44" rx="8" stroke-width="1"/>
-<text class="ts" x="340" y="322" text-anchor="middle">关键改造：judge 从「打分终点」变成「生成中途的质量把关」</text>
+<text class="ts" x="340" y="322" text-anchor="middle">关键改造：judge 从「打分终点」变成「成对偏好把关」</text>
 </svg>

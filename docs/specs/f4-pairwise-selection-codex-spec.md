@@ -1,8 +1,11 @@
-# F4 Pairwise 择优改造 · Codex 增量开发规格
+# F4 成对偏好择优 · 目标规格
 
-> **交付对象**：Codex / 编码 agent。本文档是对 `f4-critic-epitome-codex-spec.md` 的**增量改造**，不替代原 spec。原 spec 的 EPITOME pointwise 打分、CASEL 辅助、boundary 检测全部保留；本改造**只替换"如何择优、如何产偏好对"这一环**。
+> **状态**：目标规格 / 非运行时默认。当前 `/chat` 仍由 `CriticService` 使用 pointwise 分数和 `weighted_total` 做择优；`app/config.py` 尚无 `CRITIC_SELECTION_MODE`。本文记录 F4 下一阶段要迁移到的 pairwise 主线。
+> **交付对象**：Codex / 编码 agent。本文档是对 `f4-critic-epitome-codex-spec.md` 的**增量改造目标**，不替代原 spec。原 spec 的 EPITOME pointwise 打分、CASEL 辅助、boundary 检测作为历史路径和兼容说明保留；本改造目标**替换“如何择优、如何产偏好对”这一环**。
 > **模块定位**：运行时管线第④环（F4 critic 内部）。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（critic 专用 client，模型 `deepseek-v4-pro`）。
+
+> **证据边界**：Phase A rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise，也不能直接作为 runtime 切换依据。本文把 pairwise 定为后续主线，但 runtime 迁移必须先通过新的样本验证和前端/API/数据层联调。
 
 ---
 
@@ -14,40 +17,45 @@
 - LLM-as-judge 的已知规律：**pairwise（A 和 B 哪个好）比 pointwise（每条打绝对分）稳得多**，因为相对判断不需要稳定的绝对标尺。
 - 下游 DPO 真正需要的是 winner/loser **偏好对**，绝对分本就是多余的中间产物。
 
-因此本改造：**择优与偏好对改由 pairwise 比较产出（新的真值来源）；EPITOME 三维 pointwise 分继续打，但降级为诊断性/展示性输出，经 F9 校验前不作真值。**
+因此本改造目标是：**择优与训练用偏好对改由 pairwise 比较产出；具体分数降级为历史路径、兼容字段和诊断材料，不再作为未来主判据。**
+
+历史路径需保留在文档中：早期 F4 通过 EPITOME/CASEL 逐项打分并用 `weighted_total` 排序择优，这解释了现有 schema、数据库字段、前端 `ScoreMatrix` 和旧实验报告。后续新文档不得再把这些具体分数写成 F4 的目标主线。
 
 ---
 
 ## 1. 改造后的职责（一句话）
 
 接收一组候选回应（MVP 恰好 2 个），在给定用户倾诉 + 历史的语境下：
-1. 对每条仍做 EPITOME 三维 pointwise 打分（0/1/2）+ CASEL 辅助 + boundary 检测 —— **逻辑沿用原 spec，仅作诊断输出，不再用于择优**。
+1. 对每条候选做 boundary 检测；迁移期可继续保留 EPITOME/CASEL pointwise 字段作为兼容和诊断，但不要求作为目标主流程的必要输出。
 2. 对候选做 **pairwise 比较**（含正反两次消位置偏见）选出 winner —— **这是新的择优真值**。
 3. 输出最佳候选、各候选诊断分、pairwise 比较记录、偏好对（供 DPO）。
+
+当前实现尚未满足上述职责。现有 runtime 仍输出 `scores`，并用 `weighted_total` 选择 `best_candidate_id`；本文描述的是下一阶段迁移目标。
 
 ---
 
 ## 2. 范围与非目标
 
 **做：**
-- 新增 pairwise 比较 prompt（与 pointwise 在**同一次 judge 调用**内产出，不新增第二次 LLM 往返）。
+- 新增 pairwise 比较 prompt，优先产出 winner、稳定性和理由。
 - 新增正反两次比较消位置偏见。
 - 择优逻辑改为 `select_winner()` 调 `compare_pair()`；boundary 候选仍前置出局。
 - 偏好对改由 pairwise 结果产出。
 - schema 增量扩展，向后兼容。
 
 **不做：**
-- 不删除 EPITOME pointwise / CASEL / boundary 逻辑。
+- 本轮文档修复不改 `/chat` 默认运行时。
+- 不立即删除 EPITOME pointwise / CASEL / boundary 逻辑；旧字段短期保留用于兼容、迁移和历史追溯。
 - 不改 F1/F2/F3 任何接口。
 - 不实现 3 候选的两两比较聚合（`select_winner` 留扩展钩子，但 MVP 只处理 2 候选）。
-- 不改 `weighted_total` 字段含义（它仍是 pointwise 加权分，仅供诊断）。
+- 不把 `weighted_total` 写成未来主判据；它仅解释旧实现和过渡兼容。
 
 ---
 
 ## 3. 关键设计决策
 
-### 3.1 单次 judge 调用同时产出 pointwise + pairwise
-延续 MVP "合并调用降成本"的纪律。一次调用让模型既给两条候选的 EPITOME/CASEL 分，又直接给出"哪条更好 + 理由"。
+### 3.1 Pairwise 优先，旧分数字段可选
+目标实现应以 pairwise 输出为主：一次判断直接给出"哪条更好 + 理由 + 稳定性"。旧 pointwise 分数字段可在迁移期保留，但不得成为判断是否可用、是否生成偏好对的必要条件。
 
 ### 3.2 正反两次比较消位置偏见
 LLM 倾向偏袒先出现的候选。因此对同一对候选跑两次：
@@ -75,9 +83,9 @@ LLM 倾向偏袒先出现的候选。因此对同一对候选跑两次：
 | `CRITIC_LLM_MAX_TOKENS` | `4096` | 必须足够大：v4-pro 会先产 reasoning_content，token 不足会 `finish_reason=length` 导致 content 空、parse 失败 |
 | `CRITIC_LLM_RESPONSE_FORMAT_JSON` | `True` | 强制 JSON 输出 |
 | `CRITIC_PAIRWISE_TWO_CALLS` | `false` | 正反比较是否拆两次调用；默认单次调用内做两排列 |
-| `CRITIC_SELECTION_MODE` | `pairwise` | `pairwise`（新默认）/ `pointwise`（回退到原 argmax 行为，便于对照实验） |
+| `CRITIC_SELECTION_MODE` | 待新增 | 迁移期可选：`pairwise` / `pointwise`。当前代码尚未实现该配置；默认值只能在 runtime adapter 完成并通过验证后再切。 |
 
-> `CRITIC_SELECTION_MODE=pointwise` 必须保留，作为 F9 对照实验的回退路径，也作为 pairwise 出问题时的安全网。
+> 若后续新增 `CRITIC_SELECTION_MODE`，`pointwise` 只作为历史对照和紧急回退，不再作为 F4 主线。文档不得提前宣称 `pairwise` 已是 runtime 默认。
 
 ---
 
@@ -114,16 +122,17 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 ### 5.3 平票/不稳定兜底
 当 `compare_pair` 两次结论冲突：
-- **默认**：用 pointwise `weighted_total` 作 tiebreak（这正是诊断分仍有用的地方），取高分者为 winner，并标 `selection_method="pointwise_tiebreak"`。
-- 若 pointwise 也相等 → 取 **共情型（c1）** 为默认 winner（情感辅导共情优先），标 `selection_method="orientation_default"`，**不生成偏好对**（无明确优劣，喂 DPO 会加噪）。
+- **v1 建议**：记录为 `pairwise_unresolved`，不生成训练用 `preference_pair`。
+- 用户回复可以走安全兜底候选，例如共情优先的 `orientation_default`，但必须把 `selection_method` 标为兜底，而不是稳定偏好。
+- 不再用 pointwise `weighted_total` 做默认 tiebreak；否则会把已弃用的具体分数重新放回主判据。
 
-> 平票兜底用 pointwise 是合理的：pairwise 不稳时，pointwise 至少给一个有依据的方向，好过随机。但此时不产偏好对，避免把模糊样本喂进 DPO。
+> 不稳定策略是开放问题。当前文档先固定保守边界：不稳定样本不能进入 DPO；是否需要模型二次裁决、人工复核或更多样本聚合，放入后续 F4 研究任务。
 
 ---
 
 ## 6. Pairwise 比较 Prompt（中文，可直接用）
 
-在原 pointwise prompt 的同一次调用中追加 pairwise 部分。完整 prompt 结构：先给两条候选的 pointwise 打分指令（沿用原 spec §5），再追加：
+目标 prompt 应直接围绕成对比较组织。若迁移期仍复用旧 pointwise prompt，可以在同一次调用中追加以下 pairwise 部分，但最终选择只看 pairwise 判定：
 
 ```
 ————————————————
@@ -156,7 +165,7 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 请把这部分追加进同一个 JSON 输出，字段如下：
 {
-  ...（前面 pointwise 的 ER/IP/EX/casel/boundary 字段，每条候选一份）...,
+  ...（可选的旧 pointwise 兼容字段）...,
   "pairwise": {
     "judgment_1": "甲/乙/难分",     // 顺序 (甲,乙)
     "judgment_2": "甲/乙/难分",     // 顺序 (乙,甲)
@@ -191,8 +200,8 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 ```json
 {
   "best_candidate_id": "c1",
-  "selection_method": "pairwise_stable",   // 新增：pairwise_stable | pointwise_tiebreak | orientation_default | single_survivor | all_blocked
-  "scores": [ ... 原 pointwise 诊断分，含 weighted_total，含义不变 ... ],
+  "selection_method": "pairwise_stable",   // 新增：pairwise_stable | pairwise_unresolved | orientation_default | single_survivor | all_blocked
+  "scores": [ ... 旧 pointwise 兼容字段，可为空或仅供历史追溯 ... ],
   "pairwise": {                            // 新增
     "winner_id": "c1",
     "stable": true,
@@ -208,10 +217,10 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 字段说明：
 - `selection_method`：记录 winner 是怎么定的，便于 F9 分析与调试。
-- `scores[].weighted_total`：**仍计算并落库**，但仅作诊断 / tiebreak / F9 校验对象，**不再驱动择优**。下游/论文须明确：经 F9 前不作质量真值。
-- `preference_pair`：仅当 `selection_method in {pairwise_stable, single_survivor}` 时生成；`pointwise_tiebreak` 也可生成（有明确高低）；`orientation_default` **不生成**。
+- `scores[].weighted_total`：旧 pointwise 加权分。迁移期可以为兼容保留，但不再公开为主证据，也不再驱动择优。
+- `preference_pair`：仅当 `selection_method in {pairwise_stable, single_survivor}` 时生成；`pairwise_unresolved` 和 `orientation_default` **不生成**。
 
-> **数据库**：`candidates` 表无需改结构（pointwise 分照旧落库）。建议 `turns` 表新增列 `selection_method`（String）记录择优方式，便于后续抽取干净的 DPO 数据（只取 pairwise_stable 来源的偏好对）。若不想动表，可暂存进现有 JSON 字段。
+> **数据库**：短期不删除旧分数字段，避免破坏现有迁移和前端类型。下一阶段建议新增 `selection_method` 与 pairwise 判定记录，便于后续只抽取 `pairwise_stable` 来源的干净 DPO 数据。
 
 ---
 
@@ -220,14 +229,14 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 | # | 场景 | 期望 |
 |---|---|---|
 | P1 | 两次判断都选 c1 | `selection_method=pairwise_stable`，winner=c1，偏好对(c1,c2) |
-| P2 | judgment_1 选 c1、judgment_2 选 c2（位置偏见） | `stable=false`，走 pointwise tiebreak |
-| P3 | 两次都"难分" | `stable=false`，pointwise tiebreak；若 pointwise 也平 → orientation_default，无偏好对 |
+| P2 | judgment_1 选 c1、judgment_2 选 c2（位置偏见） | `stable=false`，`selection_method=pairwise_unresolved`，不生成偏好对 |
+| P3 | 两次都"难分" | `stable=false`，可走 `orientation_default` 回复兜底，但不生成偏好对 |
 | P4 | c2 越界(boundary)、c1 正常 | 不进 pairwise，winner=c1，`selection_method=single_survivor`，偏好对(c1,c2) |
 | P5 | 两条都越界 | best=None，all_blocked，无偏好对 |
 | P6 | pointwise 分 c1 高但 pairwise 稳定选 c2 | winner=c2（**pairwise 优先于 pointwise**，验证真值来源切换） |
-| P7 | `CRITIC_SELECTION_MODE=pointwise` | 回退到原 argmax 行为，pairwise 字段可空 |
+| P7 | `CRITIC_SELECTION_MODE=pointwise` | 仅作为迁移期对照/回退，pairwise 字段可空；不得作为主线输出 |
 | P8 | v4-pro 长 reasoning，max_tokens=4096 | 不出现 `finish_reason=length` / 空 content / parse 失败（回归 token 预算 bug） |
-| P9 | 单次调用解析出 pointwise + pairwise 两部分 | 两部分都正确解析，缺任一按容错处理（pairwise 缺→降级 pointwise；pointwise 缺→该候选记最低诊断分） |
+| P9 | 单次调用解析出 pairwise trace，旧分数字段可空 | pairwise 字段缺失时不得生成偏好对；旧 pointwise 字段缺失不影响 pairwise 主流程 |
 
 > P6 是这次改造的**核心回归用例**：必须证明 pairwise 结论能覆盖 pointwise 加权分。
 
@@ -239,9 +248,9 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 - [ ] `compare_pair` / `select_winner` 拆分实现，2 候选走通；3+ 候选明确未实现（NotImplementedError 或配置降级）
 - [ ] 正反两次比较产出，只有指向同一 candidate_id 才 `stable=true`
 - [ ] boundary 候选前置出局，不进 pairwise
-- [ ] 平票兜底按 §5.3：pointwise tiebreak → orientation_default；后者不产偏好对
+- [ ] 平票/不稳定按 §5.3：标为 `pairwise_unresolved` 或安全兜底，不产训练用偏好对
 - [ ] schema 新增 `selection_method`、`pairwise` 字段，旧字段全保留
-- [ ] `weighted_total` 仍计算落库，但不驱动择优
+- [ ] `weighted_total` 仅为旧字段兼容和历史追溯，不公开为主证据，不驱动择优
 - [ ] 偏好对仅在有明确优劣时生成（orientation_default 不生成）
 - [ ] `CRITIC_SELECTION_MODE=pointwise` 回退路径可用（对照实验用）
 - [ ] §9 全部用例通过，尤其 P6（pairwise 覆盖 pointwise）、P8（token 预算回归）

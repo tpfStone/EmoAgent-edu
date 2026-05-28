@@ -36,8 +36,8 @@
 <line x1="350" y1="260" x2="350" y2="286" class="arr" marker-end="url(#a)"/>
 
 <rect class="blue" x="180" y="286" width="340" height="60" rx="8" stroke-width="1"/>
-<text class="th" x="350" y="308" text-anchor="middle">③ RAG 检索</text>
-<text class="ts" x="350" y="328" text-anchor="middle">输出：相似情境的优质回应示例</text>
+<text class="th" x="350" y="308" text-anchor="middle">③ RAG 检索（规划项）</text>
+<text class="ts" x="350" y="328" text-anchor="middle">当前运行时可空跳过；未来输出参考回应</text>
 <line x1="350" y1="346" x2="350" y2="372" class="arr" marker-end="url(#a)"/>
 
 <rect class="box" x="210" y="372" width="280" height="44" rx="8" stroke-width="1"/>
@@ -50,8 +50,8 @@
 <text class="th" x="350" y="472" text-anchor="middle">生成器 B · 引导反思</text>
 <text class="ts" x="350" y="492" text-anchor="middle">候选回应 2</text>
 <rect class="purple" x="460" y="450" width="180" height="60" rx="8" stroke-width="1"/>
-<text class="th" x="550" y="472" text-anchor="middle">生成器 C · 行动（后加）</text>
-<text class="ts" x="550" y="492" text-anchor="middle">候选回应 3</text>
+<text class="th" x="550" y="472" text-anchor="middle">生成器 C · 行动（未来）</text>
+<text class="ts" x="550" y="492" text-anchor="middle">F8 后续项</text>
 <path d="M350 416 L150 416 L150 448" class="arr" marker-end="url(#a)"/>
 <line x1="350" y1="416" x2="350" y2="448" class="arr" marker-end="url(#a)"/>
 <path d="M350 416 L550 416 L550 448" class="arr" marker-end="url(#a)"/>
@@ -61,16 +61,16 @@
 <line x1="350" y1="536" x2="350" y2="562" class="arr" marker-end="url(#a)"/>
 
 <rect class="coral" x="120" y="562" width="460" height="130" rx="12" stroke-width="1"/>
-<text class="th" x="350" y="584" text-anchor="middle">⑤ Critic — 多维评分 + 择优</text>
+<text class="th" x="350" y="584" text-anchor="middle">⑤ Critic — 当前 pointwise / 目标 pairwise</text>
 <rect class="amber" x="140" y="602" width="200" height="34" rx="6" stroke-width="1"/>
-<text class="ts" x="240" y="623" text-anchor="middle">逐候选打分：EPITOME + 激活CASEL维</text>
+<text class="ts" x="240" y="623" text-anchor="middle">旧分数字段：兼容/诊断</text>
 <rect class="amber" x="360" y="602" width="200" height="34" rx="6" stroke-width="1"/>
 <text class="ts" x="460" y="623" text-anchor="middle">越界/不适龄/幻觉检测</text>
 <rect class="amber" x="140" y="644" width="420" height="34" rx="6" stroke-width="1"/>
-<text class="ts" x="350" y="665" text-anchor="middle">加权总分 → argmax 择优（选最佳，不取多数派）</text>
+<text class="ts" x="350" y="665" text-anchor="middle">目标：pairwise 稳定 winner → 偏好对；不稳定不进 DPO</text>
 <line x1="350" y1="692" x2="350" y2="718" class="arr" marker-end="url(#a)"/>
 
 <rect class="green" x="180" y="718" width="340" height="56" rx="8" stroke-width="1"/>
 <text class="th" x="350" y="740" text-anchor="middle">⑥ 回复用户</text>
-<text class="ts" x="350" y="760" text-anchor="middle">最佳回应 + (情境,候选,分数) 入日志供 DPO</text>
+<text class="ts" x="350" y="760" text-anchor="middle">最佳回应 + pairwise trace / 兼容字段入日志</text>
 </svg>
