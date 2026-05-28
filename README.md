@@ -46,6 +46,26 @@ python -m pytest tests/test_handlers -q
 python -m pytest tests -q
 ```
 
+## Frontend
+
+The React frontends live in `frontend/` as a pnpm workspace.
+
+```powershell
+pnpm install
+pnpm --dir frontend dev:student
+pnpm --dir frontend dev:console
+pnpm --dir frontend typecheck
+pnpm --dir frontend build
+pnpm --dir frontend build:pages
+```
+
+Student app: `http://localhost:5173`  
+Research console: `http://localhost:5174`
+
+GitHub Pages mock demo and local live instructions:
+
+- `docs/frontend/github-pages-mock-local-live.md`
+
 ## Documents
 
 - 总纲与开发框架：`docs/overview/`

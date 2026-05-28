@@ -1,0 +1,244 @@
+.trace {
+  display: grid;
+  gap: 18px;
+}
+
+.topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.kicker {
+  margin: 0 0 6px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.topline h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.risk {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.green {
+  color: var(--f1);
+}
+
+.yellow {
+  color: var(--f4);
+}
+
+.red {
+  color: var(--boundary);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 180px minmax(240px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 254, 251, 0.62);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.field select,
+.field input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field input::placeholder {
+  color: var(--ink-faint);
+}
+
+.field select:focus,
+.field input:focus,
+.runButton:focus {
+  outline: 2px solid color-mix(in srgb, var(--f2) 70%, white);
+  outline-offset: 2px;
+}
+
+.runButton {
+  min-width: 92px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.runButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--boundary) 56%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--boundary-bg);
+  color: var(--boundary);
+}
+
+.sections {
+  display: grid;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.metrics div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.metrics dt {
+  margin: 0 0 4px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.metrics dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.studentPreview {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 18px 20px 20px;
+  border: 1px solid color-mix(in srgb, var(--f1) 26%, var(--line));
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--paper) 92%, var(--f1-bg)),
+    color-mix(in srgb, var(--paper) 84%, var(--f1-bg))
+  );
+  box-shadow: 0 12px 30px rgba(35, 32, 27, 0.07);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.previewHeader h3,
+.previewHeader p {
+  margin: 0;
+}
+
+.previewHeader h3 {
+  color: var(--ink);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.previewHeader span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--f1) 40%, var(--line));
+  border-radius: 999px;
+  color: var(--f1);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.studentReply {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--ink);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.85;
+  text-wrap: pretty;
+}
+
+@media (max-width: 920px) {
+  .controls,
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .topline {
+    flex-direction: column;
+  }
+
+  .topline h2 {
+    font-size: 24px;
+  }
+
+  .previewHeader {
+    flex-direction: column;
+  }
+
+  .previewHeader span {
+    white-space: normal;
+  }
+}

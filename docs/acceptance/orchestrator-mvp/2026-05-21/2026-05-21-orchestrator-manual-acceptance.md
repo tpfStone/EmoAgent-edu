@@ -15,10 +15,9 @@
 
 ## 当前状态
 
-- `mock-dry-run-20260522-000306` 已通过。
-- 结果目录：`docs/acceptance/orchestrator-mvp/2026-05-21/runs/mock-dry-run-20260522-000306/`。
-- 通过证据：45/45 请求成功，`auto_issue_rows=0`，落库计数 `turns=45`、`messages=90`、`candidates=90`、`preference_pairs=0`。
-- 第一次失败 run `mock-dry-run-20260522-000010` 是 API 进程未持续监听导致的连接拒绝，已删除，不作为验收记录。
+- F1 安全门单列验收已通过，最终记录 run 为 `f1-real-llm-20260522-215321`。
+- 真实 LLM 45 条正式验收已完成，正式记录 run 为 `real-llm-20260522-215717`。
+- 当前验收结论、修复记录和证据文件见 `2026-05-21-orchestrator-mvp-test-summary.md`。
 
 ## 文件夹结构
 
@@ -27,8 +26,8 @@
 ```text
 docs/acceptance/orchestrator-mvp/2026-05-21/
   README.md
-  2026-05-21-orchestrator-deferred-validation.md
   2026-05-21-orchestrator-manual-acceptance.md
+  2026-05-21-orchestrator-mvp-test-summary.md
   runs/
     .gitignore
     <run-id>/
@@ -153,7 +152,7 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 ```
 
-本次 MVP 验收优先用 `deepseek-chat`，因为当前客户端尚未显式传 DeepSeek V4 的 `thinking` 开关；`deepseek-chat` 当前兼容映射到 `deepseek-v4-flash` 非思考模式，能保留 F3 的 temperature 设置。后续迁移计划见 `docs/overview/2026-05-21-mvp-integration-roadmap.md` 的“LLM 模型策略（MVP 验收）”。
+本次 MVP 验收优先用 `deepseek-chat`，因为当前客户端尚未显式传 DeepSeek V4 的 `thinking` 开关；`deepseek-chat` 当前兼容映射到 `deepseek-v4-flash` 非思考模式，能保留 F3 的 temperature 设置。后续迁移计划见 `docs/overview/emoedu-post-mvp-guide.md` 的“两个带硬期限的技术债”。
 
 重新启动 API，确保配置生效：
 

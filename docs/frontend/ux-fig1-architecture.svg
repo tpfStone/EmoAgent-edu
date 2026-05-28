@@ -1,0 +1,57 @@
+<svg viewBox="0 0 920 600" xmlns="http://www.w3.org/2000/svg" font-family="'Nunito','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <style>
+      .t{fill:#33312c;} .soft{fill:#6a675f;} .faint{fill:#a6a299;}
+      .mono{font-family:'IBM Plex Mono','SFMono-Regular',monospace;}
+    </style>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6a675f"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="600" fill="#faf8f3"/>
+  <text x="40" y="46" class="t" font-size="22" font-weight="800">图 1 · 双前端架构</text>
+  <text x="40" y="70" class="soft" font-size="13.5">一个后端 /chat，两个物理分离的界面；机制与孩子之间有一道刻意设计的墙</text>
+
+  <!-- backend core -->
+  <rect x="330" y="250" width="260" height="120" rx="14" fill="#fffefb" stroke="#d8cfbd" stroke-width="1.5"/>
+  <text x="460" y="280" text-anchor="middle" class="t" font-size="15" font-weight="700">后端 generator–critic</text>
+  <text x="460" y="303" text-anchor="middle" class="mono soft" font-size="11">POST /chat</text>
+  <text x="460" y="326" text-anchor="middle" class="soft" font-size="11.5">F1 安全门 → F2 情境 → F3 生成 → F4 择优</text>
+  <text x="460" y="348" text-anchor="middle" class="faint" font-size="11">落库：turns / candidates / scores / preference_pairs</text>
+
+  <!-- student app -->
+  <rect x="60" y="120" width="300" height="150" rx="16" fill="#eef3ee" stroke="#d6e3da" stroke-width="1.5"/>
+  <circle cx="86" cy="148" r="6" fill="#6f9c80"/>
+  <text x="100" y="153" class="t" font-size="16" font-weight="800">EmoAgent · 学生端</text>
+  <text x="80" y="180" class="soft" font-size="12.5">面向初中生 · 产品 · 公网</text>
+  <text x="80" y="203" class="t" font-size="12.5" font-weight="600">只渲染：</text>
+  <text x="80" y="223" class="mono soft" font-size="11.5">reply_text · risk_level · session_id</text>
+  <text x="80" y="248" class="faint" font-size="11.5">温暖、看不到任何机制</text>
+
+  <!-- research console -->
+  <rect x="560" y="120" width="300" height="150" rx="16" fill="#f3f0e8" stroke="#d8cfbd" stroke-width="1.5"/>
+  <rect x="582" y="142" width="12" height="12" rx="2" fill="#3a6b8a"/>
+  <text x="602" y="153" class="t" font-size="16" font-weight="800">研究分析台</text>
+  <text x="580" y="180" class="soft" font-size="12.5">研究者 / 开发者 / 评委 · 内网鉴权</text>
+  <text x="580" y="203" class="t" font-size="12.5" font-weight="600">渲染全部：</text>
+  <text x="580" y="223" class="mono soft" font-size="11">candidates · scores · epitome/casel</text>
+  <text x="580" y="240" class="mono soft" font-size="11">weighted_total · boundary_flag · 批量统计</text>
+
+  <!-- arrows -->
+  <path d="M330 290 Q230 290 210 270" fill="none" stroke="#6a675f" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="232" y="312" class="faint" font-size="10.5">仅 3 字段</text>
+  <path d="M590 290 Q690 290 710 270" fill="none" stroke="#6a675f" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="650" y="312" class="faint" font-size="10.5">全字段 + 落库</text>
+
+  <!-- the wall -->
+  <line x1="460" y1="400" x2="460" y2="560" stroke="#bd7a5e" stroke-width="2" stroke-dasharray="7 6"/>
+  <rect x="386" y="430" width="148" height="40" rx="8" fill="#f7efe8" stroke="#e3c4b2" stroke-width="1.2"/>
+  <text x="460" y="455" text-anchor="middle" fill="#a8624a" font-size="13" font-weight="700">安全 / 隐私之墙</text>
+  <text x="250" y="500" text-anchor="middle" class="soft" font-size="12">孩子的世界</text>
+  <text x="250" y="520" text-anchor="middle" class="faint" font-size="11">只有陪伴，无打分</text>
+  <text x="680" y="500" text-anchor="middle" class="soft" font-size="12">研究者的世界</text>
+  <text x="680" y="520" text-anchor="middle" class="faint" font-size="11">机制全开，离线可见</text>
+
+  <text x="460" y="585" text-anchor="middle" class="faint" font-size="11">同一次 /chat 调用的两面：学生端忘记系统存在，分析台看清系统如何工作</text>
+</svg>

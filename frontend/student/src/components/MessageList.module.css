@@ -1,0 +1,75 @@
+.messageList {
+  display: grid;
+  gap: 1.15rem;
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.agentMessage {
+  display: grid;
+  gap: 0.48rem;
+  justify-items: start;
+}
+
+.agentLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--sage-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.agentDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
+.agentText {
+  width: 100%;
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.85;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.agentText p {
+  margin: 0;
+}
+
+.agentText p + p {
+  margin-top: 0.95rem;
+}
+
+.studentRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.studentMessage {
+  max-width: min(32rem, 86%);
+  margin: 0;
+  padding: 0.72rem 0.92rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f1eee7;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .messageList {
+    gap: 1rem;
+  }
+
+  .studentMessage {
+    max-width: 92%;
+  }
+}

@@ -1,0 +1,56 @@
+<svg viewBox="0 0 920 640" xmlns="http://www.w3.org/2000/svg" font-family="'Nunito','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <style>
+      .t{fill:#33312c;} .soft{fill:#6a675f;} .faint{fill:#a6a299;}
+      .mono{font-family:'IBM Plex Mono',monospace;}
+    </style>
+    <marker id="a2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6a675f"/>
+    </marker>
+  </defs>
+  <rect width="920" height="640" fill="#faf8f3"/>
+  <text x="40" y="46" class="t" font-size="22" font-weight="800">图 2 · 学生端用户流（含危机分支）</text>
+  <text x="40" y="70" class="soft" font-size="13.5">孩子全程只看到温暖回复或温和转介；后端分级对孩子不可见</text>
+
+  <!-- entry -->
+  <rect x="360" y="100" width="200" height="56" rx="12" fill="#fffefb" stroke="#d8cfbd" stroke-width="1.5"/>
+  <text x="460" y="125" text-anchor="middle" class="t" font-size="14" font-weight="700">孩子打开 / 起手式开口</text>
+  <text x="460" y="143" text-anchor="middle" class="faint" font-size="11">「今天有点累」「想吐槽一件事」</text>
+
+  <path d="M460 156 L460 192" fill="none" stroke="#6a675f" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <!-- send -->
+  <rect x="350" y="196" width="220" height="50" rx="12" fill="#eef0ea" stroke="#dfe0d8" stroke-width="1.2"/>
+  <text x="460" y="226" text-anchor="middle" class="t" font-size="13.5">发送一句倾诉 → POST /chat</text>
+
+  <path d="M460 246 L460 286" fill="none" stroke="#6a675f" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <!-- decision: risk_level (hidden from child) -->
+  <polygon points="460,290 560,335 460,380 360,335" fill="#f3f0e8" stroke="#d8cfbd" stroke-width="1.5"/>
+  <text x="460" y="330" text-anchor="middle" class="t" font-size="13" font-weight="700">risk_level ?</text>
+  <text x="460" y="349" text-anchor="middle" class="faint" font-size="10">（后端判定，孩子不可见）</text>
+
+  <!-- green path -->
+  <path d="M560 335 L660 335" fill="none" stroke="#6f9c80" stroke-width="1.6" marker-end="url(#a2)"/>
+  <text x="610" y="326" text-anchor="middle" fill="#4a6e58" font-size="11" font-weight="700">green</text>
+  <rect x="660" y="300" width="220" height="70" rx="12" fill="#eef3ee" stroke="#d6e3da" stroke-width="1.5"/>
+  <text x="770" y="328" text-anchor="middle" class="t" font-size="13.5" font-weight="700">渲染 reply_text</text>
+  <text x="770" y="348" text-anchor="middle" class="soft" font-size="11.5">作为「被珍视」的一段话</text>
+  <text x="770" y="363" text-anchor="middle" class="faint" font-size="10.5">继续对话 · 同 session_id 记忆</text>
+
+  <!-- yellow/red path -->
+  <path d="M460 380 L460 430" fill="none" stroke="#bd7a5e" stroke-width="1.6" marker-end="url(#a2)"/>
+  <text x="478" y="410" fill="#a8624a" font-size="11" font-weight="700">yellow / red</text>
+  <rect x="300" y="434" width="320" height="120" rx="14" fill="#f7efe8" stroke="#e3c4b2" stroke-width="1.5"/>
+  <text x="460" y="460" text-anchor="middle" fill="#5c382a" font-size="14" font-weight="800">温和转介面板（替换输入框）</text>
+  <text x="460" y="483" text-anchor="middle" class="soft" font-size="12">共情句 + 引导联系可信成年人</text>
+  <rect x="330" y="498" width="120" height="40" rx="9" fill="#fffefb" stroke="#e3c4b2"/>
+  <text x="390" y="516" text-anchor="middle" fill="#bd7a5e" font-size="15" font-weight="800">12356</text>
+  <text x="390" y="531" text-anchor="middle" class="faint" font-size="9.5">心理援助热线</text>
+  <rect x="470" y="498" width="120" height="40" rx="9" fill="#fffefb" stroke="#e3c4b2"/>
+  <text x="530" y="516" text-anchor="middle" fill="#bd7a5e" font-size="15" font-weight="800">12355</text>
+  <text x="530" y="531" text-anchor="middle" class="faint" font-size="9.5">青少年服务台</text>
+
+  <text x="460" y="582" text-anchor="middle" class="soft" font-size="11.5">red 额外提示 120 / 110 · 锁定输入，不展开危机对话（呼应「AI 不是危机干预者」）</text>
+  <text x="460" y="604" text-anchor="middle" class="faint" font-size="11">失败兜底：超时 / module_failed → 安全话术，绝不暴露原始错误</text>
+</svg>

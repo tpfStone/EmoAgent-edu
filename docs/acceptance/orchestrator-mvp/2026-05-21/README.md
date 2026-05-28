@@ -6,16 +6,17 @@
 
 ## 当前状态
 
-- `mock-dry-run-20260522-000306` 已通过：45/45 请求成功，自动问题 0，落库抽查 `turns=45`、`messages=90`、`candidates=90`、`preference_pairs=0`。
-- 下一步是 `real-llm` 正式人工验收：接入 DeepSeek，跑完整 45 条，只标低质量或异常产出。
+- F1 安全门单列验收已通过，最终记录 run 为 `f1-real-llm-20260522-215321`。
+- 真实 LLM 45 条正式验收已完成，正式记录 run 为 `real-llm-20260522-215717`。
+- 当前结论、修复记录和证据文件见 `2026-05-21-orchestrator-mvp-test-summary.md`。
 
 ## 目录约定
 
 ```text
 docs/acceptance/orchestrator-mvp/2026-05-21/
   README.md
-  2026-05-21-orchestrator-deferred-validation.md
   2026-05-21-orchestrator-manual-acceptance.md
+  2026-05-21-orchestrator-mvp-test-summary.md
   runs/
     .gitignore
     <run-id>/

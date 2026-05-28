@@ -1,0 +1,96 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.candidate,
+.boundaryCandidate {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.boundaryCandidate {
+  border-color: color-mix(in srgb, var(--boundary) 54%, var(--line));
+  background: var(--boundary-bg);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.id {
+  margin: 0 0 4px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.header h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.markers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.winner,
+.boundary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.winner {
+  background: var(--f1-bg);
+  color: var(--f1);
+}
+
+.boundary {
+  background: color-mix(in srgb, var(--boundary-bg) 70%, white);
+  color: var(--boundary);
+}
+
+.text,
+.reason {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.reason {
+  margin-top: 10px;
+  color: var(--boundary);
+  font-size: 13px;
+}
+
+.empty {
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  background: rgba(255, 254, 251, 0.42);
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,5 +1,7 @@
 # Orchestrator MVP Implementation Plan
 
+> **Archive note:** This 2026-05-21 implementation plan is kept for historical task breakdown and execution context. Current acceptance status lives in `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`; current post-MVP planning lives in `docs/overview/emoedu-post-mvp-guide.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the first `/chat` orchestration layer that runs F1/F2/F3/F4 end to end, records a coherent MVP turn log, and maintains session history.
@@ -63,8 +65,8 @@
   - `tests/test_handlers/test_chat_handler.py`
   - `tests/test_dao/test_chat_turn_dao.py`
   - `tests/test_alembic_env.py`
-- Modify `docs/issues/2026-05-20-f1-f4-development-issues.md` or add `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md`
-  - Record deferred 45-corpus validation and manual review.
+- Modify `docs/issues/2026-05-20-f1-f4-development-issues.md` or `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`
+  - Record the 45-corpus validation boundary and manual review status.
 
 ---
 
@@ -183,7 +185,7 @@ CASEL 是辅助项，不应随激活维度数量线性膨胀；因此对已激�
 
 - [ ] **Step 6: Record the prompt-splitting rollback marker**
 
-Add this note to `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md` in Task 7:
+This historical note was later merged into `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`:
 
 ```markdown
 F4 judge prompt rollback marker:
@@ -710,7 +712,7 @@ Expected: PASS.
 ### Task 7: Record Deferred Validation
 
 **Files:**
-- Create: `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-deferred-validation.md`
+- Historical target: `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`
 
 - [ ] **Step 1: Add issue note**
 

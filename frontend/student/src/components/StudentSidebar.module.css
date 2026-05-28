@@ -1,0 +1,222 @@
+.sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  background: #f2eee6;
+  padding: 1.8rem 1.25rem 1.35rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.3rem;
+}
+
+.brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.brandDot {
+  width: 0.82rem;
+  height: 0.82rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
+.brand strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #2f302d;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textButton {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
+.textButton:hover {
+  color: var(--text-primary);
+}
+
+.primaryButton {
+  display: flex;
+  min-height: 3.35rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.62rem;
+  margin-top: 1.6rem;
+  padding: 0 1.05rem;
+  border: 1px solid rgba(111, 156, 128, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 254, 251, 0.88);
+  color: var(--sage-deep);
+  font-size: 1rem;
+  font-weight: 760;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.primaryButton span {
+  font-size: 1.4rem;
+  font-weight: 520;
+  line-height: 1;
+}
+
+.primaryButton:hover {
+  border-color: rgba(111, 156, 128, 0.52);
+  background: var(--card-white);
+  color: var(--text-primary);
+}
+
+.sectionLabel {
+  margin-top: 1.8rem;
+  color: var(--text-faint);
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.sessionList {
+  display: grid;
+  gap: 0.18rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.7rem 0.05rem 0.9rem;
+}
+
+.sessionButton {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.6rem;
+  padding: 0.38rem 0.2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  transition:
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.sessionButton:hover,
+.sessionButtonActive {
+  background: rgba(255, 254, 251, 0.58);
+}
+
+.sessionDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.dot0 {
+  background: var(--sage);
+}
+
+.dot1 {
+  background: var(--mist);
+}
+
+.dot2 {
+  background: var(--clay);
+}
+
+.dot3 {
+  background: var(--sage);
+}
+
+.sessionTitle,
+.sessionTime {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionTitle {
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 560;
+}
+
+.sessionTime {
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+.toolList {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: auto;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(216, 207, 189, 0.88);
+}
+
+.toolButton {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.72rem;
+  padding: 0 0.72rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  text-align: left;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.toolButton:hover,
+.toolButtonActive {
+  border-color: rgba(111, 156, 128, 0.26);
+  background: rgba(255, 254, 251, 0.58);
+  color: var(--sage-deep);
+}
+
+.toolDot,
+.toolRing {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.toolDot {
+  border: 1px solid rgba(111, 156, 128, 0.58);
+  background: rgba(111, 156, 128, 0.08);
+}
+
+.toolRing {
+  border: 1.5px solid var(--sage);
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft);
+  }
+}
