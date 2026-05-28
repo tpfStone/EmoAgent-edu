@@ -1,0 +1,18 @@
+{
+  "total_pairs": 24,
+  "human_valid_pairs": 15,
+  "critic_valid_pairs": 7,
+  "pairwise_matches": 3,
+  "critic_human_agreement": "0.429",
+  "pointwise_valid_pairs": 7,
+  "pointwise_matches": 3,
+  "pointwise_human_agreement": "0.429",
+  "agreement_delta_vs_pointwise": "0.000",
+  "comparison_intersection_pairs": 7,
+  "pairwise_valid_pairs_all": 9,
+  "pointwise_valid_pairs_all": 13,
+  "attrition_human_tie_or_invalid": 9,
+  "attrition_pairwise_unstable_or_invalid": 6,
+  "attrition_pointwise_invalid_or_nonformal": 2,
+  "human_tie_rate": "0.375"
+}

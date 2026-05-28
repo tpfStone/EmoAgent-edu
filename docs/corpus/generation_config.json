@@ -1,0 +1,121 @@
+{
+  "prompt_version": "corpus_synthesis_v1",
+  "gen_model": "deepseek-chat",
+  "intended_use": "rag_pool | test_input",
+  "targets": {
+    "target_preference_pairs_total": 1200,
+    "minimum_usable_pairs": 1000,
+    "soft_cap_pairs": 1500,
+    "probe_per_cell": 160
+  },
+  "production_quota_multipliers": {
+    "压抑型": 1.2
+  },
+  "probe_cells": [
+    {
+      "persona": "反刍型",
+      "scenario": "同伴关系"
+    },
+    {
+      "persona": "外放型",
+      "scenario": "学业压力"
+    },
+    {
+      "persona": "适应型",
+      "scenario": "亲子摩擦"
+    }
+  ],
+  "variant_tags": [
+    "低强度情绪",
+    "中等强度情绪",
+    "高强度但非危机",
+    "短句表达",
+    "稍长句表达",
+    "带一点犹豫",
+    "主动求助",
+    "不太愿意展开",
+    "具体事件细节",
+    "当天刚发生"
+  ],
+  "personas": [
+    {
+      "name": "压抑型",
+      "persona_basis": "ERQ-CA: 高表达抑制",
+      "regulation_tendency": "高表达抑制",
+      "language_features": "短句、回避真实感受、常用“没事”“无所谓”等淡化表达。",
+      "description": "你习惯压抑自己的感受，不太愿意直接说出心里难受，常用“没事”“无所谓”带过，但字里行间能感到你其实很在意。"
+    },
+    {
+      "name": "反刍型",
+      "persona_basis": "ERQ-CA: 高反刍",
+      "regulation_tendency": "高反刍",
+      "language_features": "反复纠结、追问原因、容易陷入“是不是我不好”的循环。",
+      "description": "你会反复想着同一件事，很难停下来，常常追问为什么会这样，也容易把事情和自己是不是不够好联系起来。"
+    },
+    {
+      "name": "回避型",
+      "persona_basis": "ERQ-CA: 高回避",
+      "regulation_tendency": "高回避",
+      "language_features": "转移话题、不愿直面、拖延处理、用“之后再说”避开压力。",
+      "description": "你不太想面对让自己难受的事情，会转移话题、拖延，或者用绕开对方和不提这件事的方式让自己轻松一点。"
+    },
+    {
+      "name": "外放型",
+      "persona_basis": "ERQ-CA: 高发泄、低重评",
+      "regulation_tendency": "高发泄、低重评",
+      "language_features": "情绪激烈、指责、感叹号较多、强调不公平和被冒犯。",
+      "description": "你遇到不舒服的事会直接表达出来，语气比较冲，容易觉得别人不理解你或事情很不公平，但不涉及伤害自己。"
+    },
+    {
+      "name": "适应型",
+      "persona_basis": "ERQ-CA: 高重评、高求助（正样本/对照）",
+      "regulation_tendency": "高重评、高求助",
+      "language_features": "能表达感受、愿意沟通、能看到不同角度并尝试求助。",
+      "description": "你能比较清楚地说出自己的难受，也愿意思考解决办法，会尝试理解别人的角度，并向倾诉对象求助。"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "学业压力",
+      "description": "围绕成绩、考试、作业、排名、偏科、复习压力等初中生日常学习压力。",
+      "subscenarios": [
+        "月考成绩退步",
+        "数学或英语偏科",
+        "被老师当众点名",
+        "作业堆积写不完",
+        "熬夜复习仍没效果",
+        "被同学排名比较",
+        "父母安排补习班",
+        "临近期中考试焦虑"
+      ]
+    },
+    {
+      "name": "同伴关系",
+      "description": "围绕朋友、同桌、小组、群聊、误会、冷落、背后议论等同伴互动困扰。",
+      "subscenarios": [
+        "周末活动没被邀请",
+        "群聊没有拉自己",
+        "好友和别人走得近",
+        "聊天后被冷淡回复",
+        "小组活动没人组队",
+        "被同学背后议论",
+        "值日或合作发生误会",
+        "秘密被朋友说出去"
+      ]
+    },
+    {
+      "name": "亲子摩擦",
+      "description": "围绕父母沟通、隐私、手机、成绩比较、补习安排、时间控制等家庭摩擦。",
+      "subscenarios": [
+        "父母翻看手机",
+        "被拿来和别人家孩子比较",
+        "因为玩手机被责备",
+        "房间物品被擅自整理",
+        "是否报补习班有分歧",
+        "想要自己安排时间",
+        "考差了不敢告诉父母",
+        "父母想谈话但自己不想聊"
+      ]
+    }
+  ]
+}

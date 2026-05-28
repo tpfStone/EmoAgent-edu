@@ -1,0 +1,28 @@
+{
+  "pair_package_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun\\f9_pairwise_rerun_pairs.csv",
+  "input_pairs": 24,
+  "judged_pairs": 24,
+  "pairwise_sample_count": 3,
+  "llm_provider": "deepseek",
+  "critic_model": "deepseek-v4-pro",
+  "critic_thinking": "enabled",
+  "llm_timeout": 60.0,
+  "critic_temperature": 0.1,
+  "generator_run_ids": [
+    "phase-a-rerun-2026-05-27T14:30:11.915549+00:00"
+  ],
+  "generated_at_values": [
+    "2026-05-27T14:30:11.915549+00:00"
+  ],
+  "generator_models": [
+    "deepseek-v4-flash"
+  ],
+  "generator_thinking_values": [
+    "disabled"
+  ],
+  "f3_prompt_bundle_hashes": [
+    "0752505ef8bef781e51e2bce279a2605038e7d12b10f6b1b5a54d2430a991b35"
+  ],
+  "runs_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\phase-a-rerun\\f9_pairwise_judge_runs.csv",
+  "summary_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\phase-a-rerun\\f9_pairwise_judge_summary.csv"
+}

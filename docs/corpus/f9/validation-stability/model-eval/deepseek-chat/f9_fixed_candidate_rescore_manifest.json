@@ -1,0 +1,15 @@
+{
+  "input_scores_path": "docs\\corpus\\f9\\validation-stability\\post-erip-run-2\\f9_priority_review_queue.csv",
+  "blind_path": "docs\\corpus\\f9\\baseline\\f9_blind_annotation.csv",
+  "bucket": "priority",
+  "llm_provider": "deepseek",
+  "deepseek_model": "deepseek-chat",
+  "critic_sample_count": 3,
+  "repeats": 3,
+  "input_rows": 48,
+  "scored_rows": 10,
+  "run_rows": 30,
+  "summary_rows": 10,
+  "run_path": "docs\\corpus\\f9\\validation-stability\\model-eval\\deepseek-chat\\f9_fixed_candidate_rescore_runs.csv",
+  "summary_path": "docs\\corpus\\f9\\validation-stability\\model-eval\\deepseek-chat\\f9_fixed_candidate_rescore_summary.csv"
+}

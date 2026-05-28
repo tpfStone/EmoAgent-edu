@@ -1,0 +1,11 @@
+﻿pair_id,sample_no,human_preference,pairwise_winner,pairwise_match,pointwise_winner,pointwise_match,main_exclusion_reason,selection_method,pairwise_confidence
+sample-3,3,c1,c1,true,tie,,,pairwise_stable,unanimous
+sample-11,11,tie,c1,,tie,,human_tie_or_invalid,pairwise_stable,unanimous
+sample-16,16,c2,,,c2,true,critic_invalid_or_unstable,pointwise_tiebreak,unstable
+sample-19,19,c1,c1,true,tie,,,pairwise_stable,unanimous
+sample-22,22,c1,,,c2,false,critic_invalid_or_unstable,pointwise_tiebreak,unstable
+sample-25,25,c2,c1,false,c2,true,,pairwise_stable,unanimous
+sample-27,27,tie,c1,,tie,,human_tie_or_invalid,pairwise_stable,majority_with_unstable
+sample-31,31,c1,c1,true,c2,false,,pairwise_stable,unanimous
+sample-40,40,c2,c1,false,tie,,,pairwise_stable,unanimous
+sample-15,15,c2,c1,false,c2,true,,pairwise_stable,unanimous

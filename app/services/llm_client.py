@@ -11,18 +11,32 @@ class LLMClientProtocol(Protocol):
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str: ...
 
 
 class MockLLMClient:
+    def __init__(self):
+        self._pairwise_call_count = 0
+
     async def generate(
         self,
         prompt: str,
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str:
         await asyncio.sleep(0)
+        if "回应A" in prompt and "回应B" in prompt:
+            self._pairwise_call_count += 1
+            winner = "A" if self._pairwise_call_count % 2 == 1 else "B"
+            return (
+                '{"winner": "'
+                + winner
+                + '", "reason": "mock pairwise", '
+                '"boundary_concern": false, "boundary_reason": ""}'
+            )
         if "EPITOME" in prompt:
             return (
                 '{"ER": 1, "IP": 1, "EX": 1, "casel": {}, "boundary_flag": false, '
@@ -42,9 +56,16 @@ class MockLLMClient:
 
 
 class DeepSeekLLMClient:
-    def __init__(self, api_key: str, base_url: str, model: str):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        thinking_type: str | None = None,
+    ):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
+        self.thinking_type = thinking_type
 
     async def generate(
         self,
@@ -52,15 +73,21 @@ class DeepSeekLLMClient:
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str:
+        request_kwargs = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+        if self.thinking_type:
+            request_kwargs["extra_body"] = {"thinking": {"type": self.thinking_type}}
         try:
             response = await asyncio.wait_for(
-                self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                ),
+                self.client.chat.completions.create(**request_kwargs),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:

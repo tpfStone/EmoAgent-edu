@@ -1,0 +1,22 @@
+{
+  "created_at": "2026-05-28",
+  "source_pair_package": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun\\f9_pairwise_rerun_pairs.csv",
+  "selected_sample_nos": [
+    "1",
+    "11",
+    "2",
+    "3",
+    "6",
+    "7"
+  ],
+  "scenario_balance": {
+    "????": 2
+  },
+  "pairwise_sample_count_for_judge": 3,
+  "variants": {
+    "hidden_label_original": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun-step3-controls\\f9_pairwise_step3_hidden_label_original_pairs.csv",
+    "physical_swap": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun-step3-controls\\f9_pairwise_step3_physical_swap_pairs.csv",
+    "identical_text": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\phase-a-rerun-step3-controls\\f9_pairwise_step3_identical_text_pairs.csv"
+  },
+  "note": "Step 3 small real-LLM controls. Current pairwise prompt hides candidate_id and orientation labels."
+}

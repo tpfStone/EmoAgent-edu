@@ -1,14 +1,15 @@
 # 情感教育多智能体系统 · 开发框架文档
 
 > **用途**：开发总纲。明确「需求功能 + 逻辑链 + 各模块问题与注意点」，技术栈已定（复用 emoagent），具体实现细节标注为「🚧 后续盘」。
-> **配套**：评分依据见 `emoedu-mas-plan.md`；语料合成见 `../corpus/emoedu-corpus-synthesis.md`。
+> **配套**：F4 成对偏好主线见 `../specs/f4-pairwise-selection-codex-spec.md`；历史评分依据见 `emoedu-mas-plan.md`；语料合成见 `../corpus/emoedu-corpus-synthesis.md`。
 > **定位**：面向初中生（12–15 岁）中文情感教育对话系统；国际比赛投稿。
+> **当前状态**：本文描述目标架构。现有 `/chat` 运行时仍使用 pointwise 分数择优；F4 目标主线已改为 pairwise，但 runtime/API/数据库/前端尚未完成迁移。
 
 ---
 
 ## 0. 系统一句话
 
-用户（初中生）倾诉 → 安全门分级把关 → 多取向生成候选回应 → critic 按共情/教育维度打分择优 → 回复 → 高质量对话回流，离线 DPO 自进化。核心是 **generator–critic 闭环**。
+用户（初中生）倾诉 → 安全门分级把关 → 多取向生成候选回应 → critic 做成对偏好比较（pairwise）择优 → 回复 → 经验证的偏好对回流，离线 DPO 自进化。核心是 **generator–critic 闭环**。
 
 ---
 
@@ -18,14 +19,14 @@
 - **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red），黄红中断生成走转介。**必须读对话历史窗口**（危机信号常跨轮累积），非单条判断。
 - **F2 情境分析**：判定情境类型（学业压力/同伴关系/亲子摩擦）+ 激活的 CASEL 维度子集。对标 CogMAS 的 Q-matrix lookup。
 - **F3 多取向生成器**：≥2 个取向（共情型、引导反思型）并行生成候选。同底座 LLM + 不同 system prompt。
-- **F4 Critic 打分择优**：EPITOME 三维（每条必评，0/1/2）+ CASEL 激活维（辅助）→ 加权 → argmax 择优。
-- **F5 回复 + 日志**：返回最佳回应；记录 (情境, 各候选, 分数) 供后续 DPO。
+- **F4 Critic 成对偏好择优**：目标主线为 pairwise 比较候选回应，稳定时产出 winner/loser；EPITOME/CASEL 分数仅作为历史兼容和诊断材料。
+- **F5 回复 + 日志**：返回最佳回应；记录情境、候选、pairwise 判定、稳定性和必要的兼容字段，供后续验证与 DPO。
 
 ### 后做（MVP 跑通后）
 - **F6 RAG 检索**：检索相似情境优质回应作生成参考（依赖语料，见语料 md）。
-- **F7 DPO 离线训练**：用日志里的 (胜者 e⁺, 落败者 e⁻) 偏好对训练，更新生成器。
+- **F7 DPO 离线训练**：只使用通过 F9/pairwise gate 的稳定偏好对训练，更新生成器。
 - **F8 第三取向**（行动建议型）：MVP 阶段故意不做（见 §4 注意点）。
-- **F9 critic 信度校验**：小批量人工标注 vs LLM-judge 一致性（见 §6）。
+- **F9 / pairwise 校验**：小批量人工 A/B 标注 vs LLM-judge 成对偏好一致性（见 §6）。
 
 ---
 
@@ -48,17 +49,17 @@ F3 多取向生成器（≥2 取向并行）──→ [候选1, 候选2, ...]
   │
   ▼
 F4 Critic
-   ├─ EPITOME 三维打分（每候选，0/1/2）
-   ├─ CASEL 激活维打分（辅助）
+   ├─ 成对偏好比较（pairwise，正反顺序消位置偏见）
+   ├─ EPITOME/CASEL 旧分数字段（兼容/诊断，不作主判据）
    ├─ 越界/不适龄/幻觉检测
-   └─ 加权总分 → argmax 择优
+   └─ 稳定 winner → 偏好对；不稳定 → 记录问题，不进 DPO
   │
   ▼
 F5 回复用户（最佳候选）
-   └─ 日志：(情境, 全部候选, 分数) → 供 F7 DPO
+   └─ 日志：(情境, 全部候选, pairwise 判定, 稳定性) → 供验证
   │
   ▼（异步、攒够才跑）
-F7 DPO：胜者/落败者配对成偏好对 → 训练 → 更新 F3 生成器
+F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 ```
 
 ---
@@ -68,7 +69,7 @@ F7 DPO：胜者/落败者配对成偏好对 → 训练 → 更新 F3 生成器
 | 层 | 选型 | 说明 |
 |---|---|---|
 | Web 框架 | FastAPI | 复用 emoagent |
-| 主数据库 | PostgreSQL | 存对话、候选、分数、偏好对 |
+| 主数据库 | PostgreSQL | 存对话、候选、pairwise 判定、兼容分数字段和偏好对 |
 | 缓存/队列 | Redis | 会话状态、对话历史窗口缓存、异步任务 |
 | 生成器底座 | DeepSeek API（复用）| MVP 用 API；DPO 后可换微调小模型 |
 | Critic 底座 | LLM API（建议与生成器**不同**或不同 prompt，降同源偏见）| 见 §4 注意点 |
@@ -94,17 +95,18 @@ F7 DPO：胜者/落败者配对成偏好对 → 训练 → 更新 F3 生成器
 
 ### F3 多取向生成器
 - **⚠️ 初期只做 2 取向**（共情 + 引导反思）。「行动建议型」与情感辅导「共情优先」有张力——急着给初中生出主意常是 EPITOME「探索」的反面。第三取向作 F8 后加。
-- 三取向 = 同底座 + 不同 system prompt，不需三个模型。
+- 多取向 = 同底座 + 不同 system prompt，不需多个模型；当前已实现两取向，第三取向是 F8 后续项。
 
 ### F4 Critic
 - **⚠️ EPITOME 评分是 0/1/2 三档**（0=无沟通,1=弱,2=强），**不是 1–5**。这是忠于原框架、可引用验证结论的前提。
 - **⚠️ EPITOME 可靠性局限（诚实标注）**：原论文指出 EPITOME 三维中 ER、IP 两维因操作定义不够清晰，专家可靠性偏低，仅 EX（探索）可靠性高。本系统应对：对 ER/IP 补充更明确的中文操作定义（见方案 md §六），并在论文 limitation 注明。这不是回避，是方法严谨性的体现。
-- **⚠️ 择优非投票**：argmax 加权总分，非 CogMAS 众数。情感回应多数派常最套路。
+- **⚠️ 分数是历史路径**：现有代码仍用 `weighted_total` 排序择优，但目标主线已改为 pairwise；具体分数不再公开或使用为主判据。
+- **⚠️ 择优非投票**：pairwise 直接比较哪条回应更适合当前孩子，非 CogMAS 众数，也不再以加权总分作为未来主线。
 - **⚠️ 同源偏见**：critic 与生成器若同模型同 prompt，judge 会偏袒自己风格的输出。建议 critic 用不同模型或显著不同 prompt。
 - **⚠️ 已知 LLM-judge 偏差（来自原论文）**：verbosity bias（偏好长回答）、跨运行不稳定、过度自信。critic prompt 要显式约束「不因长度加分」，并可多次采样取中位。
 
 ### F5/F7 日志与 DPO
-- **免费偏好对**：每轮 critic 的胜者/落败者天然成对，直接喂 DPO，无需额外造偏好数据。
+- **稳定偏好对才可用**：只有 pairwise 稳定、且通过 F9/pairwise gate 的 winner/loser 才能进入 DPO。`orientation_default`、`pairwise_unresolved` 或旧 pointwise 分数推导出的对不能直接训练。
 - **⚠️ 防自证陷阱**：DPO 偏好来自 critic，critic 是 LLM——若不做 F9 信度校验，等于 AI 教 AI 无外部锚点。F9 是 DPO 可信的前提，不是可选项。
 
 ---
@@ -135,12 +137,12 @@ F7 DPO：胜者/落败者配对成偏好对 → 训练 → 更新 F3 生成器
 
 ---
 
-## 6. F9 信度校验（DPO 可信的前提，必做）
+## 6. F9 / pairwise 校验（DPO 可信的前提，必做）
 
-- 抽取小批量（建议 30–50 条）候选回应，由你/队友按上面 0/1/2 定义人工标注。
-- 计算人工 vs critic(LLM) 的一致性（如 quadratically weighted κ，对标原论文指标）。
+- 目标主线：抽取小批量候选对，由人工做 A/B 偏好标注，计算人工 pairwise 与 critic pairwise 的一致性。
+- 历史/诊断线：EPITOME 0/1/2 分数可继续用于解释旧实现和分析维度可靠性，但不再作为 DPO 主判据。
 - 达到可接受一致性后，才正式用 critic 自动产 DPO 偏好对。
-- 论文里报告这个一致性数字 = 你「LLM-judge 在本任务可靠」的自证据，呼应原论文「需在具体任务上验证」的前提。
+- Phase A rerun 曾得到 `inconclusive`，因此旧试点不能直接解锁 runtime 或 DPO。
 
 ---
 
@@ -162,21 +164,22 @@ F7 DPO：胜者/落败者配对成偏好对 → 训练 → 更新 F3 生成器
 | F1 安全门 | ✅ 齐（C-SSRS 分级 + 12356/12355 + 历史窗口要求） | ✅ 可写完整规格后全权 |
 | F2 情境分析 | 🟡 基本齐（三类情境定义有，分类实现方式待定） | 🟡 规格补全后可 |
 | F3 生成器 | 🟡 取向定了，system prompt 未写 | 🟡 补 prompt 后可 |
-| F4 Critic | ✅ EPITOME 范式已坐实（本文 §5）；CASEL 辅助 prompt 待补 | 🟡 EPITOME 部分可先做 |
+| F4 Critic | 🟡 pairwise 目标规格已定；runtime/API/数据层/前端尚未迁移 | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |
 | F5 日志 | ✅ 齐 | ✅ |
 | F6 RAG | ❌ 依赖语料 + 向量库选型 | ❌ 暂不 |
 | F7 DPO | ❌ 依赖 F9 + 训练栈 | ❌ 暂不 |
 
-**结论**：整体不能一次性全权；但 **F1（安全门）现在信息最齐、最独立、最该先验证，可率先写完整规格交 Codex 全权开发**。其次是 F4 的 EPITOME 打分器（范式已坐实）。建议开发顺序：F1 → F4(EPITOME) → F5 → 串成 MVP → 再 F2/F3 补全 → 最后 F6/F7。
+**结论**：整体不能一次性全权。当前后端已跑通 F1-F4 与 `/chat`，下一阶段优先级应转为：先完成 F4 pairwise runtime adapter 与 trace，再同步 API、数据库和前端控制台，最后重新跑 F9/pairwise gate。
 
 ---
 
 ## 9. 下一步待办
 
 - [ ] 写 F1 安全门完整 Codex 规格（prompt 全文 + 含历史窗口的 IO schema + 三级转介 + 测试用例）
-- [ ] 写 F4 EPITOME 打分器完整规格（JSON schema + 多采样策略）
+- [ ] 将 F4 从 pointwise runtime 迁移到 pairwise runtime adapter
+- [ ] 更新 API schema、数据库记录和前端控制台 trace，停止把分数作为主证据
 - [ ] 定 F2 分类实现（prompt vs 复用 BERT）
 - [ ] 写 F3 两取向 system prompt
 - [ ] 语料：验收合成 prompt 模板方向 → 小批量试跑 → 批量
-- [ ] F9 信度校验流程落地
+- [ ] F9/pairwise 校验流程落地
 - [ ] 🚧 F6 向量库选型、F7 DPO 训练栈选型

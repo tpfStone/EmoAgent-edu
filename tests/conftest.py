@@ -14,6 +14,7 @@ class FakeLLMClient:
         timeout: float = 10.0,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        response_format: dict | None = None,
     ) -> str:
         self.prompts.append(
             {
@@ -21,6 +22,7 @@ class FakeLLMClient:
                 "timeout": timeout,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
+                "response_format": response_format,
             }
         )
         if not self.responses:

@@ -1,0 +1,8 @@
+{
+  "pair_package_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\inputs\\f9_pairwise_smoke_pairs.csv",
+  "input_pairs": 10,
+  "judged_pairs": 10,
+  "pairwise_sample_count": 3,
+  "runs_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\smoke\\f9_pairwise_judge_runs.csv",
+  "summary_path": "docs\\corpus\\f9\\pairwise-selection-pilot\\runs\\smoke\\f9_pairwise_judge_summary.csv"
+}
