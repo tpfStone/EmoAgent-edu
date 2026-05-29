@@ -24,6 +24,21 @@
 
 `CriticPairwiseService` 当前用于 F9/pairwise 离线试点，不参与 `/chat` 默认响应；离线 prompt 已把 F2 的 `activated_casel` 转为显式 CASEL A/B/tie 比较维度。
 
+## 端到端技术路线表
+
+| 阶段 | 输入 | 处理方式 | 输出 | 输出去向/作用 |
+|---|---|---|---|---|
+| F1 安全门 | 用户当前消息 + 历史窗口 | LLM 低温风险分级，代码侧填充固定转介动作 | `risk_level=green/yellow/red`、`block_generation`、`referral_message` | `green` 进入 F2；`yellow/red` 直接短路返回转介话术，不进入生成 |
+| F2 情境分析 | F1 放行后的用户当前消息 + 历史窗口 | LLM 低温四分类得到 `scenario`，再由 `SCENARIO_CASEL_MAP` 查表生成 `activated_casel` | `scenario`、`scenario_confidence`、`activated_casel`、`rationale` | `scenario` 给 F3 作情境上下文；`activated_casel` 给 F4 限定 CASEL 维度；同时进入 `/chat` 元数据、日志和离线分析 |
+| F3 双取向生成 | 用户消息 + 历史 + `scenario` + 可选 `rag_examples` | 同一底座 LLM 用两套取向 prompt 并发生成 | `c1=情感共情型`、`c2=认知共情型` 两条候选 | 候选列表进入 F4 当前 pointwise critic 择优；候选也可进入后续 F9/pairwise 输入包 |
+| F4 pointwise critic（当前 runtime） | 用户上下文 + `activated_casel` + F3 候选 | 对每条候选做 EPITOME/CASEL pointwise 打分、boundary 过滤和 `weighted_total` argmax | `best_candidate_id`、`scores`、历史兼容 `preference_pair` | 当前 `/chat` 默认用 `best_candidate_id` 选最终回复；分数和偏好对只作兼容与诊断，不作为新的 DPO 主来源 |
+| F4 pairwise / F9（离线目标线） | 冻结候选对 + 人工 A/B + `activated_casel_json` / CASEL trace | 离线 pairwise judge、pointwise baseline 和人工一致性评估 | agreement report、pairwise summary、go/no-go conclusion | 验证 pairwise 是否可迁移为后续主线；当前不是 `/chat` 默认 runtime，Phase A rerun 仍为 `inconclusive` |
+| F6/F7/F8 后续项 | 通过 gate 后的语料、偏好对或新增取向配置 | RAG 检索、DPO 训练、第三取向生成等后续实验 | 检索参考、训练数据或新增候选 | 当前不属于 F1-F4 主链路；需在对应 gate 通过后再接入运行时或训练流程 |
+
+## RAG / 外部知识库说明
+
+当前 `/chat` 主链路不需要外部知识库。F3 schema 预留了 `rag_examples`，但 `/chat` 暂未接入 F6 RAG，当前为空数组。RAG 是后续增强项，用于给生成器提供相似情境参考，不是 F2 分类或当前 F1-F4 运行的必要依赖。
+
 ## 当前改造主线
 
 F4 的运行时事实和目标方向要分开读：

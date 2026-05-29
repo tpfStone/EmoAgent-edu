@@ -75,7 +75,31 @@
 
 ---
 
-## 5. 判定 Prompt（中文，可直接用）
+## 5. 情境标签数据流与后续作用
+
+F2 的输出不是最终回复正文，而是本轮对话的结构化路由信号。完整数据流如下：
+
+```text
+用户当前消息 + 历史
+  -> F2 LLM 低温四分类
+  -> scenario
+  -> SCENARIO_CASEL_MAP 查表
+  -> activated_casel
+  -> F3 / F4 / /chat response / 日志与离线分析
+```
+
+- `scenario` 由 LLM 分类产生，标签只能是 `学业压力`、`同伴关系`、`亲子摩擦` 或 `其他`。
+- `scenario_confidence` 和 `rationale` 只作调试、日志和离线复盘参考，不参与后续路由决策。
+- `activated_casel` 由代码表 `SCENARIO_CASEL_MAP` 查出，不由 LLM 即兴生成。
+- `scenario` 传给 F3 作为生成上下文，帮助两条候选回应贴合当前情境。
+- `activated_casel` 传给当前 F4 pointwise critic，用来限定 CASEL 辅助评分维度。
+- 在 F4 pairwise 离线目标线中，`activated_casel` 会转成 CASEL A/B/tie 比较 rubric，用于解释和审计 pairwise 判断。
+- `/chat` response 返回 `scenario` 和 `activated_casel` 作为元数据；它们不是直接给学生看的回复正文。
+- F2 不做安全判断、不生成回复、不打分、不决定 EPITOME 的 ER/IP/EX 维度。
+
+---
+
+## 6. 判定 Prompt（中文，可直接用）
 
 ```
 你是一个面向中国初中生情感教育系统的情境分类模块。给定用户的倾诉和对话历史，判断这属于哪一类情境。你只分类，不回应、不评价。
@@ -106,14 +130,14 @@
 
 ---
 
-## 6. 实现方式选择
+## 7. 实现方式选择
 
 - **MVP 默认：用上面的 LLM prompt 分类**（简单、零训练、够用）。
 - 🚧 后续盘：emoagent 项目里已有 BERT 模型，若分类延迟/成本成为瓶颈，可训练/复用一个轻量分类器替代 LLM 调用。MVP 阶段不做。
 
 ---
 
-## 7. 配置项
+## 8. 配置项
 
 | 配置 | 建议初值 | 说明 |
 |---|---|---|
@@ -124,7 +148,7 @@
 
 ---
 
-## 8. 测试用例
+## 9. 测试用例
 
 | # | 输入 | 期望 scenario | 期望激活维度 |
 |---|---|---|---|
@@ -139,17 +163,17 @@
 
 ---
 
-## 9. 验收标准（DoD）
+## 10. 验收标准（DoD）
 
 - [x] FastAPI 端点，IO 符合 §3
-- [x] LLM 分类用 §5 prompt，temperature=0，JSON 解析容错（失败默认归"其他"，不报错中断）
+- [x] LLM 分类用 §6 prompt，temperature=0，JSON 解析容错（失败默认归"其他"，不报错中断）
 - [x] activated_casel 由 §4 表查出，非 LLM 即兴
 - [x] 输出可直接接入 F4 的 activated_casel 字段
-- [ ] §8 批量语料用例纳入持续回归，并记录分类准确率。
+- [ ] §9 批量语料用例纳入持续回归，并记录分类准确率。
 
 ---
 
-## 10. 不在本模块范围
+## 11. 不在本模块范围
 
 - 不做安全危机判断（F1 已前置）。
 - 不生成回应（F3）、不打分（F4）。

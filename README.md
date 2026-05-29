@@ -23,6 +23,8 @@ EmoEdu MAS 是一个面向中国初中生（12-15 岁）的中文情感教育多
 
 RAG 检索（F6）、第三取向行动建议（F8）、pairwise runtime adapter 和 DPO（F7）仍是后续或离线验证阶段内容。
 
+更细的端到端输入、处理、输出和去向见 [`docs/specs/README.md#端到端技术路线表`](docs/specs/README.md#端到端技术路线表)。
+
 ## Figures
 
 <p>
@@ -32,6 +34,8 @@ RAG 检索（F6）、第三取向行动建议（F8）、pairwise runtime adapter
 <p>
   <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="当前 /chat 运行时与目标 pairwise 迁移点" width="760">
 </p>
+
+上图是当前 `/chat` 运行时与目标 pairwise 迁移点的视觉总览；完整技术路线表以 [`docs/specs/README.md#端到端技术路线表`](docs/specs/README.md#端到端技术路线表) 为准。
 
 <p>
   <img src="./docs/figures/figure-3-argument-loop.svg" alt="理论框架到 Pairwise Gate 的证据链" width="760">
