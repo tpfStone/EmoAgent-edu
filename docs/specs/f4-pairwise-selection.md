@@ -5,13 +5,14 @@
 > **模块定位**：运行时管线第④环（F4 critic 内部）。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（critic 专用 client，模型 `deepseek-v4-pro`）。
 
-> **证据边界**：Phase A rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise，也不能直接作为 runtime 切换依据。本文把 pairwise 定为后续主线，但 runtime 迁移必须先通过新的样本验证和前端/API/数据层联调。
+> **证据边界**：Phase A rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise，也不能直接作为运行时切换依据。本文把 pairwise 定为后续主线，但运行时迁移必须先通过新的样本验证和前端/API/数据层联调。
+> **Phase B 口径**：Phase B 是受控运行时集成阶段，包含运行时 adapter、配置开关、schema/log 字段、fallback 和灰度或 shadow 验证；它不等于直接把 `/chat` 默认择优切到 pairwise。默认切换必须等待 Phase B gate 通过。
 
 ---
 
 ## 0. 当前状态 / 已完成 / 待办 / 后续计划
 
-**当前状态**：目标规格 + 离线试点工具链。`app/services/critic_pairwise.py`、`scripts/corpus/f9_pairwise_*.py` 和对应测试已存在，但 `/chat` 与 `/api/critic/evaluate` 仍未切换到 pairwise。Phase A rerun 结论为 `inconclusive`，不能作为 runtime 切换依据。
+**当前状态**：目标规格 + 离线试点工具链。`app/services/critic_pairwise.py`、`scripts/corpus/f9_pairwise_*.py` 和对应测试已存在，但 `/chat` 与 `/api/critic/evaluate` 仍未切换到 pairwise。Phase A rerun 结论为 `inconclusive`，不能作为运行时切换依据。
 
 **已完成**：
 - `CriticPairwiseService` 已能对同一候选对跑正反顺序两次独立判断，并映射回 candidate_id。
@@ -20,16 +21,18 @@
 - 测试覆盖 `tests/test_services/test_critic_pairwise.py` 与 `tests/test_corpus/test_f9_pairwise_*.py`。
 
 **待办**：
-- `CRITIC_SELECTION_MODE` 尚未实现，pairwise 不是 runtime 默认。
+- `CRITIC_SELECTION_MODE` 尚未实现，pairwise 不是运行时默认。
 - 当前离线实现使用两次独立 judge 调用；本文早期设想的“单次调用内输出两个方向”不是当前代码事实。
-- 当前离线聚合在无稳定多数时返回 `selection_method=pointwise_tiebreak`，而目标 runtime 迁移应避免把 pointwise 分数作为主判据；迁移前需要统一兜底语义。
+- 当前离线聚合在无稳定多数时返回 `selection_method=pointwise_tiebreak`，而目标运行时迁移应避免把 pointwise 分数作为主判据；迁移前需要统一兜底语义。
 - 数据库、公开 schema、前端展示尚未接入 `selection_method`、`pairwise` trace、`pairwise_confidence`。
-- Phase A 暴露 `c1` 偏斜、有效交集不足、agreement 不足，需先 rerun 通过 gate。
+- Phase A 暴露 `c1` 候选槽位偏斜、有效交集不足、agreement 不足，需先完成 Phase A.3 IRI rerun 并通过 gate。
 
 **后续计划入口**：
+- F9 产物与验收总览：`../corpus/f9/README.md`
 - Pairwise 试点计划：`../corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`
 - Phase A rerun 计划与结论：`../corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`、`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`
-- `c1` 偏斜诊断：`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_c1_collapse_diagnostic.md`
+- `c1` 候选槽位塌缩诊断：`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_c1_collapse_diagnostic.md`
+- Pointwise 历史计划归档：`../corpus/f9/plans/README.md`
 - 当前运行时 pointwise 规格：`f4-critic-epitome.md`
 
 ## 1. 为什么做这个改造
@@ -53,7 +56,7 @@
 2. 对候选做 **pairwise 比较**（含正反两次消位置偏见）选出 winner —— **这是新的择优真值**。
 3. 输出最佳候选、各候选诊断分、pairwise 比较记录、偏好对（供 DPO）。
 
-当前实现尚未满足上述职责。现有 runtime 仍输出 `scores`，并用 `weighted_total` 选择 `best_candidate_id`；本文描述的是下一阶段迁移目标。
+当前实现尚未满足上述职责。现有运行时仍输出 `scores`，并用 `weighted_total` 选择 `best_candidate_id`；本文描述的是下一阶段迁移目标。
 
 ---
 
@@ -105,9 +108,9 @@ LLM 倾向偏袒先出现的候选。因此对同一对候选跑两次：
 | `CRITIC_DEEPSEEK_MODEL` | `deepseek-v4-pro` | critic 专用模型，与 F3 的 `deepseek-chat` 分离 |
 | `CRITIC_LLM_MAX_TOKENS` | `4096` | 必须足够大：v4-pro 会先产 reasoning_content，token 不足会 `finish_reason=length` 导致 content 空、parse 失败 |
 | `CRITIC_LLM_RESPONSE_FORMAT_JSON` | `True` | 强制 JSON 输出 |
-| `CRITIC_SELECTION_MODE` | 待新增 | 迁移期可选：`pairwise` / `pointwise`。当前代码尚未实现该配置；默认值只能在 runtime adapter 完成并通过验证后再切。 |
+| `CRITIC_SELECTION_MODE` | 待新增 | 迁移期可选：`pairwise` / `pointwise`。当前代码尚未实现该配置；默认值只能在运行时 adapter 完成并通过验证后再切。 |
 
-> 若后续新增 `CRITIC_SELECTION_MODE`，`pointwise` 只作为历史对照和紧急回退，不再作为 F4 主线。文档不得提前宣称 `pairwise` 已是 runtime 默认。
+> 若后续新增 `CRITIC_SELECTION_MODE`，`pointwise` 只作为历史对照和紧急回退，不再作为 F4 主线。文档不得提前宣称 `pairwise` 已是运行时默认。
 
 ---
 
@@ -198,6 +201,19 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 > 实现注意：prompt 里"甲/乙"是**展示顺序的占位**，代码侧负责把 c1/c2 映射到甲/乙，并在 judgment_2 中交换。解析时统一映射回 candidate_id。
 
+### 7.1 activated_casel 显式比较（当前离线实现）
+
+F2 输出的 `activated_casel` 进入 pairwise judge prompt，作为显式 CASEL 比较 rubric。这里迁移的是“按激活维度做相对比较”，不是把旧 pointwise 的 0/1/2 分或 `weighted_total` 搬进 pairwise。
+
+当前 `CriticPairwiseService` 的要求：
+- prompt 只展示 `activated_casel` 中存在于共享 `CASEL_RUBRIC` 的维度定义，不展示未激活维度。
+- judge 输出 `epitome_comparison`：`{"ER": "A/B/tie", "IP": "A/B/tie", "EX": "A/B/tie"}`。
+- judge 输出 `casel_comparisons`：仅包含激活 CASEL 维度，值为 `A/B/tie`；`activated_casel=[]` 时必须为空对象 `{}`。
+- 代码侧把 A/B 归一到 candidate_id，`tie` 保留为 `"tie"`；漏评激活维度、输出未激活维度或非法值时，该 sample 标为 invalid，不生成稳定偏好。
+- 离线 pair package / judge CSV 记录 `activated_casel_json`、`judgment_1/2_epitome_comparison_json` 与 `judgment_1/2_casel_comparisons_json`，供 F9/pairwise 复核。
+
+该 trace 只用于解释、审计和验证；最终 winner 仍由 pairwise 稳定性判定产生，`weighted_total` 不参与 pairwise winner。
+
 ---
 
 ## 8. pairwise 结果判定（代码侧）
@@ -229,7 +245,9 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
     "stable": true,
     "judgment_1_winner_id": "c1",
     "judgment_2_winner_id": "c1",
-    "reason": "甲准确点出了孩子怕让父母失望的那层心情，乙只是泛泛安慰。"
+    "reason": "甲准确点出了孩子怕让父母失望的那层心情，乙只是泛泛安慰。",
+    "epitome_comparison": {"ER": "c1", "IP": "tie", "EX": "c1"},
+    "casel_comparisons": {"自我觉察引导": "c1", "关系技能培养": "tie"}
   },
   "preference_pair": {                     // 语义不变，但来源改为 pairwise
     "winner_id": "c1", "loser_id": "c2"
@@ -259,12 +277,24 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 | P7 | `CRITIC_SELECTION_MODE=pointwise` | 仅作为迁移期对照/回退，pairwise 字段可空；不得作为主线输出 |
 | P8 | v4-pro 长 reasoning，max_tokens=4096 | 不出现 `finish_reason=length` / 空 content / parse 失败（回归 token 预算 bug） |
 | P9 | 单次调用解析出 pairwise trace，旧分数字段可空 | pairwise 字段缺失时不得生成偏好对；旧 pointwise 字段缺失不影响 pairwise 主流程 |
+| P10 | `activated_casel` 非空 | prompt 只包含激活 CASEL 维度；输出每个激活维度的 A/B/tie 比较，漏评、多评或非法值均 invalid |
 
 > P6 是这次改造的**核心回归用例**：必须证明 pairwise 结论能覆盖 pointwise 加权分。
 
 ---
 
 ## 11. 验收标准（DoD）
+
+### 11.1 F4-local 前置验收（先于 F9）
+
+以下是 F4 pairwise 自身的结构性验收。未通过时，不进入 F9 的人工 A/B、一致性统计或 DPO 判断：
+
+- [x] `activated_casel_json` 已进入 pair package / summary；缺失时可按 `scenario` 从 `SCENARIO_CASEL_MAP` 推导
+- [x] pairwise prompt 只展示激活 CASEL 维度及定义，不展示未激活维度
+- [x] `casel_comparisons` 完整覆盖激活维度，且无未激活维度；漏评、多评或非法值均 invalid
+- [x] run CSV 记录 `judgment_1/2_epitome_comparison_json` 与 `judgment_1/2_casel_comparisons_json`，供 F9 复核
+
+### 11.2 迁移与运行时验收
 
 - [ ] critic 专用 client 接 `deepseek-v4-pro`，`CRITIC_LLM_MAX_TOKENS=4096`，`response_format=json`
 - [ ] `compare_pair` / `select_winner` 拆分实现，2 候选走通；3+ 候选明确未实现（NotImplementedError 或配置降级）
@@ -281,6 +311,8 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 ---
 
 ## 12. 与 F9 的衔接（务必写进论文方法链）
+
+> 顺序约束：先完成 §11.1 的 F4-local 前置验收，再进入 F9 修改/重跑和人工一致性验收。F9 验证的是在结构正确的 pairwise 输出上，critic 偏好与人工偏好是否一致，不负责补齐 `activated_casel_json`、prompt 维度范围或 `casel_comparisons` schema。
 
 改造后，F9 信度校验要校验的**主对象从 pointwise 三维分变成 pairwise 偏好判断**：
 - 人工对同一批候选对做 A/B 偏好标注（"哪条更好"，比标 0/1/2 更快更稳，标注成本反而下降）。

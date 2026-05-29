@@ -11,6 +11,7 @@ from app.schemas.critic import (
     EpitomeScore,
     PreferencePair,
 )
+from app.services.casel_rubric import CASEL_RUBRIC
 from app.services.llm_client import LLMClientProtocol
 
 
@@ -36,14 +37,6 @@ PROMPT_LEAK_MARKERS = (
 BRACKETED_PROMPT_LEAK_RE = re.compile(
     r"[（(][^）)]*(先接住|再递|新视角|共情|提问|承接|回应|孩子|取向|策略|候选|追问|建议回复)[^）)]*[）)]"
 )
-CASEL_RUBRIC = {
-    "自我觉察引导": "是否帮孩子识别、命名情绪。0=无视或否定情绪；1=笼统提及；2=精准命名并确认具体情绪。",
-    "自我管理引导": "是否引导可行的情绪调节。0=教孩子压抑/否认；1=泛泛建议；2=适龄、有据的调节策略。",
-    "社会觉察培养": "是否帮孩子理解他人视角。0=强化对立；1=不涉及或很空泛；2=引导换位思考且不评判。",
-    "关系技能培养": "是否给出可操作的人际应对。0=误导或破坏关系；1=空泛安慰；2=具体可执行的沟通方式。",
-    "负责任决策引导": "是否引导孩子自主权衡。0=替孩子下结论；1=给单一答案；2=引导自主权衡多选项。",
-}
-
 F9_RELIABILITY_SCORING_GUARDRAILS = """
 【F9 信度修订后的额外评分规则】
 先判定 audit_tags，再给 ER/IP/EX。audit_tags 只能从下面取值；没有命中则输出空数组。若命中多个问题，必须输出多个标签。

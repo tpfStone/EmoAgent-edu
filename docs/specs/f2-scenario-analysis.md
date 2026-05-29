@@ -58,7 +58,7 @@
 }
 ```
 
-> `activated_casel` 直接传给 F4 critic 的 `activated_casel` 字段。EPITOME 三维由 critic 恒评，不在此模块决定。
+> `activated_casel` 直接传给 F4 critic 的 `activated_casel` 字段。当前 pointwise F4 用它限定 CASEL 0/1/2 辅助评分；pairwise 目标线用它生成显式 CASEL 比较 rubric，并只做 A/B/tie 相对比较，不计算 CASEL 分数或 `weighted_total`。EPITOME 三维由 critic 恒评/恒比较，不在此模块决定。
 
 ---
 

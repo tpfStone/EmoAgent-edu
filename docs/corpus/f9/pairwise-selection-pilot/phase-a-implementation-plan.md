@@ -282,7 +282,7 @@ Phase A.1 的解决方案是先搭建最小闭环：
 
 结论修正：本轮 smoke 工具链跑通，但 agreement 数字不能用于判断 pairwise 是否优于或劣于 pointwise。原因是有效分母过小、pairwise 与 pointwise 使用的 valid 集不一致、pointwise 对照为 `CRITIC_SAMPLE_COUNT=1` 快速诊断口径，且 smoke 输入候选本身存在 `无效二选一`、`不当安抚`、`格式异常`、`缺少陪伴感` 等明显噪声。因此本轮唯一稳妥结论是：工具链可用、pairwise judge 无 invalid、格式未崩；不能上线，也不能切换为 `/chat` 默认择优器。
 
-下一步仍属于 Phase A，不是 Phase B。后续按 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 执行 Phase A rerun / Phase A.2：先修 F3 prompt、补 provenance、改 eval 交集口径、显式化模型，再用修复后的真实 F3 重新生成 15-20 对 human-valid 主集。
+下一步仍属于 Phase A，不是 Phase B。该段最初指向 Phase A.2；截至 2026-05-29，Phase A.2 已完成且结论为 `inconclusive`，当前执行入口改为 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 中的 Phase A.3：先做候选槽位化防污染、F3 新 IRI 取向小样本验证和均衡冻结输入包，再重新生成 15-20 对 human-valid 主集。
 
 2026-05-28 后续更新：Phase A.2 rerun 已完成候选生成、人工 A/B 标注、pairwise judge、pointwise baseline 和 eval，结论为 `inconclusive`。Phase A.2 的结果不再维护在本文中，详见 `phase-a-rerun-plan.md` 与 `reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`。
 

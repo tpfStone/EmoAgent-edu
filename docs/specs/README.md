@@ -10,7 +10,7 @@
 | F2 情境分析 | [f2-scenario-analysis.md](f2-scenario-analysis.md) | 已接入 `/api/scenario/evaluate` 与 `/chat`；情境到 CASEL 映射由代码表生成 | `app/services/scenario_service.py`, `app/services/orchestrator_service.py` | `tests/test_services/test_scenario_service.py`, `tests/test_handlers/test_scenario_handler.py` | `../corpus/` |
 | F3 多取向生成器 | [f3-multi-orientation-generator.md](f3-multi-orientation-generator.md) | 已接入 `/api/generator/generate` 与 `/chat`；固定两取向并发生成，RAG 入口尚未接入 `/chat` | `app/services/generator_service.py`, `app/services/orchestrator_service.py` | `tests/test_services/test_generator_service.py`, `tests/test_handlers/test_generator_handler.py` | `../corpus/f9/plans/f3-generator-fix-plan.md`, `../issues/2026-05-22-f3-prompt-iteration-issues.md` |
 | F4 pointwise critic | [f4-critic-epitome.md](f4-critic-epitome.md) | 当前 `/chat` 默认择优器；使用 EPITOME/CASEL pointwise、median、boundary 过滤和 `weighted_total` | `app/services/critic_service.py`, `app/services/orchestrator_service.py`, `app/schemas/critic.py` | `tests/test_services/test_critic_service.py`, `tests/test_handlers/test_critic_handler.py` | `../corpus/f9/plans/f4-critic-fix-plan.md`, `../corpus/f9/README.md` |
-| F4 pairwise 目标 | [f4-pairwise-selection.md](f4-pairwise-selection.md) | 离线工具链已存在；不是 runtime 默认，Phase A rerun 结论为 `inconclusive` | `app/services/critic_pairwise.py`, `scripts/corpus/f9_pairwise_*.py` | `tests/test_services/test_critic_pairwise.py`, `tests/test_corpus/test_f9_pairwise_*.py` | `../corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`, `../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md` |
+| F4 pairwise 目标 | [f4-pairwise-selection.md](f4-pairwise-selection.md) | 离线工具链已存在；已显式接入 `activated_casel` CASEL 比较 rubric；不是 runtime 默认，Phase A rerun 结论为 `inconclusive` | `app/services/critic_pairwise.py`, `scripts/corpus/f9_pairwise_*.py` | `tests/test_services/test_critic_pairwise.py`, `tests/test_corpus/test_f9_pairwise_*.py` | `../corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`, `../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md` |
 | F9 信度校验 | [f9-reliability-guide.md](f9-reliability-guide.md) | 主 gate 转为 pairwise 人工 A/B 一致性；pointwise 正式人工 F9 暂停，旧主包单次 PASS 但稳定性复跑失败 | `scripts/corpus/f9_sampling.py`, `scripts/corpus/f9_reliability.py`, `scripts/corpus/f9_validation.py`, `scripts/corpus/f9_fixed_candidate_rescore.py`, `scripts/corpus/f9_pairwise_*.py` | `tests/test_corpus/test_f9_*.py` | `../corpus/f9/README.md`, `../corpus/f9/pointwise-diagnostics/execution-summary.md` |
 
 ## 运行时主链路
@@ -22,14 +22,14 @@
 3. F3 `GeneratorService` 生成 `情感共情型` 与 `认知共情型` 两条候选。
 4. F4 `CriticService` 使用 pointwise 分数和 boundary 过滤择优。
 
-`CriticPairwiseService` 当前用于 F9/pairwise 离线试点，不参与 `/chat` 默认响应。
+`CriticPairwiseService` 当前用于 F9/pairwise 离线试点，不参与 `/chat` 默认响应；离线 prompt 已把 F2 的 `activated_casel` 转为显式 CASEL A/B/tie 比较维度。
 
 ## 当前改造主线
 
 F4 的运行时事实和目标方向要分开读：
 
 - `f4-critic-epitome.md` 描述当前 `/chat` 默认行为：pointwise EPITOME/CASEL 打分、`weighted_total` 择优和历史兼容 `preference_pair`。
-- `f4-pairwise-selection.md` 描述目标主线：用成对偏好判断替代 pointwise 作为择优和 DPO 偏好对来源。
+- `f4-pairwise-selection.md` 描述目标主线：用成对偏好判断替代 pointwise 作为择优和 DPO 偏好对来源；CASEL 在该线中是显式比较维度和审计 trace，不是加权总分项。
 - `f9-reliability-guide.md` 的主 gate 应转为 pairwise 人工 A/B 一致性；pointwise weighted kappa 只保留为诊断证据。
 - 在 pairwise rerun 通过预设 gate 前，不切换 `/chat` runtime，不把旧 pointwise 偏好对放入 DPO。
 

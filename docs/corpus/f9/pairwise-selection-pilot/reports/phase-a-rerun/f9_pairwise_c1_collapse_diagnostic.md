@@ -2,13 +2,28 @@
 
 日期：2026-05-28
 
+## 当前可执行结论：C1 最小防污染项
+
+本文保留 `C1 collapse` 作为历史问题名；正文中的准确含义是 **`c1` 候选槽位塌缩**。Phase A.2 的 `c1/c2` 同时绑定了候选槽位、取向标签和具体文本，旧结果只能作为诊断证据，不能作为新 IRI 取向下的正式偏好结论。
+
+Phase A.3 前置的最小防污染项是：
+
+- `c1/c2` 只表示候选槽位，不表示取向。
+- pairwise prompt 匿名化：不展示 `candidate_id`，不展示 `orientation`，只展示 `回应A` / `回应B` 的文本。
+- 保留 A/B 双向换位，并继续把 A/B 展示位映射回候选槽位。
+- 保留 raw pattern gate，报告 `A/B` 原始模式与候选槽位映射后的稳定性。
+- eval 必须按候选槽位、取向、raw pattern 分层输出 winner 分布。
+- 下一版冻结输入包必须记录原始取向到最终候选槽位的映射，且正式包应均衡或随机映射 `情感共情型` / `认知共情型` 到 `c1/c2`。
+
+执行口径：Step 1/2/3 是 Phase A.2 已完成的历史诊断证据；Step 4 是 Phase A.3 默认 judge 口径；Step 5 已迁移到 Phase A.3 的冻结输入包与 eval 实施计划，不在旧诊断轮直接执行。
+
 ## 文档归属
 
 本文记录 Phase A rerun 后发现的 `c1` 塌缩问题、当前已完成的检查、诊断设计，以及后续处理方案。
 
 放置位置：`docs/corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/`。
 
-原因：该问题来自 Phase A rerun 的真实产物分析，属于 rerun 诊断报告，不是顶层试验方案，也不是新的 Phase B/runtime 设计。顶层计划只保留阶段口径和门槛，避免把单轮诊断细节混入长期方案。
+原因：该问题来自 Phase A rerun 的真实产物分析，属于 rerun 诊断报告，不是顶层试验方案，也不是新的 Phase B 运行时设计。顶层计划只保留阶段口径和门槛，避免把单轮诊断细节混入长期方案。
 
 相关文件：
 
@@ -33,11 +48,11 @@ stable pairwise winner: c2 = 0/14
 human-valid: c1 = 7, c2 = 8
 ```
 
-这说明当前 pairwise judge 的稳定输出与人工偏好不一致，且存在明显偏斜。该问题暂称为 `c1 collapse`，但不能预设根因一定是 `c1` 列 bug；需要区分以下三类可能：
+这说明当前 pairwise judge 的稳定输出与人工偏好不一致，且存在明显偏斜。该问题暂称为 `c1 collapse`，准确说是 `c1` 候选槽位塌缩；但不能预设根因一定是 `c1` 列 bug，需要区分以下三类可能：
 
 1. 代码层映射或聚合 bug：A/B 展示位映射回 `candidate_id` 时出错，或聚合时硬绑 `c1`。
 2. 展示位偏置：真实 LLM 偏好展示位 A 或 B，即使双向换位后也产生大量位置冲突。
-3. 风格/标签偏好：LLM 偏好 `共情型` 风格，或受 prompt 中暴露的 `c1/c2`、`orientation` 标签影响。
+3. 风格/标签偏好：LLM 偏好 Phase A.2 历史标签中的 `共情型` 风格，或受 prompt 中暴露的 `c1/c2`、`orientation` 标签影响。
 
 ## 当前检查结果
 
@@ -128,6 +143,8 @@ c2, c1, false     = 0
 
 当前 pairwise prompt 暴露了候选 id 和取向：
 
+下列 `共情型/引导反思型` 是 Phase A.2 历史标签，用来解释旧产物中的污染来源，不是 Phase A.3 的取向定义。
+
 ```text
 【回应A】(c1, 共情型) ...
 【回应B】(c2, 引导反思型) ...
@@ -136,8 +153,8 @@ c2, c1, false     = 0
 这会把以下变量绑在一起：
 
 - 展示位：A/B
-- 候选列：c1/c2
-- 取向标签：共情型/引导反思型
+- 候选槽位：c1/c2
+- 取向标签：Phase A.2 历史标签 `共情型/引导反思型`
 - 实际文本内容
 
 因此，仅凭 “stable winner 全部是 c1” 无法区分是列偏置、风格偏好，还是标签诱导。
@@ -146,7 +163,7 @@ c2, c1, false     = 0
 
 诊断顺序采用“先 mock、再无 API 汇总、再真实 LLM 小对照、最后定性”的路径。第一段不调用 LLM，用来先排除最便宜、最确定的代码层错误；只有代码层诊断通过后，才进入真实 LLM 对照。
 
-### Step 1：补代码层诊断测试
+### Step 1：补代码层诊断测试（已完成，历史诊断证据）
 
 优先补 `tests/test_services/test_critic_pairwise.py`：
 
@@ -169,7 +186,7 @@ c2, c1, false     = 0
 C:\Python313\python.exe -m pytest tests\test_services\test_critic_pairwise.py -q
 ```
 
-### Step 2：补无 API 诊断汇总
+### Step 2：补无 API 诊断汇总（已完成，历史诊断证据）
 
 在不重跑 LLM 的前提下，从既有 `f9_pairwise_judge_runs.csv` 生成或记录 raw pattern：
 
@@ -218,7 +235,7 @@ C:\Python313\python.exe -m pytest -q
 
 结论：mock 层未复现 A/B 到 `candidate_id` 的映射 bug；当前更应继续验证真实 LLM 的位置偏置、内容/风格偏好、以及标签诱导。
 
-### Step 3：修正真实 LLM 对照设计
+### Step 3：修正真实 LLM 对照设计（已完成，历史诊断证据）
 
 真实 LLM 对照应拆成三类，不要只做一个物理对调：
 
@@ -235,7 +252,7 @@ C:\Python313\python.exe -m pytest -q
 
 3. 隐藏标签对照。
    - prompt 中只展示 `回应A` / `回应B` 的文本。
-   - 不展示 `(c1, 共情型)`、`(c2, 引导反思型)`。
+   - 不展示 `(c1, 共情型)`、`(c2, 引导反思型)`；这里的取向名是 Phase A.2 历史标签。
    - 目的：隔离 “候选 id / orientation 标签诱导”。
 
 ### Step 3 执行记录
@@ -330,11 +347,11 @@ Step 3 结论：
 - 隐藏标签后，6 样本子集的 `c1` 稳定 winner 从旧 prompt 的 `4/6` 降到 `3/6`，并首次出现 `c2 stable=1/6`；标签暴露不是唯一根因，但确实污染了判断。
 - 仍存在少量 `c1,c2,false` 与 `c2,c1,false` raw position conflict；这些冲突已被 sample 层判为 unstable，后续报告应继续保留 raw pattern gate。
 
-当前判断：`c1 collapse` 不是代码层映射 bug，也不是隐藏标签 prompt 下的纯位置偏置；更像是旧 prompt 标签暴露与内容/风格偏好共同造成的混合问题。
+当前判断：`c1` 候选槽位塌缩不是代码层映射 bug，也不是隐藏标签 prompt 下的纯位置偏置；更像是旧 prompt 标签暴露与内容/风格偏好共同造成的混合问题。
 
-### Step 4：F4 prompt 临时修正方向
+### Step 4：F4 prompt 匿名化（Phase A.3 默认 judge 口径）
 
-Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至少做以下改动：
+Step 1/2/3 已完成且未发现代码层映射 bug；Phase A.3 的 F4 prompt 应至少做以下改动：
 
 - prompt 中不展示 `candidate_id`。
 - prompt 中不展示 `orientation`。
@@ -342,17 +359,17 @@ Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至
 - 保留代码侧 A/B 到 candidate_id 的映射。
 - 在 judge 指令中加入“忽略呈现顺序”，但不要把这当成唯一去偏手段；核心仍是双向换位和 raw pattern 诊断。
 
-### Step 5：输入包设计修正
+### Step 5：冻结输入包设计修正（迁移到 Phase A.3 实施）
 
-后续 frozen pair package 不应固定 `c1=共情型`、`c2=引导反思型`。建议：
+后续冻结输入包不应固定 `c1=共情型`、`c2=引导反思型`。这里的绑定是 Phase A.2 历史问题；Phase A.3 应使用 `情感共情型` / `认知共情型`，并让取向与候选槽位解耦。建议：
 
-- 在 package 阶段随机或均衡 `c1/c2` 的 orientation 分配。
-- manifest 中记录原始 orientation 与最终 candidate_id 的映射。
-- eval 报告同时输出按 orientation 和 candidate_id 分层的 winner 分布。
+- 在 package 阶段随机或均衡 `c1/c2` 的取向分配。
+- manifest 中记录原始取向与最终候选槽位的映射。
+- eval 报告同时输出按取向和候选槽位分层的 winner 分布。
 
 本步骤暂不在当前诊断轮直接执行，原因：
 
-- 它会改变 frozen pair package 的身份语义，不只是重跑 judge；现有 `c1/c2` 已经被人工标注、judge runs、summary、eval report 共同引用，直接重排会让既有 Phase A rerun 产物不可横向比较。
+- 它会改变冻结输入包的身份语义，不只是重跑 judge；现有 `c1/c2` 已经被人工标注、judge runs、summary、eval report 共同引用，直接重排会让既有 Phase A rerun 产物不可横向比较。
 - 它需要同步修改 package manifest、人工标注模板、eval 汇总口径，以及按 `candidate_id` / `orientation` 分层的报告字段，否则会把“候选列”与“原始取向”混在一起。
 - 它属于下一轮输入包设计修正；Step 3 真实 LLM 对照已经支持“标签暴露会污染判断，但不是唯一根因”这一判断，因此应以新 package 版本执行，不应混入当前 `phase-a-rerun` 诊断产物。
 
@@ -360,9 +377,9 @@ Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至
 
 当前方案方向是完善的，但不能把“完整 rerun”当成下一条可直接命令执行。
 
-- Step 4 的 F4 prompt 匿名化、双向换位保留、raw pattern gate 保留，证据链充分，可以执行，并应作为下一轮 judge 的默认口径。
-- Step 5 的输入包设计方向合理，可以进入实现计划；但它还缺少明确的 package manifest 字段、人工标注模板字段、eval 分层输出字段和验收命令，尚不能直接重跑 Phase A。
-- 下一轮 rerun 应等待 F3 候选质量修复、`c1/c2` 取向均衡入包、eval 分层 gate 和 comparison-intersection 样本门槛都落地后再执行。
+- Step 4 的 F4 prompt 匿名化、双向换位保留、raw pattern gate 保留，证据链充分，应作为 Phase A.3 judge 的默认口径。
+- Step 5 的冻结输入包设计方向合理，已迁移到 Phase A.3 实施计划；需要明确 manifest 字段、人工标注模板字段、eval 分层输出字段和验收命令后再重跑 Phase A.3。
+- 下一轮 rerun 应等待 F3 新取向小样本验证、`c1/c2` 取向均衡入包、eval 分层 gate 和 comparison-intersection 样本门槛都落地后再执行。
 
 ## 决策口径
 
@@ -372,7 +389,7 @@ Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至
 - 不切换 `/chat` 默认择优为 pairwise。
 - 不把本轮 `pairwise_stable` 输出进入 DPO 候选池。
 - 不把当前 `14/24 stable` 解读为有效稳定偏好；它已经被 c1 collapse 诊断污染。
-- 可以执行 F4 prompt 匿名化、raw pattern gate 保留、eval 分层输出，以及下一版输入包的 `c1/c2` 取向均衡设计。
+- 可以执行 F4 prompt 匿名化、raw pattern gate 保留、eval 分层输出，以及下一版冻结输入包的 `c1/c2` 取向均衡设计。
 - 不能直接重跑完整 Phase A rerun；需要先把 F3 候选质量修复、输入包 manifest、人工标注模板、eval 字段和通过门槛落成可执行任务。
 
 可能结论及后续：
@@ -382,6 +399,6 @@ Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至
 | 代码 bug | Step 1 任一 mock 测试失败 | 修代码，重跑本轮 pairwise judge |
 | 展示位偏置 | identical / hidden-label 对照仍稳定偏 A 或 B | 当前未在隐藏标签 prompt 下复现纯位置偏置；继续保留双向换位和 raw pattern gate |
 | candidate_id/标签偏置 | 隐藏标签后偏斜显著下降 | prompt 不再暴露 candidate_id/orientation；已作为下一轮 F4 prompt 修正项 |
-| 风格偏好 | winner 跟随共情型内容移动，且 hidden-label 后仍明显偏共情型 | 修订 F4 rubric，正面处理 judge 与人工偏好的定义差异 |
+| 风格偏好 | winner 跟随 Phase A.2 `共情型` 内容移动，且 hidden-label 后仍明显偏旧 `共情型` | 修订 F4 rubric，正面处理 judge 与人工偏好的定义差异 |
 
-当前更可能的判断是混合问题：`c1 collapse` 不是代码层映射 bug，也不是隐藏标签 prompt 下的纯位置偏置；更像是旧 prompt 标签暴露与内容/风格偏好共同造成的混合问题。当前 Step 4 的 prompt 匿名化可执行；Step 5 的输入包设计方向合理，但还需要拆成明确的 package、annotation、eval 实施任务后再进入下一轮 rerun。
+当前更可能的判断是混合问题：`c1` 候选槽位塌缩不是代码层映射 bug，也不是隐藏标签 prompt 下的纯位置偏置；更像是旧 prompt 标签暴露与内容/风格偏好共同造成的混合问题。当前 Step 4 的 prompt 匿名化进入 Phase A.3 默认口径；Step 5 的冻结输入包设计方向合理，但还需要拆成明确的 package、annotation、eval 实施任务后再进入下一轮 rerun。

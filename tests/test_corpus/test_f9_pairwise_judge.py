@@ -27,6 +27,7 @@ def _write_pairs(path: Path):
         "pair_id",
         "sample_no",
         "scenario",
+        "activated_casel_json",
         "user_text",
         "history_json",
         "c1_orientation",
@@ -49,6 +50,7 @@ def _write_pairs(path: Path):
                 "pair_id": "sample-3",
                 "sample_no": "3",
                 "scenario": "同伴关系",
+                "activated_casel_json": '["自我觉察引导", "关系技能培养"]',
                 "user_text": "他们没叫我进小群。",
                 "history_json": '[{"role":"student","text":"前文"}]',
                 "c1_orientation": "情感共情型",
@@ -78,7 +80,26 @@ async def test_run_pairwise_judge_writes_runs_summary_and_manifest(tmp_path):
     _write_pairs(pair_path)
     service = FakePairwiseService(
         [
-            PairwiseSampleResult("sample-3", 1, "c1", "c1", True, "c1", False, "c1"),
+            PairwiseSampleResult(
+                "sample-3",
+                1,
+                "c1",
+                "c1",
+                True,
+                "c1",
+                False,
+                "c1",
+                judgment_1_epitome_comparison={"ER": "c1", "IP": "tie", "EX": "c2"},
+                judgment_2_epitome_comparison={"ER": "c1", "IP": "tie", "EX": "c2"},
+                judgment_1_casel_comparisons={
+                    "自我觉察引导": "c1",
+                    "关系技能培养": "tie",
+                },
+                judgment_2_casel_comparisons={
+                    "自我觉察引导": "c1",
+                    "关系技能培养": "tie",
+                },
+            ),
             PairwiseSampleResult("sample-3", 2, "c1", None, False, None, False, "tie"),
             PairwiseSampleResult("sample-3", 3, "c1", "c1", True, "c1", False, "c1"),
         ]
@@ -99,8 +120,18 @@ async def test_run_pairwise_judge_writes_runs_summary_and_manifest(tmp_path):
     assert len(run_rows) == 3
     assert run_rows[0]["repeat_no"] == "1"
     assert run_rows[0]["stable"] == "true"
+    assert json.loads(run_rows[0]["judgment_1_epitome_comparison_json"]) == {
+        "ER": "c1",
+        "IP": "tie",
+        "EX": "c2",
+    }
+    assert json.loads(run_rows[0]["judgment_1_casel_comparisons_json"]) == {
+        "自我觉察引导": "c1",
+        "关系技能培养": "tie",
+    }
     assert list(summary_rows[0].keys()) == SUMMARY_COLUMNS
     assert summary_rows[0]["pair_id"] == "sample-3"
+    assert summary_rows[0]["activated_casel_json"] == '["自我觉察引导", "关系技能培养"]'
     assert summary_rows[0]["stable_votes_c1"] == "2"
     assert summary_rows[0]["unstable_count"] == "1"
     assert summary_rows[0]["winner_id"] == "c1"
@@ -116,4 +147,5 @@ async def test_run_pairwise_judge_writes_runs_summary_and_manifest(tmp_path):
     assert manifest["f3_prompt_bundle_hashes"] == ["hash-1"]
     assert manifest["generator_run_ids"] == ["run-1"]
     assert service.calls[0][0].history[0].text == "前文"
+    assert service.calls[0][0].activated_casel == ["自我觉察引导", "关系技能培养"]
     assert service.calls[0][1].candidate_id == "c1"

@@ -109,7 +109,7 @@ pnpm --dir frontend build:pages
 ## Documentation
 
 - `docs/README.md`：文档结构总览和推荐阅读路径。
-- `docs/overview/`：项目方案、工程拆分、阶段计划和审查矩阵。
+- `docs/overview/`：项目方案、工程拆分和阶段计划。
 - `docs/specs/`：F1-F4、F4 pairwise 与 F9 的实现规格。
 - `docs/corpus/`：合成语料、F9 产物和 pairwise pilot 记录。
 - `docs/frontend/`：前端设计、部署和演示说明。

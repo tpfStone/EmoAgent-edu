@@ -20,7 +20,7 @@
   </defs>
 
   <text class="title" x="42" y="42">理论框架到 Pairwise Gate 的证据链</text>
-  <text class="note" x="42" y="66">CASEL 定教育目标，EPITOME 解释质量语言，IRI 只作理论锚点；DPO 必须等待人工 gate。</text>
+  <text class="note" x="42" y="66">CASEL 定教育目标，EPITOME 解释质量语言，IRI 锚定 F3 双取向；DPO 必须等待人工 gate。</text>
 
   <rect class="casel" x="58" y="108" width="250" height="118" rx="14" stroke-width="1.4"/>
   <text class="h" x="183" y="138" text-anchor="middle">CASEL</text>
@@ -36,9 +36,9 @@
 
   <rect class="iri" x="650" y="108" width="250" height="118" rx="14" stroke-width="1.4"/>
   <text class="h" x="775" y="138" text-anchor="middle">IRI</text>
-  <text class="s" x="674" y="166">• 认知共情 / 情感共情</text>
-  <text class="s" x="674" y="190">• 论文解释层</text>
-  <text class="s" x="674" y="214">• 不进入打分回路</text>
+  <text class="s" x="674" y="166">• c1 情感共情 / c2 认知共情</text>
+  <text class="s" x="674" y="190">• 锚定 F3 生成取向</text>
+  <text class="s" x="674" y="214">• 不作为 F4 打分维度</text>
 
   <path class="arr" d="M183 226 L183 270 L410 270" marker-end="url(#arrow)"/>
   <path class="arr" d="M479 226 L479 270" marker-end="url(#arrow)"/>

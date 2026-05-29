@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Protocol
 
 from openai import AsyncOpenAI
@@ -31,11 +32,27 @@ class MockLLMClient:
         if "回应A" in prompt and "回应B" in prompt:
             self._pairwise_call_count += 1
             winner = "A" if self._pairwise_call_count % 2 == 1 else "B"
-            return (
-                '{"winner": "'
-                + winner
-                + '", "reason": "mock pairwise", '
-                '"boundary_concern": false, "boundary_reason": ""}'
+            casel_comparisons = {
+                dimension: winner
+                for dimension in (
+                    "自我觉察引导",
+                    "自我管理引导",
+                    "社会觉察培养",
+                    "关系技能培养",
+                    "负责任决策引导",
+                )
+                if dimension in prompt
+            }
+            return json.dumps(
+                {
+                    "winner": winner,
+                    "reason": "mock pairwise",
+                    "epitome_comparison": {"ER": winner, "IP": "tie", "EX": winner},
+                    "casel_comparisons": casel_comparisons,
+                    "boundary_concern": False,
+                    "boundary_reason": "",
+                },
+                ensure_ascii=False,
             )
         if "EPITOME" in prompt:
             return (

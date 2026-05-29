@@ -1,12 +1,16 @@
 import argparse
 import csv
+import json
 from pathlib import Path
+
+from app.services.scenario_service import SCENARIO_CASEL_MAP
 
 
 PAIR_PACKAGE_COLUMNS = [
     "pair_id",
     "sample_no",
     "scenario",
+    "activated_casel_json",
     "user_text",
     "history_json",
     "c1_orientation",
@@ -49,6 +53,7 @@ HUMAN_ANNOTATION_COLUMNS = [
 USER_TEXT_COLUMNS = ("user_text", "用户倾诉")
 HISTORY_COLUMNS = ("history_json", "对话历史")
 CANDIDATE_TEXT_COLUMNS = ("candidate_text", "候选文本")
+ACTIVATED_CASEL_COLUMNS = ("activated_casel_json", "activated_casel")
 
 
 def _first_value(row: dict[str, str], columns: tuple[str, ...]) -> str:
@@ -67,6 +72,29 @@ def _provenance_value(c1: dict[str, str], c2: dict[str, str], column: str) -> st
             f"sample {c1.get('sample_no') or c2.get('sample_no')} has mismatched {column}"
         )
     return c1_value or c2_value
+
+
+def _json_list_text(values: list[str]) -> str:
+    return json.dumps(values, ensure_ascii=False)
+
+
+def _activated_casel_json(c1: dict[str, str], c2: dict[str, str]) -> str:
+    raw_value = _first_value(c1, ACTIVATED_CASEL_COLUMNS) or _first_value(
+        c2, ACTIVATED_CASEL_COLUMNS
+    )
+    if raw_value:
+        try:
+            parsed = json.loads(raw_value)
+        except json.JSONDecodeError:
+            return "[]"
+        if isinstance(parsed, list):
+            return _json_list_text([str(item) for item in parsed])
+        return "[]"
+
+    scenario = c1.get("scenario") or c2.get("scenario", "")
+    if scenario in SCENARIO_CASEL_MAP:
+        return _json_list_text(SCENARIO_CASEL_MAP[scenario])
+    return "[]"
 
 
 def build_pair_rows(source_rows: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -94,6 +122,7 @@ def build_pair_rows(source_rows: list[dict[str, str]]) -> list[dict[str, str]]:
                 "pair_id": f"sample-{sample_no}",
                 "sample_no": sample_no,
                 "scenario": c1.get("scenario") or c2.get("scenario", ""),
+                "activated_casel_json": _activated_casel_json(c1, c2),
                 "user_text": _first_value(c1, USER_TEXT_COLUMNS)
                 or _first_value(c2, USER_TEXT_COLUMNS),
                 "history_json": _first_value(c1, HISTORY_COLUMNS)

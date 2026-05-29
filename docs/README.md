@@ -14,7 +14,7 @@
 - `frontend/` pnpm workspace：学生端、研究分析台、shared API/type 层。
 - `docs/frontend/github-pages-mock-local-live.md`：GitHub Pages mock 与本机 live 演示说明。
 
-完整审查矩阵与剩余风险见 `overview/docs-review-matrix.md`。旧文档中若仍保留分支集成时期的事实源说明，应按当前 `master` 已集成状态理解或修正。
+旧文档中若仍保留分支集成时期的事实源说明，应按当前 `master` 已集成状态理解或修正。2026-05-29 文档清理审查记录已归档至 `archive/2026-05-29/docs-review-matrix.md`。
 
 ## 当前 F4 主线口径
 
