@@ -46,7 +46,7 @@ async def test_critic_evaluate_endpoint_returns_service_response():
                     "candidates": [
                         {
                             "candidate_id": "c1",
-                            "orientation": "共情型",
+                            "orientation": "情感共情型",
                             "text": "听起来你有些受伤。",
                         }
                     ],

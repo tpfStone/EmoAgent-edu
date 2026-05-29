@@ -1,6 +1,6 @@
-# 前端模块 · Claude Code 开发规格（学生端 + 研究分析台）
+# 前端模块规格（学生端 + 研究分析台）
 
-> **交付对象**：Claude Code / 编码 agent。本文档自包含，实现前端无需阅读其他文档（后端接口契约见 §3，已与 F1–F4 现有 schema 对齐）。
+> **文档定位**：本文档自包含，实现前端无需阅读其他文档（后端接口契约见 §3，已与 F1–F4 现有 schema 对齐）。
 > **模块定位**：系统的两个前端入口。学生端是产品；研究分析台是离线工具。二者共享一个后端 `/chat`，但**物理分离、数据通路不同**。
 > **技术栈**：React 18 + Vite + TypeScript（建议）；后端复用现有 FastAPI（`POST /chat`）。无需新增后端端点即可跑通学生端。
 
@@ -48,8 +48,8 @@ POST /chat
   "activated_casel": ["string"],
   "best_candidate_id": "string | null",
   "candidates": [
-    {"candidate_id": "c1", "orientation": "共情型", "text": "string"},
-    {"candidate_id": "c2", "orientation": "引导反思型", "text": "string"}
+    {"candidate_id": "c1", "orientation": "情感共情型", "text": "string"},
+    {"candidate_id": "c2", "orientation": "认知共情型", "text": "string"}
   ],
   "scores": [
     {

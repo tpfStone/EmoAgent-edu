@@ -290,7 +290,7 @@ export type ChatStatus =
 
 export type RiskLevel = 'green' | 'yellow' | 'red'
 export type ScenarioLabel = '学业压力' | '同伴关系' | '亲子摩擦' | '其他'
-export type GeneratorOrientation = '共情型' | '引导反思型'
+export type GeneratorOrientation = '情感共情型' | '认知共情型'
 
 export interface ChatRequest {
   session_id: string
@@ -474,7 +474,7 @@ const full: FullChatResponse = {
   scenario: '学业压力',
   activated_casel: ['自我觉察引导'],
   best_candidate_id: 'c1',
-  candidates: [{ candidate_id: 'c1', orientation: '共情型', text: '候选' }],
+  candidates: [{ candidate_id: 'c1', orientation: '情感共情型', text: '候选' }],
   scores: [
     {
       candidate_id: 'c1',

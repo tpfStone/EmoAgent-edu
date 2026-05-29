@@ -1,7 +1,7 @@
 # F4 成对偏好择优 · 目标规格
 
 > **状态**：目标规格 / 非运行时默认。当前 `/chat` 仍由 `CriticService` 使用 pointwise 分数和 `weighted_total` 做择优；`app/config.py` 尚无 `CRITIC_SELECTION_MODE`。本文记录 F4 下一阶段要迁移到的 pairwise 主线。
-> **交付对象**：Codex / 编码 agent。本文档是对 `f4-critic-epitome-codex-spec.md` 的**增量改造目标**，不替代原 spec。原 spec 的 EPITOME pointwise 打分、CASEL 辅助、boundary 检测作为历史路径和兼容说明保留；本改造目标**替换“如何择优、如何产偏好对”这一环**。
+> 本文档是对 `f4-critic-epitome.md` 的**增量改造目标**，不替代原规格。原规格的 EPITOME pointwise 打分、CASEL 辅助、boundary 检测作为历史路径和兼容说明保留；本改造目标**替换“如何择优、如何产偏好对”这一环**。
 > **模块定位**：运行时管线第④环（F4 critic 内部）。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（critic 专用 client，模型 `deepseek-v4-pro`）。
 
@@ -9,7 +9,30 @@
 
 ---
 
-## 0. 为什么做这个改造（实现者理解即可，不必复述）
+## 0. 当前状态 / 已完成 / 待办 / 后续计划
+
+**当前状态**：目标规格 + 离线试点工具链。`app/services/critic_pairwise.py`、`scripts/corpus/f9_pairwise_*.py` 和对应测试已存在，但 `/chat` 与 `/api/critic/evaluate` 仍未切换到 pairwise。Phase A rerun 结论为 `inconclusive`，不能作为 runtime 切换依据。
+
+**已完成**：
+- `CriticPairwiseService` 已能对同一候选对跑正反顺序两次独立判断，并映射回 candidate_id。
+- 多 sample 聚合已实现，只有稳定 winner 达到多数时才输出 `selection_method=pairwise_stable`。
+- 离线脚本覆盖 package、judge、pointwise baseline、eval、rerun generate 等流程。
+- 测试覆盖 `tests/test_services/test_critic_pairwise.py` 与 `tests/test_corpus/test_f9_pairwise_*.py`。
+
+**待办**：
+- `CRITIC_SELECTION_MODE` 尚未实现，pairwise 不是 runtime 默认。
+- 当前离线实现使用两次独立 judge 调用；本文早期设想的“单次调用内输出两个方向”不是当前代码事实。
+- 当前离线聚合在无稳定多数时返回 `selection_method=pointwise_tiebreak`，而目标 runtime 迁移应避免把 pointwise 分数作为主判据；迁移前需要统一兜底语义。
+- 数据库、公开 schema、前端展示尚未接入 `selection_method`、`pairwise` trace、`pairwise_confidence`。
+- Phase A 暴露 `c1` 偏斜、有效交集不足、agreement 不足，需先 rerun 通过 gate。
+
+**后续计划入口**：
+- Pairwise 试点计划：`../corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`
+- Phase A rerun 计划与结论：`../corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`、`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`
+- `c1` 偏斜诊断：`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_c1_collapse_diagnostic.md`
+- 当前运行时 pointwise 规格：`f4-critic-epitome.md`
+
+## 1. 为什么做这个改造
 
 实测发现（须知背景，影响实现取舍）：
 - 用 pointwise 绝对评分（每维 0/1/2 再加权 argmax）时，critic 与人工一致性低：`deepseek-chat` 10/20，升级到 `deepseek-v4-pro` 仍仅 11/20。
@@ -23,7 +46,7 @@
 
 ---
 
-## 1. 改造后的职责（一句话）
+## 2. 改造后的职责（一句话）
 
 接收一组候选回应（MVP 恰好 2 个），在给定用户倾诉 + 历史的语境下：
 1. 对每条候选做 boundary 检测；迁移期可继续保留 EPITOME/CASEL pointwise 字段作为兼容和诊断，但不要求作为目标主流程的必要输出。
@@ -34,7 +57,7 @@
 
 ---
 
-## 2. 范围与非目标
+## 3. 范围与非目标
 
 **做：**
 - 新增 pairwise 比较 prompt，优先产出 winner、稳定性和理由。
@@ -52,46 +75,45 @@
 
 ---
 
-## 3. 关键设计决策
+## 4. 关键设计决策
 
-### 3.1 Pairwise 优先，旧分数字段可选
+### 4.1 Pairwise 优先，旧分数字段可选
 目标实现应以 pairwise 输出为主：一次判断直接给出"哪条更好 + 理由 + 稳定性"。旧 pointwise 分数字段可在迁移期保留，但不得成为判断是否可用、是否生成偏好对的必要条件。
 
-### 3.2 正反两次比较消位置偏见
+### 4.2 正反两次比较消位置偏见
 LLM 倾向偏袒先出现的候选。因此对同一对候选跑两次：
 - 第 1 次：候选顺序 (c1, c2)
 - 第 2 次：候选顺序 (c2, c1)
 
 判定规则：
 - **两次都选同一条** → 该条稳定胜出（`pairwise_stable=true`）。
-- **两次结论冲突**（各偏袒自己的位置，或一次平一次胜）→ 记为**平票/不稳定**（`pairwise_stable=false`），走 §5.3 兜底。
+- **两次结论冲突**（各偏袒自己的位置，或一次平一次胜）→ 记为**平票/不稳定**（`pairwise_stable=false`），走 §6.3 兜底。
 
-> 两次比较可在**同一次 judge 调用**里要求模型输出两个方向的判断，或拆两次调用。MVP 实现：**同一次调用内要求模型对 (c1,c2) 与 (c2,c1) 两种排列分别给结论**，避免两次往返。若模型对此不稳定，回退为两次独立调用（配置开关 `CRITIC_PAIRWISE_TWO_CALLS`，默认 `false`）。
+> 当前离线代码采用**两次独立 judge 调用**：一次展示 (c1,c2)，一次展示 (c2,c1)。如果后续为了成本改成单次调用内输出两个方向，必须重新跑 pairwise 稳定性验证。
 
-### 3.3 boundary 仍优先于一切
+### 4.3 boundary 仍优先于一切
 任一候选 `boundary_flag=true` → 该候选直接出局，**不进入 pairwise**。
 - 若仅一条越界 → 另一条直接为 winner（无需比较），偏好对仍生成（winner=未越界, loser=越界）。
-- 若两条都越界 → 不择优，返回兜底（同原 spec §6）。
+- 若两条都越界 → 不择优，返回兜底（同 `f4-critic-epitome.md` §6）。
 
 ---
 
-## 4. 配置项（在原 spec §6 基础上新增）
+## 5. 配置项（在原规格 §6 基础上新增）
 
 | 配置 | 建议初值 | 说明 |
 |---|---|---|
 | `CRITIC_DEEPSEEK_MODEL` | `deepseek-v4-pro` | critic 专用模型，与 F3 的 `deepseek-chat` 分离 |
 | `CRITIC_LLM_MAX_TOKENS` | `4096` | 必须足够大：v4-pro 会先产 reasoning_content，token 不足会 `finish_reason=length` 导致 content 空、parse 失败 |
 | `CRITIC_LLM_RESPONSE_FORMAT_JSON` | `True` | 强制 JSON 输出 |
-| `CRITIC_PAIRWISE_TWO_CALLS` | `false` | 正反比较是否拆两次调用；默认单次调用内做两排列 |
 | `CRITIC_SELECTION_MODE` | 待新增 | 迁移期可选：`pairwise` / `pointwise`。当前代码尚未实现该配置；默认值只能在 runtime adapter 完成并通过验证后再切。 |
 
 > 若后续新增 `CRITIC_SELECTION_MODE`，`pointwise` 只作为历史对照和紧急回退，不再作为 F4 主线。文档不得提前宣称 `pairwise` 已是 runtime 默认。
 
 ---
 
-## 5. 改造后的择优逻辑
+## 6. 改造后的择优逻辑
 
-### 5.1 代码结构（扩展钩子）
+### 6.1 代码结构（扩展钩子）
 
 把"比较一对"和"从候选集选 winner"拆成两个函数，为未来 3 候选留口子（MVP 不实现聚合）：
 
@@ -108,7 +130,7 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
     ...
 ```
 
-### 5.2 select_winner 流程（MVP）
+### 6.2 select_winner 流程（MVP）
 
 ```
 1. 过滤掉 boundary_flag=true 的候选 → survivors
@@ -120,17 +142,17 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 5. len(survivors) >= 3   → MVP 未实现，抛 NotImplementedError（或按配置降级取前 2）
 ```
 
-### 5.3 平票/不稳定兜底
+### 6.3 平票/不稳定兜底
 当 `compare_pair` 两次结论冲突：
 - **v1 建议**：记录为 `pairwise_unresolved`，不生成训练用 `preference_pair`。
-- 用户回复可以走安全兜底候选，例如共情优先的 `orientation_default`，但必须把 `selection_method` 标为兜底，而不是稳定偏好。
+- 用户回复可以走安全兜底候选，例如指向 `情感共情型` 的 `orientation_default`。纯情绪承接比推进视角更保守，因此更适合作为安全默认取向；但必须把 `selection_method` 标为兜底，而不是稳定偏好。
 - 不再用 pointwise `weighted_total` 做默认 tiebreak；否则会把已弃用的具体分数重新放回主判据。
 
 > 不稳定策略是开放问题。当前文档先固定保守边界：不稳定样本不能进入 DPO；是否需要模型二次裁决、人工复核或更多样本聚合，放入后续 F4 研究任务。
 
 ---
 
-## 6. Pairwise 比较 Prompt（中文，可直接用）
+## 7. Pairwise 比较 Prompt（中文，可直接用）
 
 目标 prompt 应直接围绕成对比较组织。若迁移期仍复用旧 pointwise prompt，可以在同一次调用中追加以下 pairwise 部分，但最终选择只看 pairwise 判定：
 
@@ -178,7 +200,7 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 ---
 
-## 7. pairwise 结果判定（代码侧）
+## 8. pairwise 结果判定（代码侧）
 
 把模型的两次判断映射回 candidate_id 后：
 
@@ -189,13 +211,13 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 | c1 胜 | c2 胜（即各偏位置） | `stable=False`（位置偏见，平票） |
 | 难分 | 难分 | `stable=False`（模型认为难分） |
 
-> 只有两次**指向同一条 candidate_id** 才算 stable。任何冲突或含"难分"都按 `stable=False` 走 §5.3 兜底。
+> 只有两次**指向同一条 candidate_id** 才算 stable。任何冲突或含"难分"都按 `stable=False` 走 §6.3 兜底。
 
 ---
 
-## 8. Schema 增量（向后兼容）
+## 9. Schema 增量（向后兼容）
 
-在原 §3 输出基础上**新增**字段，不删旧字段：
+在 `f4-critic-epitome.md` §3 输出基础上**新增**字段，不删旧字段：
 
 ```json
 {
@@ -224,7 +246,7 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 ---
 
-## 9. 测试用例（在原 §7 基础上新增/调整）
+## 10. 测试用例（在原 §7 基础上新增/调整）
 
 | # | 场景 | 期望 |
 |---|---|---|
@@ -242,23 +264,23 @@ def select_winner(ctx, candidates, scores) -> SelectionResult:
 
 ---
 
-## 10. 验收标准（DoD）
+## 11. 验收标准（DoD）
 
 - [ ] critic 专用 client 接 `deepseek-v4-pro`，`CRITIC_LLM_MAX_TOKENS=4096`，`response_format=json`
 - [ ] `compare_pair` / `select_winner` 拆分实现，2 候选走通；3+ 候选明确未实现（NotImplementedError 或配置降级）
 - [ ] 正反两次比较产出，只有指向同一 candidate_id 才 `stable=true`
 - [ ] boundary 候选前置出局，不进 pairwise
-- [ ] 平票/不稳定按 §5.3：标为 `pairwise_unresolved` 或安全兜底，不产训练用偏好对
+- [ ] 平票/不稳定按 §6.3：标为 `pairwise_unresolved` 或安全兜底，不产训练用偏好对
 - [ ] schema 新增 `selection_method`、`pairwise` 字段，旧字段全保留
 - [ ] `weighted_total` 仅为旧字段兼容和历史追溯，不公开为主证据，不驱动择优
 - [ ] 偏好对仅在有明确优劣时生成（orientation_default 不生成）
 - [ ] `CRITIC_SELECTION_MODE=pointwise` 回退路径可用（对照实验用）
-- [ ] §9 全部用例通过，尤其 P6（pairwise 覆盖 pointwise）、P8（token 预算回归）
+- [ ] §10 全部用例通过，尤其 P6（pairwise 覆盖 pointwise）、P8（token 预算回归）
 - [ ] F9 / rescore 脚本同步用 critic 专用模型
 
 ---
 
-## 11. 与 F9 的衔接（务必写进论文方法链）
+## 12. 与 F9 的衔接（务必写进论文方法链）
 
 改造后，F9 信度校验要校验的**主对象从 pointwise 三维分变成 pairwise 偏好判断**：
 - 人工对同一批候选对做 A/B 偏好标注（"哪条更好"，比标 0/1/2 更快更稳，标注成本反而下降）。

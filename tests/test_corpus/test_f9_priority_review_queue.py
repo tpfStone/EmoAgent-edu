@@ -16,7 +16,7 @@ def _calibration_row(sample_no: int) -> dict[str, str]:
         "score_side": "calibration",
         "scenario": "同伴关系",
         "candidate_id": "c2",
-        "orientation": "引导反思型",
+        "orientation": "认知共情型",
         "F4_ER": "2",
         "F4_IP": "2",
         "F4_EX": "2",
@@ -34,7 +34,7 @@ def _review_row(
     sample_no: int,
     *,
     scenario: str = "同伴关系",
-    orientation: str = "引导反思型",
+    orientation: str = "认知共情型",
     score_side: str = "ER_IP_2",
     rationale: str = "无明显风险",
     candidate_text: str | None = None,
@@ -98,9 +98,9 @@ def test_build_priority_queue_keeps_calibration_first_and_prioritizes_high_signa
         _calibration_row(13),
         _review_row(1, rationale="换谁都会觉得难受，是否更气她当众那句话"),
         _review_row(2, score_side="ER_not_2"),
-        _review_row(3, scenario="学业压力", orientation="共情型"),
+        _review_row(3, scenario="学业压力", orientation="情感共情型"),
         _review_row(4, rationale="普通高分"),
-        _review_row(5, scenario="亲子摩擦", orientation="共情型", candidate_text="你有没有想过换个角度"),
+        _review_row(5, scenario="亲子摩擦", orientation="情感共情型", candidate_text="你有没有想过换个角度"),
     ]
     count1_rows = [_summary_row(3, er_flip=True)]
     count3_rows = [_summary_row(5, ip_flip=True)]

@@ -1,4 +1,4 @@
-# F3 F9 生成器修复实施计划
+﻿# F3 F9 生成器修复实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -26,7 +26,7 @@
 
 3. **Prompt 修改范围明确。**
    - 修改 F3 generator 侧：`app/services/generator_service.py`。
-   - 同步修改 F3 spec：`docs/specs/f3-multi-orientation-generator-codex-spec.md`。
+   - 同步修改 F3 spec：`docs/specs/f3-multi-orientation-generator.md`。
    - 不修改 F4 critic：`app/services/critic_service.py`，除非后续 validation 显示 F4 本身回归。
 
 4. **矫枉过正抽查由脚本辅助输出。**
@@ -129,11 +129,11 @@ GLOBAL_QUALITY_PROBES = [
   - 覆盖新的 F3 prompt guardrails。
   - 覆盖 `换个角度看` 不再作为推荐表达出现在 prompt 中。
 
-- `docs/specs/f3-multi-orientation-generator-codex-spec.md`
+- `docs/specs/f3-multi-orientation-generator.md`
   - 同步 F3 prompt 约束。
   - 明确品质化总结不是默认共情策略。
 
-- `docs/corpus/f9/f4-fix-execution-summary.md`
+- `docs/corpus/f9/pointwise-diagnostics/execution-summary.md`
   - 在下一步计划中指向本计划，并修正“sample 25”表述为“sample 25 暴露的 F3 品质化总结/强行正向重构模式”。
 
 新增：
@@ -663,7 +663,7 @@ Expected:
 
 **Files:**
 - Modify: `app/services/generator_service.py`
-- Modify: `docs/specs/f3-multi-orientation-generator-codex-spec.md`
+- Modify: `docs/specs/f3-multi-orientation-generator.md`
 - Test: `tests/test_services/test_generator_service.py`
 
 - [ ] **Step 1: 修改 `COMMON_PROMPT` 中原则 2**
@@ -727,7 +727,7 @@ F9_RELIABILITY_GUARDRAILS = """【F9 信度修订后的额外约束】
 
 - [ ] **Step 5: 同步 F3 spec**
 
-在 `docs/specs/f3-multi-orientation-generator-codex-spec.md` 中同步以上三处文字：
+在 `docs/specs/f3-multi-orientation-generator.md` 中同步以上三处文字：
 
 - 共同约束原则 2。
 - F9 信度约束。
@@ -750,14 +750,14 @@ Expected:
 ## 7. Task 5: 更新执行总结文档
 
 **Files:**
-- Modify: `docs/corpus/f9/f4-fix-execution-summary.md`
+- Modify: `docs/corpus/f9/pointwise-diagnostics/execution-summary.md`
 
 - [ ] **Step 1: 修正下一步计划**
 
 将当前“修复 F3 sample 25 generation 残留”改为：
 
 ```markdown
-1. 按 `docs/corpus/f9/f3-fix-plan.md` 修复 F3 生成器问题。范围不是只替换 sample 25 的 `说明你` 字符串，而是修复 sample 25 暴露出的品质化总结、强行正向重构和固定转折模板。
+1. 按 `docs/corpus/f9/plans/f3-generator-fix-plan.md` 修复 F3 生成器问题。范围不是只替换 sample 25 的 `说明你` 字符串，而是修复 sample 25 暴露出的品质化总结、强行正向重构和固定转折模板。
 2. 扩展 F9 validation：
    - sample-specific hard flags 继续要求 generated/rerun 均为 0。
    - global quality probes 单独统计，generated 上限 2/20，rerun 上限 4/40。
@@ -769,7 +769,7 @@ Expected:
 Run:
 
 ```powershell
-rg -n "f3-fix-plan|global quality|f9_low_score_review_queue|2/20|4/40|sample 25" docs\corpus\f9\f4-fix-execution-summary.md
+rg -n "f3-generator-fix-plan|global quality|f9_low_score_review_queue|2/20|4/40|sample 25" docs\corpus\f9\pointwise-diagnostics\execution-summary.md
 ```
 
 Expected:
@@ -944,4 +944,3 @@ Expected:
   - `generator_fallback_rows: 0`
 - `docs/corpus/f9/validation/rerun/f9_low_score_review_queue.csv` 已生成。
 - 正式人工 F9 启动前，已人工抽查 low-score review queue。
-

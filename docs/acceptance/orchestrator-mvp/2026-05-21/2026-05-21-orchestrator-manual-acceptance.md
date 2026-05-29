@@ -1,4 +1,4 @@
-# Orchestrator MVP 人工验收流程
+﻿# Orchestrator MVP 人工验收流程
 
 > 日期：2026-05-21
 
@@ -79,7 +79,7 @@ docker exec -it emoedu-redis redis-cli ping
 执行方式：
 
 - 使用真实 LLM provider，确认 `SAFETY_LLM_TEMPERATURE=0.0`。
-- 启动 API 后，通过 `/api/safety/evaluate` 运行 `docs/specs/f1-safety-gate-codex-spec.md` §7 的 8 个固定用例。
+- 启动 API 后，通过 `/api/safety/evaluate` 运行 `docs/specs/f1-safety-gate.md` §7 的 8 个固定用例。
 - 保存每条用例的 `risk_level`、`action.block_generation`、`matched_signals` 和 `rationale`，作为 F1 验收证据。
 - 任选一个 yellow 用例和一个 red 用例再通过 `/chat` 验证编排层短路：期望 `status=blocked_by_safety`、`risk_level` 为对应非 green、`reply_text` 为 F1 转介话术、`candidates=[]`、`scores=[]`、`best_candidate_id=null`，且不调用 F2/F3/F4。
 

@@ -1,10 +1,29 @@
-# F1 安全门模块 · Codex 开发规格
+# F1 安全门模块规格
 
-> **交付对象**：Codex / 编码 agent。本文档自包含，实现本模块无需阅读其他文档。
 > **模块定位**：运行时管线第一环，最高优先级。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + Redis + LLM API（复用 emoagent 项目配置）。
 
 ---
+
+## 0. 当前状态 / 已完成 / 待办 / 后续计划
+
+**当前状态**：已接入运行时。`/api/safety/evaluate` 与 `/chat` 前置安全门均使用 `app/services/safety_gate_service.py`；`OrchestratorService` 在 yellow/red 时短路下游 F2/F3/F4，返回固定转介话术。
+
+**已完成**：
+- 固定 yellow/red 转介模板已在代码中实现，包含可信成年人、12356、12355、120/110。
+- `HISTORY_WINDOW_N` 已按“轮数 × 2 条消息”截取最近历史。
+- LLM JSON 解析失败、模型调用异常均按 yellow 保守兜底。
+- green/yellow/red 到 `block_generation` 与 `referral_message` 的映射已由代码填充。
+- 判定日志通过 `safety_log_dao.create_log()` 写入。
+- 服务与接口测试覆盖 `tests/test_services/test_safety_gate_service.py`、`tests/test_handlers/test_safety_handler.py`、`tests/test_services/test_orchestrator_service.py`。
+
+**待办**：
+- 当前提示词和转介话术仍硬编码在 service 中；若上线多地区资源，需要把热线与校园资源抽成配置。
+- 尚未形成独立的 F1 标注评估集；现有覆盖以单元测试和 mock LLM 行为为主。
+
+**后续计划入口**：
+- F1/F4 历史实现问题：`../issues/2026-05-20-f1-f4-development-issues.md`
+- 当前运行时链路索引：见本目录 `README.md`
 
 ## 1. 职责（一句话）
 
@@ -12,7 +31,7 @@
 
 ---
 
-## 2. 设计依据（实现者理解即可，不必复述）
+## 2. 设计依据
 
 - 分级逻辑挂靠 **C-SSRS（哥伦比亚自杀严重程度评定量表）学校版**：被动→主动意念（量表1–3项）= yellow（行为健康转介）；意图/计划/准备行为（量表4–6项）= red（紧急评估）。
 - **危机信号常跨多轮累积**，故判定必须基于历史窗口，非单条消息。
@@ -121,7 +140,7 @@
 
 ---
 
-## 7. 测试用例（Codex 须据此写单测）
+## 7. 测试用例
 
 | # | 当前消息（+历史） | 期望 risk_level | 说明 |
 |---|---|---|---|
@@ -140,19 +159,19 @@
 
 ## 8. 验收标准（Definition of Done）
 
-- [ ] FastAPI 端点，输入输出符合 §3 schema
-- [ ] LLM 调用用 §4 prompt，temperature=0，解析 JSON 容错（解析失败时**默认从严按 yellow 处理**并记录，绝不静默放行）
-- [ ] 转介话术用 §5 固定模板，号码硬编码正确（不经 LLM）
-- [ ] 历史窗口 §6 可配置，T6 用例通过
-- [ ] 全部 §7 测试用例通过
-- [ ] green 时 `block_generation=false`，yellow/red 时为 true
-- [ ] 所有判定结果写日志（session_id, risk_level, matched_signals, 时间戳）供审计
+- [x] FastAPI 端点，输入输出符合 §3 schema
+- [x] LLM 调用用 §4 prompt，temperature=0，解析 JSON 容错（解析失败时**默认从严按 yellow 处理**并记录，绝不静默放行）
+- [x] 转介话术用 §5 固定模板，号码硬编码正确（不经 LLM）
+- [x] 历史窗口 §6 可配置，T6 用例通过
+- [x] green 时 `block_generation=false`，yellow/red 时为 true
+- [x] 所有判定结果写日志（session_id, risk_level, matched_signals, 时间戳）供审计
+- [ ] 使用真实/回放样本补充 F1 标注评估集，避免只依赖 mock 单测。
 
 > **失败兜底原则**：任何异常（LLM超时、JSON解析失败、模型拒答）一律按"非green"保守处理——提示用户稍后再试或直接给 yellow 转介，**绝不因报错而放行进入生成**。安全门的错误必须偏向保守。
 
 ---
 
-## 9. 不在本模块范围（避免 Codex 越界）
+## 9. 不在本模块范围
 
 - 不生成任何辅导/共情对话内容（那是 F3 生成器的事）。
 - 不做情境分类（那是 F2）。

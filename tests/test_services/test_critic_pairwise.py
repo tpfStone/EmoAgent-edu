@@ -14,7 +14,7 @@ from app.services.critic_pairwise import (
 from app.services.llm_client import MockLLMClient
 
 
-def _candidate(candidate_id: str, text: str, orientation: str = "共情型"):
+def _candidate(candidate_id: str, text: str, orientation: str = "情感共情型"):
     return PairwiseCandidate(
         candidate_id=candidate_id,
         orientation=orientation,
@@ -91,7 +91,7 @@ async def test_judge_sample_maps_two_independent_orders_to_same_candidate(
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "你反复想是不是自己做错了，会很堵。"),
-        _candidate("c2", "别太在意，大家都会这样。", "引导反思型"),
+        _candidate("c2", "别太在意，大家都会这样。", "认知共情型"),
         sample_no=1,
     )
 
@@ -116,7 +116,7 @@ async def test_judge_sample_marks_position_conflict_unstable(fake_llm_client):
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "引导反思型"),
+        _candidate("c2", "候选二", "认知共情型"),
         sample_no=1,
     )
 
@@ -197,7 +197,7 @@ async def test_judge_sample_marks_parse_failure_invalid(fake_llm_client):
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "引导反思型"),
+        _candidate("c2", "候选二", "认知共情型"),
         sample_no=1,
     )
 
@@ -272,7 +272,7 @@ async def test_project_mock_llm_returns_valid_pairwise_json():
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "引导反思型"),
+        _candidate("c2", "候选二", "认知共情型"),
         sample_no=1,
     )
 

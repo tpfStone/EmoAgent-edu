@@ -16,12 +16,12 @@ export const MOCK_SAMPLES: FullChatResponse[] = [
     candidates: [
       {
         candidate_id: "syn_0007_c1",
-        orientation: "共情型",
+        orientation: "情感共情型",
         text: "你现在觉得累和紧张是可以理解的。先不用把所有事一次解决，我们只找今天最小、最能开始的一步。",
       },
       {
         candidate_id: "syn_0007_c2",
-        orientation: "引导反思型",
+        orientation: "认知共情型",
         text: "如果把今天的压力从 0 到 10 打分，它现在大概是几分？哪一项任务先处理会让分数下降一点点？",
       },
     ],
@@ -64,12 +64,12 @@ export const MOCK_SAMPLES: FullChatResponse[] = [
     candidates: [
       {
         candidate_id: "syn_0021_c1",
-        orientation: "引导反思型",
+        orientation: "认知共情型",
         text: "这件事让你最受伤的是哪一部分？是他们说的话、被排除在外，还是担心之后还会发生？",
       },
       {
         candidate_id: "syn_0021_c2",
-        orientation: "共情型",
+        orientation: "情感共情型",
         text: "你会难过不是小题大做。先让一个可信任的人知道发生了什么，这能帮你不用一个人扛着。",
       },
     ],
@@ -112,12 +112,12 @@ export const MOCK_SAMPLES: FullChatResponse[] = [
     candidates: [
       {
         candidate_id: "syn_0032_c1",
-        orientation: "共情型",
+        orientation: "情感共情型",
         text: "你希望被家人理解，这个愿望很正常。先写下最想表达的一句话，等双方都平静时再说。",
       },
       {
         candidate_id: "syn_0032_c2",
-        orientation: "引导反思型",
+        orientation: "认知共情型",
         text: "你父母一定是因为以前也经历过同样的升学压力，所以才会这样要求你。",
       },
     ],

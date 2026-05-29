@@ -1,18 +1,41 @@
-# F4 Critic（EPITOME 打分器）· Codex 开发规格
+# F4 Critic（EPITOME 打分器）规格
 
-> **交付对象**：Codex / 编码 agent。本文档自包含。
 > **模块定位**：运行时管线第④环。对生成器产出的候选回应打分并择优。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（复用 emoagent）。
 
 ---
 
+## 0. 当前状态 / 已完成 / 待办 / 后续计划
+
+**当前状态**：已接入运行时，且仍是 `/chat` 默认择优器。`app/services/critic_service.py` 使用 EPITOME/CASEL pointwise 分数、`weighted_total` 和 boundary 过滤选择 `best_candidate_id`；pairwise 仍是离线/下一阶段目标，不是 runtime 默认。
+
+**已完成**：
+- `/api/critic/evaluate`、`/chat` F4 链路与 DAO 记录已实现。
+- `CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro`、`CRITIC_LLM_MAX_TOKENS=4096`、JSON response format 已作为 critic 专用配置接入。
+- `CRITIC_SAMPLE_COUNT=3` 默认取中位数，降低单次打分抖动。
+- boundary 候选已排除在 argmax 外；全部越界时返回 `CRITIC_FALLBACK_MESSAGE`。
+- CASEL 分数按激活维度归一，使用 mean bonus 进入 `weighted_total`。
+- F9 后续修订的 audit tags、ER/IP cap、内部提示外泄、格式异常、事实编造 hard boundary 已在代码侧执行。
+- 服务与接口测试覆盖 `tests/test_services/test_critic_service.py`、`tests/test_handlers/test_critic_handler.py`、`tests/test_services/test_orchestrator_service.py`。
+
+**待办**：
+- Pointwise 诊断线显示 ER/IP 高分饱和与稳定性仍未完全过 gate；不应把 pointwise 分数继续作为新的 DPO 主判据。
+- 当前公开 schema 尚未包含 `audit_tags`、`selection_method` 或 pairwise trace；这些属于后续迁移扩展。
+- 正式人工 F9 仍暂停，需等待新的 gate 口径或 pairwise rerun 通过。
+
+**后续计划入口**：
+- F4 修复计划：`../corpus/f9/plans/f4-critic-fix-plan.md`
+- F9 主线状态：`../corpus/f9/README.md`、`../corpus/f9/pointwise-diagnostics/execution-summary.md`
+- Pairwise 目标规格：`f4-pairwise-selection.md`
+- 当前运行时链路索引：见本目录 `README.md`
+
 ## 1. 职责（一句话）
 
-接收一组候选回应（在给定用户倾诉 + 历史的语境下），对每条用 EPITOME 三维打分（每维 0/1/2），加权后用 argmax 选出最佳候选；输出最佳候选、全部候选的分数（供 DPO 偏好对），以及越界标记。
+接收一组候选回应（在给定用户倾诉 + 历史的语境下），对每条用 EPITOME 三维打分（每维 0/1/2），加权后用 argmax 选出最佳候选；输出最佳候选、全部候选的分数和越界标记。当前 `preference_pair` 是历史兼容字段和诊断材料，不再作为新的 DPO 主来源。
 
 ---
 
-## 2. 设计依据（实现者理解即可）
+## 2. 设计依据
 
 - 打分框架 **EPITOME**（Sharma et al.；本系统沿用 Kumar & Groh 2025 验证的 LLM-as-judge 范式），三维：ER 情绪反应 / IP 解释 / EX 探索，每维 **0/1/2** 三档（0=无,1=弱,2=强）。
 - **已知可靠性局限（须诚实处理）**：原论文指出 EPITOME 的 ER、IP 两维因操作定义不清，专家可靠性偏低，仅 EX 较高。**应对：本规格对 ER/IP 给出更明确的操作定义（见 §4）以缓解。** 论文 limitation 须注明。
@@ -31,8 +54,8 @@
   "history": [{"role": "student|assistant", "text": "string"}],
   "activated_casel": ["自我觉察引导", "..."],   // 来自 F2，可为空数组（MVP 早期可不传，仅评EPITOME）
   "candidates": [
-    {"candidate_id": "c1", "orientation": "共情型", "text": "string"},
-    {"candidate_id": "c2", "orientation": "引导反思型", "text": "string"}
+    {"candidate_id": "c1", "orientation": "情感共情型", "text": "string"},
+    {"candidate_id": "c2", "orientation": "认知共情型", "text": "string"}
   ]
 }
 ```
@@ -52,7 +75,7 @@
       "rationale": "一句中文理由"
     }
   ],
-  "preference_pair": {                          // 供 F7 DPO；候选≥2且有明确高低分时生成
+  "preference_pair": {                          // 历史兼容字段；候选≥2且有明确高低分时生成
     "winner_id": "c1", "loser_id": "c2"
   }
 }
@@ -144,7 +167,7 @@ F9 audit tag 与最终 cap 规则：
 ## 6. 计分与防偏差
 
 - **加权总分** = ER + IP + EX + CASEL_TOTAL_WEIGHT × mean(casel_scores)
-- **初始权重（等权起步，不依赖专家）**：EPITOME 三维各权重 = 1.0；CASEL 辅助维作为整体平均 bonus 计入，`CASEL_TOTAL_WEIGHT = 0.5`。当 `activated_casel=[]` 时，CASEL bonus = 0，保持 EPITOME-only 行为。🚧 DPO 数据积累后反推优化。
+- **初始权重（等权起步，不依赖专家）**：EPITOME 三维各权重 = 1.0；CASEL 辅助维作为整体平均 bonus 计入，`CASEL_TOTAL_WEIGHT = 0.5`。当 `activated_casel=[]` 时，CASEL bonus = 0，保持 EPITOME-only 行为。后续若用 pairwise / 人工验证数据反推权重，必须另开实验，不能直接用旧 pointwise 偏好对调参。
 - **CASEL 辅助权重边界**：CASEL 是辅助项，不应随激活维度数量线性膨胀；因此对已激活 CASEL 分数取平均后再加权，避免亲子摩擦等多维情境让 CASEL 总贡献逼近或盖过 EPITOME。
 - **防 verbosity bias**：prompt 已含约束；另可在代码侧记录候选长度，若高分候选显著更长则告警/复核。
 - **防跨运行不稳定**：建议对每个候选打分**采样 3 次取中位数**（temperature 略低）。🚧 成本权衡后定。
@@ -174,14 +197,15 @@ F9 audit tag 与最终 cap 规则：
 
 ## 8. 验收标准（DoD）
 
-- [ ] FastAPI 端点，IO 符合 §3 schema
-- [ ] 用 §5 prompt，JSON 解析容错（失败则该候选记为最低分并标记，不静默）
-- [ ] boundary_flag 候选排除在 argmax 外
-- [ ] 等权计分，权重做成可配置常量
-- [ ] `activated_casel` 非空时 CASEL 分数按 mean bonus 进入 `weighted_total`；为空时保持 EPITOME-only 行为
-- [ ] preference_pair 在候选≥2且有明确高低时生成，写入 PostgreSQL 供 DPO
-- [ ] 全部 §7 用例通过
-- [ ] 每次打分写日志（候选、各维分、总分、是否越界）
+- [x] FastAPI 端点，IO 符合 §3 schema
+- [x] 用 §5 prompt，JSON 解析容错（失败则该候选记为最低分并标记，不静默）
+- [x] boundary_flag 候选排除在 argmax 外
+- [x] 等权计分，权重做成常量
+- [x] `activated_casel` 非空时 CASEL 分数按 mean bonus 进入 `weighted_total`；为空时保持 EPITOME-only 行为
+- [x] preference_pair 在候选≥2且有明确高低时生成并写入 PostgreSQL；当前仅作兼容和诊断，新的 DPO 主线见 pairwise 规格
+- [x] 每次打分写运行记录（候选、各维分、总分、是否越界）
+- [ ] `CASEL_TOTAL_WEIGHT` 等权重如需实验调参，应迁移为配置项。
+- [ ] 不再扩大 pointwise DPO 用途；后续偏好对主线迁移见 `f4-pairwise-selection.md`。
 
 ---
 
@@ -189,4 +213,4 @@ F9 audit tag 与最终 cap 规则：
 
 - 不生成、不改写候选回应（那是 F3）。
 - 不做安全危机分级（那是 F1，已前置）。注意：F4 的 boundary 检测是"回应内容是否越界/适龄"，与 F1 的"用户是否处于危机"不同，二者不重复。
-- 不直接训练模型（F4 只产偏好对，训练是 F7）。
+- 不直接训练模型（训练是 F7）；新的训练偏好对来源以 `f4-pairwise-selection.md` 的 gate 为准。

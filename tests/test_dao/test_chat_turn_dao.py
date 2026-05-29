@@ -86,8 +86,8 @@ async def test_chat_turn_dao_records_answered_turn_with_candidates(db_session):
         scenario="同伴关系",
         activated_casel=["自我觉察引导"],
         candidates=[
-            _candidate("c1", "共情型", "我听见你很难受。"),
-            _candidate("c2", "引导反思型", "你愿意说说发生了什么吗？"),
+            _candidate("c1", "情感共情型", "我听见你很难受。"),
+            _candidate("c2", "认知共情型", "你愿意说说发生了什么吗？"),
         ],
         scores=[
             _score("c1", 2, 2, 1, 5.0),

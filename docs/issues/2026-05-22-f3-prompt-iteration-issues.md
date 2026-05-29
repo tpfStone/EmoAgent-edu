@@ -1,4 +1,4 @@
-# F3 Prompt 迭代残留问题记录
+﻿# F3 Prompt 迭代残留问题记录
 
 日期：2026-05-22
 
@@ -7,7 +7,7 @@
 相关文件：
 
 - `app/services/generator_service.py`
-- `docs/specs/f3-multi-orientation-generator-codex-spec.md`
+- `docs/specs/f3-multi-orientation-generator.md`
 - `tests/test_services/test_generator_service.py`
 - `docs/acceptance/orchestrator-mvp/2026-05-21/runs/f3-prompt-iterations/`
 

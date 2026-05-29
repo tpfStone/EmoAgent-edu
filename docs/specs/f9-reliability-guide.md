@@ -1,22 +1,78 @@
 # F9 信度校验 · 详细执行文档
 
-> **这是什么**：F9 = 用极小规模人工标注，验证 F4 critic 的 LLM 打分与人工判断一致。它是论文里「LLM-judge 在本任务可靠」这句话的**唯一证据**，也是放量与 DPO 的前置闸门。
-> **配套**：上层路线见 `emoedu-post-mvp-guide.md` 的 P1；评分定义见 `f4-critic-epitome-codex-spec.md` §4；理论依据见 `emoedu-mas-plan.md` §十。
+> **这是什么**：F9 = 用极小规模人工标注，验证 F4 critic 的 LLM 判断与人工判断一致。它是论文里「LLM-judge 在本任务可靠」这句话的**唯一证据**，也是放量与 DPO 的前置闸门。
+> **配套**：当前执行状态见 `../corpus/f9/README.md`；评分定义见 `f4-critic-epitome.md` §4；pairwise 目标见 `f4-pairwise-selection.md`。
 > **一句话**：没有这份校验，DPO 和系统效果的所有结论都站不住（AI 教 AI 无锚点）。
 
 ---
 
-## 0. F9 要回答的唯一问题
+## 当前状态 / 已完成 / 待办 / 后续计划
 
-> **F4 critic 用 EPITOME 0/1/2 给候选回应打的分，可信吗？**
+**当前状态**：本文同时保留旧 pointwise EPITOME 信度校验方法，并明确新的 pairwise F9 主线。按 `docs/corpus/f9/README.md` 的当前判定，正式人工 F9 仍暂停：旧 pointwise validation 主包单次 PASS，但稳定性复跑未通过；pairwise pilot 工具链可用但 Phase A rerun 结论为 `inconclusive`。
 
-「可信」的操作化定义：F4 的打分与人工标注的一致性，达到可接受水平（见 §6 判读线），并对标原论文（Kumar & Groh 2025）报告同类指标。
+**已完成**：
+- 第一轮 F9 基线产物已在 `../corpus/f9/baseline/` 保存。
+- pointwise 自动验收、稳定性复跑、post-erip 多轮诊断产物已在 `../corpus/f9/validation*` 保存。
+- F4 已根据 F9 差集分析收紧 ER/IP 定义、加入 audit tags 与代码侧 cap。
+- pairwise 离线工具链、Phase A rerun 输入/输出与报告已在 `../corpus/f9/pairwise-selection-pilot/` 保存。
 
-注意 F9 **不是**：不是评回复质量好坏（那是别的事），不是给 45 条逐条打分，不是 MVP 的「回复合理性排雷」。F9 是**信度**（reliability）验证——量的是「标尺准不准」，不是「东西好不好」。
+**待办**：
+- 不直接启动新的人工 F9，直到 pairwise rerun 通过预设 gate，或项目明确批准新的 F9 gate 口径。
+- 当前推荐主线是 pairwise F9：验证成对偏好判断与人工 A/B 是否一致。
+- Pointwise ER/IP/EX 只作为诊断线保留；若继续 pointwise，需要先解决 ER/IP 高分饱和与稳定性问题，再冻结新盲标包。
+
+**后续计划入口**：
+- F9 总览：`../corpus/f9/README.md`
+- Pointwise 诊断记录：`../corpus/f9/pointwise-diagnostics/execution-summary.md`
+- Pairwise 当前结论：`../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`
+- F4 pointwise 规格：`f4-critic-epitome.md`
+- F4 pairwise 目标规格：`f4-pairwise-selection.md`
+
+## 0. 当前 F9 要回答的主问题
+
+> **F4 critic 做成对偏好判断时，是否与人工 A/B 偏好一致？**
+
+「可信」的操作化定义：在同一批冻结候选对上，critic pairwise winner/tie/invalid 与人工 A/B 标注达到预设一致性门槛；不稳定、tie、invalid 或 `pairwise_unresolved` 样本不得进入 DPO。
+
+Pointwise EPITOME 0/1/2 信度仍有价值，但它现在是诊断问题：用于解释旧实现、定位 ER/IP 高分饱和和保留论文 limitation，不再作为 DPO 解锁的主 gate。
+
+注意 F9 **不是**：不是评回复质量好坏（那是别的事），不是给 45 条逐条打分，不是 MVP 的「回复合理性排雷」。F9 是**信度**（reliability）验证——量的是「judge 准不准」，不是「东西好不好」。
 
 ---
 
-## 1. 抽样：标什么、抽多少、怎么抽
+## 0.1 Pairwise F9 执行框架
+
+### 标注对象
+
+**候选对**。每条样本包含同一用户倾诉、同一上下文和两条候选回应。人工标注者只回答：A 更适合、B 更适合、难分/tie、无效/越界。
+
+### 数据来源
+
+- `../corpus/f9/pairwise-selection-pilot/inputs/phase-a-rerun/` 的候选对和 manifest。
+- 后续 rerun 重新冻结的候选包。必须记录模型、prompt hash、候选来源、生成配置和 pair_id。
+
+### 标注纪律
+
+- [ ] 人工看不到 critic pairwise 结果、pointwise 分数和 candidate_id 原始标签。
+- [ ] 至少两名标注者独立标注；先算人工间一致性，再算人工-critic 一致性。
+- [ ] 保留 tie 和 invalid，不强行转成 winner/loser。
+- [ ] 亲子/同伴场景中涉及第三方动机推测的样本单独标记，避免混淆候选质量问题和 judge 问题。
+
+### 指标
+
+- `valid_pair_count`：进入比较的有效人工样本数量，必须达到 rerun plan 预设下限。
+- `human_human_agreement`：人工之间的一致性，用作人机一致性的上限参照。
+- `critic_human_agreement`：critic pairwise 与人工共识的一致性。
+- `agreement_delta_vs_pointwise`：pairwise 相对 pointwise baseline 是否改善。
+- `position_bias_controls`：physical swap、hidden label、identical text 等控制实验结果。
+
+通过线必须在 rerun plan 中先写死，不能看结果后调整。
+
+---
+
+## 1. Pointwise 旧方法：抽样、标什么、抽多少、怎么抽
+
+以下方法保留用于旧 EPITOME 0/1/2 诊断。它不再直接解锁 DPO。
 
 ### 标注对象
 
@@ -34,7 +90,7 @@
 ### 怎么抽（抽样设计决定 κ 可信度）
 
 - [ ] **跨情境分层**：学业压力 / 同伴关系 / 亲子摩擦各抽约 1/3，别全抽一类。
-- [ ] **跨取向分层**：共情型、引导反思型各占一半。引导反思型的 EX 分布更宽，对 EX 维的 κ 估计更有意义。
+- [ ] **跨取向分层**：情感共情型、认知共情型各占一半。新 c2 不再是旧“引导反思型”，不要预设其 EX 分布更宽；EX 的方差应通过覆盖 F4 分数梯度和边界样本来保证。
 - [ ] **覆盖分数梯度**：从 F4 打分里，高分/中分/低分候选都要抽到。**别只抽 F4 给高分的**——如果样本里 ER/IP/EX 全是 2，κ 会因为「方差太小」算出虚低或无意义的值（一致性指标在分数无变化时失效）。
 - [ ] **故意纳入边界候选**：抽几条 F4 标了 `boundary_flag=true` 的，以及亲子/同伴里「替第三方猜动机」的候选（已知噪声）——这些是人机最可能分歧的地方，纳入才能暴露真实一致性。
 
@@ -46,7 +102,7 @@
 
 标注者（你 + 至少一名队友）开标前，一起做这件事，否则 κ 测的是「你俩理解不一致」而非「人机不一致」。
 
-- [ ] 一起读 `f4-critic-epitome-codex-spec.md` §4 的三维 0/1/2 定义。
+- [ ] 一起读 `f4-critic-epitome.md` §4 的三维 0/1/2 定义。
 - [ ] **共标 5 条练习样本**（不计入正式 40 条），逐条对答案、讨论分歧，直到对锚点理解一致。
 - [ ] 特别对齐三个易错点：
   - **EX 的 0 vs 1**：「关闭对话/转移」是 0，「没主动探索但也没关闭」是 1。容易混。
@@ -68,7 +124,7 @@
 
 | sample_no | scenario | orientation | 用户倾诉 | 对话历史 | 候选文本 | 标注者A_ER | A_IP | A_EX | 标注者B_ER | B_IP | B_EX |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 同伴关系 | 共情型 | … | … | … | | | | | | |
+| 1 | 同伴关系 | 情感共情型 | … | … | … | | | | | | |
 
 > F4 的分**单独存一张表**，标注全部完成后再合并比对。两表用 sample_no 对齐。
 
@@ -117,7 +173,7 @@ for dim in ["ER", "IP", "EX"]:
 
 ## 5. 预期会遇到的：ER/IP 偏低，这是已知局限不是 bug
 
-文档已多处诚实预告（`f4-critic-epitome-codex-spec.md` §2、`emoedu-development-framework.md` §4）：原论文里 EPITOME 的 **ER、IP 两维操作定义不清、专家可靠性偏低，只有 EX 较高**。
+文档已多处诚实预告（`f4-critic-epitome.md` §2、`emoedu-development-framework.md` §4）：原论文里 EPITOME 的 **ER、IP 两维操作定义不清、专家可靠性偏低，只有 EX 较高**。
 
 所以你大概率会看到：**EX 的 κ 不错，ER/IP 偏低。** 这是 EPITOME 框架本身的性质，不是你的系统坏了。
 
@@ -140,7 +196,7 @@ for dim in ["ER", "IP", "EX"]:
 
 weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.4-0.6 moderate，0.6-0.8 substantial，>0.8 almost perfect。
 
-### F9 通过标准（比赛可投档）
+### Pointwise 诊断通过标准（不直接解锁 DPO）
 
 - [ ] **EX 维人机 κ ≥ 0.6**（substantial）。EX 是 EPITOME 里最可靠的维，它要是不达标，整个 judge 的可信度存疑。
 - [ ] **ER/IP 维人机 κ ≥ 0.4**（moderate），并在 limitation 诚实讨论。
@@ -153,17 +209,24 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 - **只有 ER/IP 低、EX 达标** → 可投，按 §5 写 limitation。这是预期内的，不算 F9 失败。
 - **人人 κ 低** → 不是 F4 的问题，是你俩没对齐，回 §2。
 
-> **F4 一旦因 F9 修改 → 所有用旧 F4 跑的偏好对作废**（含 probe 433 对）。这就是 F9 必须在放量前的原因。
+> **F4 一旦因 F9 修改 → 所有用旧 F4 跑的 pointwise 偏好对都只能保留为历史诊断产物**（含 probe 433 对），不得直接进 DPO。新的训练数据必须来自通过 pairwise gate 的稳定偏好对。
 
 ---
 
 ## 7. F9 的产出（直接进论文）
 
+### Pairwise 主产出
+
+1. **一张 A/B 一致性表**：人工间一致性、critic-human agreement、pointwise baseline、delta、有效样本数。
+2. **一段方法描述**：冻结候选包、盲标、正反顺序控制、tie/invalid 保留、位置偏差控制实验。
+3. **一段 go/no-go 结论**：是否允许 `pairwise_stable` 偏好对进入 DPO 候选池。
+4. **一段 limitation**：若存在 `c1` 偏斜、有效交集不足或场景偏差，必须如实写入。
+
+### Pointwise 附属产出
+
 1. **一张 κ 表**：行=ER/IP/EX，列=人人 κ、人机 κ，附每维分数分布。
-2. **一段方法描述**：抽样设计（40 条、分层、盲标、独立标）、加权 κ、对标原论文。
+2. **一段诊断描述**：解释 ER/IP 高分饱和、EX 相对更可靠、pointwise 不再作为 DPO 主判据。
 3. **一段 limitation**：ER/IP 残余局限 + 归因框架。
-4. **一句结论**：「F4 critic 的 EPITOME 打分在本任务上达到与人工可比的一致性（EX substantial，ER/IP moderate），据此其自动产出的偏好对可作为 DPO 训练信号。」
-   - **这句话一出，`judge_unverified_preference_pairs` 就解锁成可用偏好对**，放量与 DPO 才合法启动。
 
 ---
 
@@ -175,7 +238,7 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 - [ ] 合并三表（A、B、F4）按 sample_no 对齐。
 - [ ] 跑 §4 代码，得三维 × 人人/人机 κ + 分数分布。
 - [ ] 对照 §6 判读：EX≥0.6？ER/IP≥0.4？人人不低于人机？
-- [ ] 达标 → 写 §7 产出，解锁偏好对，启动 P-corpus 放量。
+- [ ] 达标 → 写 §7 的 pointwise 附属产出；若未同步通过 pairwise gate，不解锁 DPO。
 - [ ] 不达标 → 按 §6 分支处理（改 F4 重测 / 重对齐锚点 / 写 limitation）。
 
 ---

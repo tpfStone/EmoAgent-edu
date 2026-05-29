@@ -24,8 +24,8 @@ async def test_generator_returns_two_fixed_orientation_candidates(fake_llm_clien
 
     assert [candidate.candidate_id for candidate in response.candidates] == ["c1", "c2"]
     assert [candidate.orientation for candidate in response.candidates] == [
-        "共情型",
-        "引导反思型",
+        "情感共情型",
+        "认知共情型",
     ]
     assert response.candidates[0].text == "我听见你有点受伤。"
     assert response.candidates[1].text == "你愿意说说最难受的是哪一刻吗？"
@@ -39,19 +39,19 @@ async def test_generator_uses_orientation_prompts_rag_and_temperature(fake_llm_c
     await service.generate(_request(rag_examples=["参考回应：先接住情绪。"]))
 
     assert len(llm.prompts) == 2
-    assert "【你的取向：共情陪伴 —— 全程向内】" in llm.prompts[0]["prompt"]
-    assert "不要问任何问题" in llm.prompts[0]["prompt"]
+    assert "【你的取向：情感共情 —— 与他的感受共振】" in llm.prompts[0]["prompt"]
+    assert "不解释成因，不给建议、方法或新角度" in llm.prompts[0]["prompt"]
     assert '不要把"哇"、"其实你"或品质化夸奖作为默认开头' in llm.prompts[0]["prompt"]
-    assert "最终回复只包含直接对学生说的话" in llm.prompts[0]["prompt"]
+    assert "最终回复只包含直接对孩子说的话" in llm.prompts[0]["prompt"]
     assert "禁止内部提示外泄" in llm.prompts[0]["prompt"]
     assert "不得编造用户未说的事实" in llm.prompts[0]["prompt"]
     assert "少评价、少说教、少替第三方解释，多承接孩子感受" in llm.prompts[0]["prompt"]
-    assert "【你的取向：引导反思 —— 重心向外】" in llm.prompts[1]["prompt"]
-    assert "不要固定使用任何引导套话" in llm.prompts[1]["prompt"]
+    assert "【你的取向：认知共情 —— 把他的处境理解准】" in llm.prompts[1]["prompt"]
+    assert "不是给他一个新视角" in llm.prompts[1]["prompt"]
+    assert "把他没明说、但藏在话里的那层担忧、在意或为难，准确点出来" in llm.prompts[1]["prompt"]
     assert "不替朋友、同学、家长或老师解释动机" in llm.prompts[1]["prompt"]
-    assert "如果新角度需要猜他人的心里想法，就换成孩子自己的感受、需要或可控边界" in llm.prompts[1]["prompt"]
-    assert "如果新角度需要补充孩子没说过的事实" in llm.prompts[1]["prompt"]
-    assert "退回为关于孩子感受的轻问题" in llm.prompts[1]["prompt"]
+    assert "不给建议、不给方法、不抛新观点、不催他往前走" in llm.prompts[1]["prompt"]
+    assert "落点是理解他的感受和处境，不是分析他这个人" in llm.prompts[1]["prompt"]
     assert "反趋同" in llm.prompts[1]["prompt"]
     assert "避免模板化" in llm.prompts[1]["prompt"]
     assert "参考回应：先接住情绪。" in llm.prompts[0]["prompt"]
@@ -79,31 +79,32 @@ async def test_generator_prompt_contains_f9_reliability_guardrails(fake_llm_clie
     await service.generate(_request())
 
     empathic_prompt = llm.prompts[0]["prompt"]
-    reflective_prompt = llm.prompts[1]["prompt"]
+    cognitive_prompt = llm.prompts[1]["prompt"]
     assert "未充分承接情绪前，不要把痛苦、自责、愤怒或不信任直接重构成优点、主见、判断力或在乎别人" in empathic_prompt
     assert "轻量稳定感可以使用，但前面必须已经具体回应当前倾诉" in empathic_prompt
     assert "愤怒或不公感" in empathic_prompt
-    assert "不要用“停在这里也没关系”“这样也没什么不对”这类安抚收尾" in empathic_prompt
+    assert "不要用“停在这里也没关系”“这样也没什么不对”这类安抚句收尾" in empathic_prompt
     assert "这股气是有道理的" in empathic_prompt
-    assert "二选一问题必须同时满足" in reflective_prompt
-    assert "两个选项都是孩子真实面临的" in reflective_prompt
-    assert "彼此互斥" in reflective_prompt
-    assert "任一答案都能推进孩子继续表达" in reflective_prompt
-    assert "不满足就不要发问" in reflective_prompt
-    assert "不要把因果关系硬拆成二选一" in reflective_prompt
-    assert '优先"是A还是B"' not in reflective_prompt
+    assert "二选一问题必须同时满足" in cognitive_prompt
+    assert "两个选项都是孩子真实面临的" in cognitive_prompt
+    assert "彼此互斥" in cognitive_prompt
+    assert "任一答案都能推进孩子继续表达" in cognitive_prompt
+    assert "不满足，就不发问" in cognitive_prompt
+    assert "不要把因果关系硬拆成二选一" in cognitive_prompt
+    assert '优先"是A还是B"' not in cognitive_prompt
     assert "不要用“说明你”“可见你”“这本身”把孩子的痛苦总结成品质、能力或优点" in empathic_prompt
     assert "肯定只能落在孩子明确说出的动作、感受或表达本身" in empathic_prompt
-    assert "不要把抱怨、愤怒、自责、沉默、反复确认改写成判断力、懂事、很有数或有主见" in reflective_prompt
-    assert "换个角度看" not in reflective_prompt
+    assert "不要把抱怨、愤怒、自责、沉默、反复确认改写成判断力、懂事、很有数或有主见" in cognitive_prompt
+    assert "换个角度看" not in cognitive_prompt
+    assert "给孩子打开一个他自己没注意到的新视角" not in cognitive_prompt
+    assert "递视角" not in cognitive_prompt
     assert "承接必须包含对孩子说出的那一件具体的事的复述" in empathic_prompt
     assert "最多只能跟在具体复述后面作补充，绝不能单独充当承接" in empathic_prompt
-    assert "开头先用一句具体复述接住情绪" in reflective_prompt
-    assert "引导反思型的承接可以短，但不能空" in reflective_prompt
-    assert "一句具体复述即可" in reflective_prompt
-    assert "不要写括号式阶段标签" in reflective_prompt
-    assert "（先接住你的场景）" in reflective_prompt
-    assert "（再递新视角）" in reflective_prompt
+    assert "先用一句具体复述接住他刚说的那个场景或动作" in cognitive_prompt
+    assert "不要重复它的活" in cognitive_prompt
+    assert "不要写括号式阶段标签" in cognitive_prompt
+    assert "（先接住你的场景）" in cognitive_prompt
+    assert "（再递新视角）" in cognitive_prompt
 
 
 @pytest.mark.asyncio
@@ -125,6 +126,6 @@ async def test_failed_candidate_generation_returns_fallback(fake_llm_client):
     response = await service.generate(_request())
 
     assert response.candidates[0].candidate_id == "c1"
-    assert response.candidates[0].orientation == "共情型"
+    assert response.candidates[0].orientation == "情感共情型"
     assert response.candidates[0].text == GENERATOR_FALLBACK_TEXT
     assert response.candidates[1].text == "你愿意多说一点吗？"

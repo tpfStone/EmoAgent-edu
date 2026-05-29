@@ -4,7 +4,7 @@
 
 ## 文档归属
 
-本文记录 Phase A rerun 后发现的 `c1` 塌缩问题、当前已完成的检查、对外部调试建议的审查结论，以及下一步处理方案。
+本文记录 Phase A rerun 后发现的 `c1` 塌缩问题、当前已完成的检查、诊断设计，以及后续处理方案。
 
 放置位置：`docs/corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/`。
 
@@ -61,9 +61,25 @@ if winner == "B":
 
 因此从静态代码看，没有明显的 “A 位直接等于 c1” 硬编码。
 
-### 2. 现有 mock 测试覆盖
+基于上述双向换位，单个 pairwise sample 的两次调用应按以下真值表解释：
 
-已运行：
+```text
+call 1: A=c1, B=c2
+call 2: A=c2, B=c1
+```
+
+| call 1 raw winner | call 2 raw winner | candidate-id 结果 | 期望 sample |
+|---|---|---|---|
+| A | B | c1, c1 | stable c1 |
+| B | A | c2, c2 | stable c2 |
+| A | A | c1, c2 | unstable |
+| B | B | c2, c1 | unstable |
+| tie | 任意 | None / 任意 | unstable |
+| 任意 | tie | 任意 / None | unstable |
+
+### 2. 初始 mock 测试覆盖与补齐项
+
+补齐前已运行：
 
 ```powershell
 C:\Python313\python.exe -m pytest tests\test_services\test_critic_pairwise.py -q
@@ -75,19 +91,19 @@ C:\Python313\python.exe -m pytest tests\test_services\test_critic_pairwise.py -q
 7 passed
 ```
 
-现有测试已覆盖：
+当时测试已覆盖：
 
 - `A` then `B` 可映射为同一候选并 stable。
 - 恒定返回 `A` 位会被识别为 unstable。
 - 聚合支持 `majority_with_unstable`、`split_majority`、`invalid`。
 
-仍缺少的代码层检查：
+当时仍缺少的代码层检查：
 
 - 精确断言 prompt 内容换位：第一次 `回应A=AAA, 回应B=BBB`；第二次 `回应A=BBB, 回应B=AAA`。
 - 恒定返回 `B` 位的对称测试。
 - 原始 A/B 判定组合真值表测试。
 
-建议补齐这些测试后，再运行真实 LLM 对照。
+这些检查已在 Step 1/2 执行记录中补齐，再进入真实 LLM 对照。
 
 ### 3. 当前真实 run 的 raw pattern
 
@@ -106,6 +122,7 @@ c2, c1, false     = 0
 - `c1,c2,false` 表示两次都偏展示位 A，是直接的 A 位偏置证据。
 - 但 stable 样本中仍大量为 `c1,c1,true`，说明问题不只是展示位 A 偏置。
 - `c2,c2,true` 只有 2 次，说明当前 judge 对 `c2` 的内容或标签偏好很弱。
+- 物理对调后若仍稳定输出新的 `c1`，不能直接称为 A 位偏置；在当前双向换位实现下，更准确的解释是候选列偏置、标签诱导，或二者与内容偏好的混合。真正的 A 位偏置应看 `judgment_1_winner_id=c1` 且 `judgment_2_winner_id=c2` 这类 raw position conflict。
 
 ### 4. Prompt 暴露标签导致变量混淆
 
@@ -125,54 +142,9 @@ c2, c1, false     = 0
 
 因此，仅凭 “stable winner 全部是 c1” 无法区分是列偏置、风格偏好，还是标签诱导。
 
-## 对外部建议的审查结论
+## 诊断方案与后续处理
 
-### 可采纳部分
-
-外部建议中 “先 mock、再真实 LLM、最后定性” 的顺序是合理的。第一段不调用 LLM，能先排除最便宜的代码 bug，应该优先执行。
-
-可直接采纳：
-
-- 先补换位 prompt 断言。
-- 补恒定 `A` / 恒定 `B` 的对称测试。
-- 补聚合真值表。
-- 第一段未通过前，不跑真实 LLM。
-
-### 需要修正的部分
-
-外部建议中 1.1 的解读需要调整。
-
-原建议说：物理对调 24 对后，如果仍偏向新的 `c1`，则确诊 A 位位置偏置。
-
-这个结论不严谨。因为当前实现每个 sample 会双向换位，新的 `c1` 并不总在 A 位。若物理对调后仍稳定输出 `c1`，更准确的解释是：
-
-- 可能存在 `candidate_id` / 列标签偏置；
-- 也可能是 prompt 暴露 `(c1, orientation)` 后产生的标签诱导；
-- 不能直接称为 A 位偏置。
-
-真正的 A 位偏置应看 raw sample pattern：`judgment_1_winner_id=c1` 且 `judgment_2_winner_id=c2`。这表示两次都选展示位 A，最终应被判为 unstable。
-
-### 修正后的真值表
-
-单个 pairwise sample 的两次调用：
-
-```text
-call 1: A=c1, B=c2
-call 2: A=c2, B=c1
-```
-
-正确真值表：
-
-| call 1 raw winner | call 2 raw winner | candidate-id 结果 | 期望 sample |
-|---|---|---|---|
-| A | B | c1, c1 | stable c1 |
-| B | A | c2, c2 | stable c2 |
-| A | A | c1, c2 | unstable |
-| B | B | c2, c1 | unstable |
-| tie | 任意 | None / 任意 | unstable |
-| 任意 | tie | 任意 / None | unstable |
-
-## 下一步方案
+诊断顺序采用“先 mock、再无 API 汇总、再真实 LLM 小对照、最后定性”的路径。第一段不调用 LLM，用来先排除最便宜、最确定的代码层错误；只有代码层诊断通过后，才进入真实 LLM 对照。
 
 ### Step 1：补代码层诊断测试
 
@@ -362,7 +334,7 @@ Step 3 结论：
 
 ### Step 4：F4 prompt 临时修正方向
 
-若 Step 1 代码层通过，则下一轮 F4 prompt 应至少做以下改动：
+Step 1/2/3 已完成且未发现代码层映射 bug；下一轮 F4 prompt 应至少做以下改动：
 
 - prompt 中不展示 `candidate_id`。
 - prompt 中不展示 `orientation`。
@@ -382,24 +354,34 @@ Step 3 结论：
 
 - 它会改变 frozen pair package 的身份语义，不只是重跑 judge；现有 `c1/c2` 已经被人工标注、judge runs、summary、eval report 共同引用，直接重排会让既有 Phase A rerun 产物不可横向比较。
 - 它需要同步修改 package manifest、人工标注模板、eval 汇总口径，以及按 `candidate_id` / `orientation` 分层的报告字段，否则会把“候选列”与“原始取向”混在一起。
-- 它属于下一轮输入包设计修正，应在 Step 3 真实 LLM 对照确认标签诱导或列偏置后，以新 package 版本执行；不应混入当前 `phase-a-rerun` 诊断产物。
+- 它属于下一轮输入包设计修正；Step 3 真实 LLM 对照已经支持“标签暴露会污染判断，但不是唯一根因”这一判断，因此应以新 package 版本执行，不应混入当前 `phase-a-rerun` 诊断产物。
+
+### 当前下一步方案评估
+
+当前方案方向是完善的，但不能把“完整 rerun”当成下一条可直接命令执行。
+
+- Step 4 的 F4 prompt 匿名化、双向换位保留、raw pattern gate 保留，证据链充分，可以执行，并应作为下一轮 judge 的默认口径。
+- Step 5 的输入包设计方向合理，可以进入实现计划；但它还缺少明确的 package manifest 字段、人工标注模板字段、eval 分层输出字段和验收命令，尚不能直接重跑 Phase A。
+- 下一轮 rerun 应等待 F3 候选质量修复、`c1/c2` 取向均衡入包、eval 分层 gate 和 comparison-intersection 样本门槛都落地后再执行。
 
 ## 决策口径
 
-在完成上述诊断前：
+上述诊断完成后的当前口径：
 
 - 不进入 Phase B。
 - 不切换 `/chat` 默认择优为 pairwise。
 - 不把本轮 `pairwise_stable` 输出进入 DPO 候选池。
 - 不把当前 `14/24 stable` 解读为有效稳定偏好；它已经被 c1 collapse 诊断污染。
+- 可以执行 F4 prompt 匿名化、raw pattern gate 保留、eval 分层输出，以及下一版输入包的 `c1/c2` 取向均衡设计。
+- 不能直接重跑完整 Phase A rerun；需要先把 F3 候选质量修复、输入包 manifest、人工标注模板、eval 字段和通过门槛落成可执行任务。
 
 可能结论及后续：
 
 | 结论 | 判据 | 后续 |
 |---|---|---|
 | 代码 bug | Step 1 任一 mock 测试失败 | 修代码，重跑本轮 pairwise judge |
-| 展示位偏置 | identical / hidden-label 对照仍稳定偏 A 或 B | 加强 F4 prompt 去偏，保留双向换位和 raw pattern gate |
-| candidate_id/标签偏置 | 隐藏标签后偏斜显著下降 | prompt 不再暴露 candidate_id/orientation |
+| 展示位偏置 | identical / hidden-label 对照仍稳定偏 A 或 B | 当前未在隐藏标签 prompt 下复现纯位置偏置；继续保留双向换位和 raw pattern gate |
+| candidate_id/标签偏置 | 隐藏标签后偏斜显著下降 | prompt 不再暴露 candidate_id/orientation；已作为下一轮 F4 prompt 修正项 |
 | 风格偏好 | winner 跟随共情型内容移动，且 hidden-label 后仍明显偏共情型 | 修订 F4 rubric，正面处理 judge 与人工偏好的定义差异 |
 
-当前更可能的判断是混合问题：存在明显 A 展示位偏置，同时 prompt 暴露 `c1/共情型` 和 `c2/引导反思型`，导致列、标签和风格变量缠在一起。下一步应先补 mock 测试，再做隐藏标签的真实 LLM 小对照。
+当前更可能的判断是混合问题：`c1 collapse` 不是代码层映射 bug，也不是隐藏标签 prompt 下的纯位置偏置；更像是旧 prompt 标签暴露与内容/风格偏好共同造成的混合问题。当前 Step 4 的 prompt 匿名化可执行；Step 5 的输入包设计方向合理，但还需要拆成明确的 package、annotation、eval 实施任务后再进入下一轮 rerun。

@@ -1,10 +1,27 @@
-# F2 情境分析模块 · Codex 开发规格
+# F2 情境分析模块规格
 
-> **交付对象**：Codex / 编码 agent。本文档自包含。
 > **模块定位**：运行时管线第②环（安全门放行后）。对标 CogMAS 的 Q-matrix lookup。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（复用 emoagent）。
 
 ---
+
+## 0. 当前状态 / 已完成 / 待办 / 后续计划
+
+**当前状态**：已接入运行时。`/api/scenario/evaluate` 与 `/chat` 中的 F2 均使用 `app/services/scenario_service.py`，输出 `scenario`、`scenario_confidence`、`activated_casel` 与 `rationale`，并传给 F4。
+
+**已完成**：
+- 四类情境分类 prompt 已实现，LLM temperature 为 `SCENARIO_LLM_TEMPERATURE=0.0`。
+- `SCENARIO_CASEL_MAP` 已硬编码，`activated_casel` 不由 LLM 即兴生成。
+- JSON 包裹解析、非法情境和调用异常均默认归为“其他”。
+- 服务与接口测试覆盖 `tests/test_services/test_scenario_service.py`、`tests/test_handlers/test_scenario_handler.py`、`tests/test_services/test_orchestrator_service.py`。
+
+**待办**：
+- 尚未把 45 条语料的 `scenario` 字段接成持续回归/准确率报告；当前主要是单元测试覆盖。
+- 若分类延迟或成本成为瓶颈，再评估轻量分类器替代 LLM。
+
+**后续计划入口**：
+- 语料与标注入口：`../corpus/`
+- 当前运行时链路索引：见本目录 `README.md`
 
 ## 1. 职责（一句话）
 
@@ -12,7 +29,7 @@
 
 ---
 
-## 2. 设计依据（实现者理解即可）
+## 2. 设计依据
 
 - 对应 CogMAS 的 Q-matrix：不是每条对话都跑全部维度，而是先判定情境，再激活相关维度，避免无关维度稀释信号。
 - 三类核心情境（学业压力/同伴关系/亲子摩擦）是 MVP 范围，依据初中生高频议题 + SEL 文献。超出的归「其他」，仍可走通用共情，不阻断。
@@ -124,11 +141,11 @@
 
 ## 9. 验收标准（DoD）
 
-- [ ] FastAPI 端点，IO 符合 §3
-- [ ] LLM 分类用 §5 prompt，temperature=0，JSON 解析容错（失败默认归"其他"，不报错中断）
-- [ ] activated_casel 由 §4 表查出，非 LLM 即兴
-- [ ] §8 用例通过；用 45 条语料跑分类准确率并记录
-- [ ] 输出可直接接入 F4 的 activated_casel 字段
+- [x] FastAPI 端点，IO 符合 §3
+- [x] LLM 分类用 §5 prompt，temperature=0，JSON 解析容错（失败默认归"其他"，不报错中断）
+- [x] activated_casel 由 §4 表查出，非 LLM 即兴
+- [x] 输出可直接接入 F4 的 activated_casel 字段
+- [ ] §8 批量语料用例纳入持续回归，并记录分类准确率。
 
 ---
 

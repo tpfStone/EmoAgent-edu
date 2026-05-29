@@ -6,7 +6,7 @@ from app.schemas.safety import ConversationMessage
 from app.schemas.scenario import ScenarioLabel
 
 
-GeneratorOrientation = Literal["共情型", "引导反思型"]
+GeneratorOrientation = Literal["情感共情型", "认知共情型"]
 
 
 class GeneratorGenerateRequest(BaseModel):
