@@ -1,40 +1,69 @@
 # Specs 文档索引
 
-本目录保存 EmoAgent-edu 运行时模块规格与后续改造目标。文档用于标准开发、测试与验收，不面向特定工具或实现者。
+本目录保存 EmoAgent-edu 运行时模块规格与后续改造目标。当前文档口径以“在线快路径 + 后台准路径”为准：模块接口可以保留完整实验能力，但 `/chat` 不再每轮阻塞式跑完整 F1-F4 双候选 critic 链路。
 
 ## 模块状态总览
 
-| 模块 | 文档 | 当前状态 | 关联代码 | 主要测试 | 后续 plan / 证据入口 |
-|---|---|---|---|---|---|
-| F1 安全门 | [f1-safety-gate.md](f1-safety-gate.md) | 已接入 `/api/safety/evaluate` 与 `/chat` 前置短路；异常按 yellow 兜底 | `app/services/safety_gate_service.py`, `app/services/orchestrator_service.py` | `tests/test_services/test_safety_gate_service.py`, `tests/test_handlers/test_safety_handler.py`, `tests/test_services/test_orchestrator_service.py` | `../issues/2026-05-20-f1-f4-development-issues.md` |
-| F2 情境分析 | [f2-scenario-analysis.md](f2-scenario-analysis.md) | 已接入 `/api/scenario/evaluate` 与 `/chat`；情境到 CASEL 映射由代码表生成 | `app/services/scenario_service.py`, `app/services/orchestrator_service.py` | `tests/test_services/test_scenario_service.py`, `tests/test_handlers/test_scenario_handler.py` | `../corpus/` |
-| F3 多取向生成器 | [f3-multi-orientation-generator.md](f3-multi-orientation-generator.md) | 已接入 `/api/generator/generate` 与 `/chat`；固定两取向并发生成，RAG 入口尚未接入 `/chat` | `app/services/generator_service.py`, `app/services/orchestrator_service.py` | `tests/test_services/test_generator_service.py`, `tests/test_handlers/test_generator_handler.py` | `../corpus/f9/plans/f3-generator-fix-plan.md`, `../issues/2026-05-22-f3-prompt-iteration-issues.md` |
-| F4 pointwise critic | [f4-critic-epitome.md](f4-critic-epitome.md) | 当前 `/chat` 默认择优器；使用 EPITOME/CASEL pointwise、median、boundary 过滤和 `weighted_total` | `app/services/critic_service.py`, `app/services/orchestrator_service.py`, `app/schemas/critic.py` | `tests/test_services/test_critic_service.py`, `tests/test_handlers/test_critic_handler.py` | `../corpus/f9/plans/f4-critic-fix-plan.md`, `../corpus/f9/README.md` |
-| F4 pairwise 目标 | [f4-pairwise-selection.md](f4-pairwise-selection.md) | 离线工具链已存在；已显式接入 `activated_casel` CASEL 比较 rubric；不是 runtime 默认，Phase A rerun 结论为 `inconclusive` | `app/services/critic_pairwise.py`, `scripts/corpus/f9_pairwise_*.py` | `tests/test_services/test_critic_pairwise.py`, `tests/test_corpus/test_f9_pairwise_*.py` | `../corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`, `../corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md` |
-| F9 信度校验 | [f9-reliability-guide.md](f9-reliability-guide.md) | 主 gate 转为 pairwise 人工 A/B 一致性；pointwise 正式人工 F9 暂停，旧主包单次 PASS 但稳定性复跑失败 | `scripts/corpus/f9_sampling.py`, `scripts/corpus/f9_reliability.py`, `scripts/corpus/f9_validation.py`, `scripts/corpus/f9_fixed_candidate_rescore.py`, `scripts/corpus/f9_pairwise_*.py` | `tests/test_corpus/test_f9_*.py` | `../corpus/f9/README.md`, `../corpus/f9/pointwise-diagnostics/execution-summary.md` |
+| 模块 | 文档 | 当前状态 | 关联代码 | 主要测试 / 证据入口 |
+| --- | --- | --- | --- | --- |
+| F1 安全门 | [f1-safety-gate.md](f1-safety-gate.md) | `/chat` 默认使用本地分类器；`/api/safety/classifier/evaluate` 为生产接口；LLM 版 `/api/safety/evaluate` 保留兼容 | `app/services/f1_safety_classifier.py`, `app/services/classifier_safety_gate_service.py`, `app/services/safety_gate_service.py` | `tests/test_services/test_safety_gate_service.py`, `exp/README.md` |
+| F2 情境分析 | [f2-scenario-analysis.md](f2-scenario-analysis.md) | LLM 输出 scenario、CASEL lookup、`support_mode`、`emotion_intensity`、`help_seeking` 和 `secondary_safety` | `app/services/scenario_service.py`, `app/schemas/scenario.py` | `tests/test_services/test_scenario_service.py`, `exp/README.md` |
+| F3 多取向生成器 | [f3-multi-orientation-generator.md](f3-multi-orientation-generator.md) | 模块接口保留 c1/c2 双取向；`/chat` 首轮按 F2 路由只生成一个候选并流式返回；PsyQA support card 已接入 | `app/services/generator_service.py`, `app/services/f3_support_service.py` | `tests/test_services/test_generator_service.py`, `tests/test_services/test_f3_support_service.py`, `exp/runs/f3_support_probe/` |
+| F4 pointwise critic | [f4-critic-epitome.md](f4-critic-epitome.md) | 模块接口可同步调用；`/chat` 中改为后台任务，写入 session guidance，下一轮可注入 | `app/services/critic_service.py`, `app/services/orchestrator_service.py`, `app/schemas/critic.py` | `tests/test_services/test_critic_service.py`, `exp/runs/f3_route_f4_probe/` |
+| F4 pairwise 目标 | [f4-pairwise-selection.md](f4-pairwise-selection.md) | 离线工具链和实验包存在；不是 runtime 默认；人工一致性不足，暂不解锁 DPO | `app/services/critic_pairwise.py`, `exp/f4_pairwise_model_runner.py`, `exp/f4_human_model_agreement.py` | `exp/runs/f4_eval_package/`, `exp/runs/f4_pairwise_model_probe/` |
+| F6 memory/RAG | 暂无独立 spec | 应用侧接口已预留；默认关闭；后续用于长期记忆和检索缓存 | `app/services/memory_rag_service.py`, `app/handlers/memory_handler.py` | `GET /api/memory/status`, `DELETE /api/memory` |
+| F9 信度校验 | [f9-reliability-guide.md](f9-reliability-guide.md) | 历史 F9 作为追溯材料；当前主 gate 转为 pairwise 人工 A/B 和 critic-human agreement | `docs/corpus/f9/`, `exp/f4_eval_package_builder.py` | `docs/corpus/f9/README.md`, `exp/README.md` |
 
-## 运行时主链路
+## 当前 `/chat` 运行时主链路
 
-当前 `/chat` 仍按以下顺序运行：
+### 首次对话
 
-1. F1 `SafetyGateService` 判定 green/yellow/red；yellow/red 直接返回转介话术。
-2. F2 `ScenarioService` 只在 green 后运行，输出情境和 `activated_casel`。
-3. F3 `GeneratorService` 生成 `情感共情型` 与 `认知共情型` 两条候选。
-4. F4 `CriticService` 使用 pointwise 分数和 boundary 过滤择优。
+```text
+F1 ClassifierSafetyGateService
+-> 若 yellow/red：直接返回转介
+-> F2 ScenarioService
+-> 若 secondary_safety yellow/red：直接返回转介
+-> F3 GeneratorService.stream_one_text()
+-> SSE 流式返回
+-> 后台 F4 CriticService 写 session guidance
+```
 
-`CriticPairwiseService` 当前用于 F9/pairwise 离线试点，不参与 `/chat` 默认响应；离线 prompt 已把 F2 的 `activated_casel` 转为显式 CASEL A/B/tie 比较维度。
+F3 的候选方向由 F2 决定：
+
+- `emotion_first` 或 `emotion_intensity=high`：优先 `c1 情感共情型`。
+- `solution_seeking`：优先 `c2 认知共情型`。
+- 其他情况默认 `c2` 或 balanced 逻辑，具体以 `OrchestratorService._first_turn_candidate_id` 为准。
+
+### 后续对话
+
+```text
+Redis 读取最近历史
+-> 如后台 F4 guidance 已完成则读取
+-> GeneratorService.stream_followup_text()
+-> SSE 流式返回
+```
+
+后续轮次不再每次调用 F1/F2/F4，目的是降低延迟并让对话自然延续。F4 guidance 如果还没生成完成，不等待、不阻塞。
+
+### 模块接口与实验链路
+
+完整双候选和 critic 链路仍然保留在模块接口和 `exp/` 中：
+
+- `/api/generator/generate` 可以生成 c1/c2 双候选。
+- `/api/critic/evaluate` 可以同步评估候选。
+- `exp/f3_support_probe.py`、`exp/f3_route_f4_probe.py`、`exp/f4_pairwise_model_runner.py` 用于继续做离线实验。
 
 ## 当前改造主线
 
-F4 的运行时事实和目标方向要分开读：
-
-- `f4-critic-epitome.md` 描述当前 `/chat` 默认行为：pointwise EPITOME/CASEL 打分、`weighted_total` 择优和历史兼容 `preference_pair`。
-- `f4-pairwise-selection.md` 描述目标主线：用成对偏好判断替代 pointwise 作为择优和 DPO 偏好对来源；CASEL 在该线中是显式比较维度和审计 trace，不是加权总分项。
-- `f9-reliability-guide.md` 的主 gate 应转为 pairwise 人工 A/B 一致性；pointwise weighted kappa 只保留为诊断证据。
-- 在 pairwise rerun 通过预设 gate 前，不切换 `/chat` runtime，不把旧 pointwise 偏好对放入 DPO。
+- 在线路径先保证交互速度、安全兜底和流式体验。
+- 后台路径保留理论支撑：critic、pairwise、人工偏好和 DPO 数据准备。
+- F1 已从 prompt 工程迁移为本地分类器；后续除非新增标注数据，否则先不继续优化。
+- F3 已接入 PsyQA 策略先验和 support card；后续重点是产品侧语言体验和前端呈现。
+- F4 不再作为在线强阻塞择优器；后续重点是后台质量标签、session guidance 和人工校准。
 
 ## 维护规则
 
-- 改运行时代码、schema、prompt 或验收口径时，同步更新对应模块规格。
-- F4 pointwise 文档描述当前 `/chat` 默认行为；F4 pairwise 文档描述目标主线和迁移条件。
-- F9 相关计划、run 产物和诊断记录以 `../corpus/f9/README.md` 为入口。
+- 改 `/chat` 编排顺序、schema、SSE 事件或 prompt 时，同步更新本文件和对应模块 spec。
+- F4 pointwise 文档描述后台 critic 当前行为；F4 pairwise 文档描述目标主线和迁移条件。
+- 新实验结果优先写入 `../../exp/README.md`，再摘要同步到对应 spec。
+- 历史 F9/corpus 文档只做追溯，不能覆盖当前 `exp/` 结论。

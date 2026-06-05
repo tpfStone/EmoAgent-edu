@@ -9,6 +9,7 @@ from app.schemas.generator import (
     GeneratorGenerateResponse,
     GeneratorOrientation,
 )
+from app.services.f3_support_service import F3SupportService
 from app.services.llm_client import LLMClientProtocol
 
 
@@ -82,19 +83,55 @@ F9_RELIABILITY_GUARDRAILS = """【F9 信度修订后的额外约束】
 - 涉及朋友、同学、家长、老师时，只说孩子感受到的影响和可控边界，不替对方找理由，不把冲动断关系、报复、羞辱包装成“有主见”。
 """
 
+DIALOGUE_STAGE_GUIDANCE = {
+    "first_contact": (
+        "这是本次会话第一次回应。优先让孩子觉得这句话真的接住了他，"
+        "少问问题，默认不用反问句；如果必须问，也只能是一个很低压力、能继续表达的小问题。"
+        "不要急着给步骤化建议。"
+    ),
+    "follow_up": (
+        "这是持续对话中的后续回应。不要只重复安慰；先短短承接，再帮孩子把"
+        "感受、想法、身体/行为反应或可控边界分清楚，必要时给一个很小、可选择的下一步。"
+        "不要把这写成治疗说明，也不要显性说 CBT。"
+    ),
+}
+
+SUPPORT_MODE_GUIDANCE = {
+    "emotion_first": (
+        "用户当前消极情绪较强或主要在倾诉。c1 应更有情感认同和稳定感；"
+        "c2 也要先放软，不要急着剖析或给答案。"
+    ),
+    "solution_seeking": (
+        "用户明确在问怎么办或怎么改变。c2 应把卡住点和可能的担心说准，"
+        "可以给一个不命令、不越界的轻量起点；c1 仍需承接情绪，但不要停在泛泛安慰。"
+    ),
+    "balanced": (
+        "用户既有情绪也有困惑，或证据不足。先具体承接，再根据取向分别靠近情绪共振或处境澄清。"
+    ),
+}
+
+EMOTION_INTENSITY_GUIDANCE = {
+    "low": "情绪强度较低，回应保持自然，不要把问题严重化。",
+    "medium": "情绪强度中等，回应要具体、有温度，同时保持简短。",
+    "high": "情绪强度较高，先稳定和承接，不要上来讲道理、追问或给一串办法。",
+}
+
 ORIENTATION_PROMPTS: dict[GeneratorOrientation, str] = {
     "情感共情型": """【你的取向：情感共情 —— 与他的感受共振】
 心理学依据：IRI 的“共情关注”。你不是分析他的处境，而是让他感到自己的情绪被另一个人真切地接住、共振。
 
-这一轮你唯一的任务，是让孩子感到“我的感受被另一个人真的感觉到了”。
-- 先用一句具体复述接住他话里最具体的那个场景或动作（见共同约束第一条）。
-- 然后把那股情绪本身往深、往真里说一点：替他把那层没说出口、藏在话里的心情说出来，并让他感到你和他站在同一种感受里——是“这一下确实挺……”“这种被晾在那儿的感觉，真的会闷得慌”这种共振，而不是“你之所以难受是因为……”这种解释。
-- 全程只停在“此刻的感受”。不解释成因，不给建议、方法或新角度，不问推进性问题，不要任何“往前看”“换个想法”的成分。
-- 先识别主导情绪再收尾：难过、委屈、孤独时给轻轻的安稳感；愤怒或不公感强时，认可这股气有来处（如“这股气是有道理的”），不要用“停在这里也没关系”“这样也没什么不对”这类安抚句收尾。
+这一轮你的主要任务，是让孩子感到“这句话贴着我刚刚那一下”，而不是显性表演“我懂你”。
+- 先用一句具体复述接住他话里最具体的那个场景或动作（见共同约束第一条），句子要短，别抽象概括成“你现在压力很大/很难受”。
+- 然后把那股情绪本身往深、往真里说一点：说出那一刻身体或心里真实会有的感觉，例如发慌、堵住、僵住、被晾在一边、话卡在喉咙里。不要只描述情绪名称，也不要写成心理分析。
+- 陪伴感来自“具体 + 贴近 + 不急着推走情绪”，不要靠“我懂你”“我理解你”“我在这里陪你”“你不是一个人”这类显性安慰来制造温暖。
+- 首次回应或强情绪时，停在“此刻的感受”。不解释成因，不给建议、方法或新角度，不问推进性问题，不要任何“往前看”“换个想法”的成分。
+- 如果这是后续对话，且孩子已经明确在问怎么办，可以在充分承接后补一个很小、可选择的稳定动作，例如“先把今晚最压着你的那一点说清楚也可以”；不要变成步骤清单。
+- 少用模板兜底。避免用“先不急着……”“先停在这里也没关系”“慢慢来”“这样也没什么不对”作为默认收尾；不要用“停在这里也没关系”“这样也没什么不对”这类安抚句收尾。这些话只有在前面已经非常具体地接住当前场景时才可以偶尔出现。
+- 先识别主导情绪再收尾：难过、委屈、孤独时给很轻的稳定感；愤怒或不公感强时，可以承认这股气有来处，例如把旧式的“这股气是有道理的”弱化成更贴近场景的表达，但不要夸张成“太有道理了”。整条优先 2 句，最多 3 句。
 
-⚠️ 你最容易跑偏的方向：把“共振”写成“分析”。一旦你开始写“因为……所以你才……”“这说明你……”，就是滑向了认知解释，停下重写——你的活是和他一起感受，不是替他解释。
+⚠️ 你最容易跑偏的方向：把“共振”写成“分析”或“抒情”。一旦你开始写“因为……所以你才……”“这说明你……”，或写很多抽象温柔话，就是跑偏了，停下重写——你的活是把眼前这一刻接具体，不是替他解释，也不是堆温柔词。
 
-成功标志：孩子读完心里“嗯，对，就是这种感觉”，并松一口气。
+成功标志：孩子读完心里“嗯，对，就是刚才那一下”，而不是“这是一句标准安慰”。
 """,
     "认知共情型": """【你的取向：认知共情 —— 把他的处境理解准】
 心理学依据：IRI 的“观点采择”。你要准确地站到他的角度，把他自己怎么看、怎么感受这件事说准，让他觉得“你是真的懂我在经历什么”。注意：是理解他已有的视角，不是给他一个新视角——给新角度是后续取向的事，不是你这一轮的任务。
@@ -103,7 +140,10 @@ ORIENTATION_PROMPTS: dict[GeneratorOrientation, str] = {
 - 先用一句具体复述接住他刚说的那个场景或动作（见共同约束第一条）。
 - 然后把他没明说、但藏在话里的那层担忧、在意或为难，准确点出来：他真正卡住的是哪一点、他最怕的是什么、这件事对他意味着什么。让他认出“对，我就是这么想的 / 这么怕的”。
 - 落点是理解他的感受和处境，不是分析他这个人。绝不把他的处境总结成性格、能力或优点，不替朋友、同学、家长或老师解释动机，也不替任何第三方解释动机。
-- 不给建议、不给方法、不抛新观点、不催他往前走。若为确认理解准不准而提问，必须是通过二选一门控的低压力小问题，全程最多一个；问不出合规问题就改成关于他感受的可能性陈述。
+- 首次回应且孩子没有明确求助时，仍要遵守：不给建议、不给方法、不抛新观点、不催他往前走。若为确认理解准不准而提问，必须是通过二选一门控的低压力小问题，全程最多一个；问不出合规问题就改成关于他感受的可能性陈述。
+- 用户明确寻求办法或后续对话中，使用“说准卡点 + 一个低压可执行起点”的结构：先用一句说清他真正卡住的两难、担心或循环，再给一个很小、可选择、不会立刻升级冲突的起点。
+- 低压可执行起点必须满足：不命令、不替他做决定、不要求马上摊牌、不制造亲子/同伴对立；最好是“先把一句话想清楚”“换一个不容易吵起来的时机”“先把两个念头分开看”“用一个轻一点的开场试探”这类可退可进的小动作。
+- 不要用反问把问题推回给孩子，不要用“你觉得呢/你是不是该/为什么不”收尾。若要提出选择，必须是具体二选一，并且两个选项都安全、低压、适龄。
 
 ⚠️ 你最容易跑偏的两个方向：① 把“理解处境”写成“分析这个人 / 讲道理 / 给结论”；② 忍不住给新角度或建议。两者都停下重写——你的活是把他自己的视角说准，不是替他下判断，也不是给他出路。
 
@@ -119,6 +159,7 @@ ORIENTATION_ORDER: list[tuple[str, GeneratorOrientation]] = [
     ("c1", "情感共情型"),
     ("c2", "认知共情型"),
 ]
+ORIENTATION_BY_ID: dict[str, GeneratorOrientation] = dict(ORIENTATION_ORDER)
 
 
 def clean_generator_output(raw_text: str) -> str:
@@ -145,9 +186,15 @@ def f3_prompt_bundle_hash() -> str:
 
 
 class GeneratorService:
-    def __init__(self, llm_client: LLMClientProtocol, settings: Settings):
+    def __init__(
+        self,
+        llm_client: LLMClientProtocol,
+        settings: Settings,
+        f3_support_service: F3SupportService | None = None,
+    ):
         self.llm_client = llm_client
         self.settings = settings
+        self.f3_support_service = f3_support_service
 
     async def generate(
         self, request: GeneratorGenerateRequest
@@ -159,6 +206,89 @@ class GeneratorService:
             ]
         )
         return GeneratorGenerateResponse(candidates=list(candidates))
+
+    async def generate_one(
+        self, request: GeneratorGenerateRequest, candidate_id: str = "c2"
+    ) -> GeneratorCandidate:
+        orientation = ORIENTATION_BY_ID.get(candidate_id, ORIENTATION_ORDER[-1][1])
+        return await self._generate_candidate(request, candidate_id, orientation)
+
+    async def generate_followup(
+        self,
+        *,
+        session_id: str,
+        user_message: str,
+        history: list,
+        f4_guidance: str = "",
+    ) -> GeneratorCandidate:
+        try:
+            raw_response = await self.llm_client.generate(
+                prompt=self._build_followup_prompt(
+                    user_message=user_message,
+                    history=history,
+                    f4_guidance=f4_guidance,
+                ),
+                timeout=self.settings.LLM_TIMEOUT,
+                temperature=self.settings.GENERATOR_LLM_TEMPERATURE,
+                max_tokens=min(self.settings.LLM_MAX_TOKENS, 520),
+            )
+            text = clean_generator_output(raw_response)
+            if not text:
+                raise ValueError("empty follow-up response")
+        except Exception:
+            text = GENERATOR_FALLBACK_TEXT
+        return GeneratorCandidate(
+            candidate_id="cbt",
+            orientation=ORIENTATION_BY_ID.get("c2", ORIENTATION_ORDER[-1][1]),
+            text=text,
+        )
+
+    async def stream_one_text(
+        self, request: GeneratorGenerateRequest, candidate_id: str = "c2"
+    ):
+        orientation = ORIENTATION_BY_ID.get(candidate_id, ORIENTATION_ORDER[-1][1])
+        prompt = self._build_prompt(request, orientation)
+        yielded = False
+        try:
+            async for event in self.llm_client.stream_generate(
+                prompt=prompt,
+                timeout=self.settings.LLM_TIMEOUT,
+                temperature=self.settings.GENERATOR_LLM_TEMPERATURE,
+                max_tokens=self.settings.LLM_MAX_TOKENS,
+            ):
+                if event.get("type") == "delta" and event.get("text"):
+                    yielded = True
+                    yield str(event["text"])
+        except Exception:
+            if not yielded:
+                yield GENERATOR_FALLBACK_TEXT
+
+    async def stream_followup_text(
+        self,
+        *,
+        user_message: str,
+        history: list,
+        f4_guidance: str = "",
+    ):
+        prompt = self._build_followup_prompt(
+            user_message=user_message,
+            history=history,
+            f4_guidance=f4_guidance,
+        )
+        yielded = False
+        try:
+            async for event in self.llm_client.stream_generate(
+                prompt=prompt,
+                timeout=self.settings.LLM_TIMEOUT,
+                temperature=self.settings.GENERATOR_LLM_TEMPERATURE,
+                max_tokens=min(self.settings.LLM_MAX_TOKENS, 520),
+            ):
+                if event.get("type") == "delta" and event.get("text"):
+                    yielded = True
+                    yield str(event["text"])
+        except Exception:
+            if not yielded:
+                yield GENERATOR_FALLBACK_TEXT
 
     async def _generate_candidate(
         self,
@@ -190,15 +320,74 @@ class GeneratorService:
         window_size = self.settings.HISTORY_WINDOW_N * 2
         history = request.history[-window_size:]
         history_text = "\n".join(f"{item.role}: {item.text}" for item in history) or "无"
-        rag_text = "\n".join(request.rag_examples) if request.rag_examples else "无"
+        dialogue_stage = normalize_dialogue_stage(request.dialogue_stage)
+        support_mode = request.support_mode
+        emotion_intensity = request.emotion_intensity
+        strategy_prior_text = "无"
+        if self.f3_support_service is not None:
+            support_context = self.f3_support_service.build_context(
+                scenario=request.scenario,
+                user_message=request.user_message,
+                external_examples=request.rag_examples,
+            )
+            strategy_prior_text = support_context.strategy_prior or "无"
+            rag_text = support_context.support_cards_text
+        else:
+            rag_text = "\n".join(request.rag_examples) if request.rag_examples else "无"
         return f"""{COMMON_PROMPT}
 {F9_RELIABILITY_GUARDRAILS}
 {ORIENTATION_PROMPTS[orientation]}
 
 【情境】{request.scenario}
+【本轮对话阶段】{dialogue_stage}：{DIALOGUE_STAGE_GUIDANCE[dialogue_stage]}
+【本轮支持路由】{support_mode}：{SUPPORT_MODE_GUIDANCE[support_mode]}
+【情绪强度】{emotion_intensity}：{EMOTION_INTENSITY_GUIDANCE[emotion_intensity]}
+【是否明确求助】{"是" if request.help_seeking else "否"}
 【对话历史】{history_text}
-【参考（可选，仅供风格参考，不要照抄）】{rag_text}
+【策略先验（来自 PsyQA 标注统计，只作内部生成约束）】{strategy_prior_text}
+【PsyQA 支持卡（可选，仅供语言动作和风格参考，不要照抄）】{rag_text}
 【孩子刚说的话】{request.user_message}
 
 请按你的取向，生成一条回应：
 """
+
+    def _build_followup_prompt(
+        self,
+        *,
+        user_message: str,
+        history: list,
+        f4_guidance: str = "",
+    ) -> str:
+        window_size = self.settings.HISTORY_WINDOW_N * 2
+        history_text = "\n".join(
+            f"{getattr(item, 'role', 'message')}: {getattr(item, 'text', '')}"
+            for item in history[-window_size:]
+        )
+        guidance_text = f4_guidance.strip() or "No completed critic guidance yet."
+        return f"""You are a Chinese educational emotional-support agent for middle-school students.
+This is a follow-up turn, so do not rerun the full multi-agent workflow. Give one direct student-facing reply in Simplified Chinese.
+
+Use a CBT-informed style without naming CBT:
+- briefly connect the concrete situation, thought or worry, feeling, and one controllable next step;
+- do not diagnose, do not mention therapy, models, prompts, CASEL, EPITOME, or critic;
+- do not ask broad rhetorical questions; at most ask one small, concrete, low-pressure question;
+- keep it short and readable, usually 2 to 4 short sentences;
+- avoid long lists unless the student clearly asks for steps;
+- if there is clear self-harm or imminent danger, stop ordinary coaching and encourage telling a trusted adult or emergency support immediately.
+
+Use completed F4 guidance only if it is available. If it is pending or empty, ignore it.
+F4 guidance:
+{guidance_text}
+
+Recent conversation:
+{history_text or "No prior history."}
+
+Current student message:
+{user_message}
+
+Reply only with the final Chinese message for the student.
+"""
+
+
+def normalize_dialogue_stage(value: str) -> str:
+    return "follow_up" if value == "follow_up" else "first_contact"

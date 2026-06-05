@@ -32,6 +32,23 @@ def test_default_llm_client_uses_generator_model_and_thinking_mode():
     assert client.thinking_type == "disabled"
 
 
+def test_dashscope_provider_uses_dashscope_model():
+    client = get_llm_client_cached(
+        "dashscope",
+        "deepseek-key",
+        "https://api.deepseek.com",
+        "deepseek-v4-flash",
+        "disabled",
+        "dashscope-key",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "qwen3.7-plus",
+        "disabled",
+    )
+
+    assert client.model == "qwen3.7-plus"
+    assert client.extra_body_style == "dashscope-qwen"
+
+
 def test_settings_default_to_flash_generator_and_v4_pro_critic():
     settings = Settings(_env_file=None)
 

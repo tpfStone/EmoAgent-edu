@@ -1,16 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchStudentChat } from "@emoedu/shared";
+import { fetchStudentChatStream } from "@emoedu/shared";
 import { useStudentChat } from "./useStudentChat";
 
 vi.mock("@emoedu/shared", () => ({
-  fetchStudentChat: vi.fn(),
+  fetchStudentChatStream: vi.fn(),
 }));
 
-const fetchStudentChatMock = vi.mocked(fetchStudentChat);
+const fetchStudentChatStreamMock = vi.mocked(fetchStudentChatStream);
 
 function Harness() {
-  const { referralLocked, riskLevel, send } = useStudentChat("session-a");
+  const { referralLocked, riskLevel, send } = useStudentChat("session-a", "anon-a");
 
   return (
     <div>
@@ -29,9 +29,10 @@ describe("useStudentChat conservative fallback", () => {
   });
 
   it("does not downgrade the last known non-green risk when chat fetch fails", async () => {
-    fetchStudentChatMock
+    fetchStudentChatStreamMock
       .mockResolvedValueOnce({
         session_id: "session-a",
+        anonymous_user_id: "anon-a",
         reply_text: "我先陪你把这件事稳住。",
         risk_level: "yellow",
       })
@@ -46,7 +47,7 @@ describe("useStudentChat conservative fallback", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "send" }));
 
-    await waitFor(() => expect(fetchStudentChatMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchStudentChatStreamMock).toHaveBeenCalledTimes(2));
     expect(screen.getByText("risk:yellow")).toBeTruthy();
     expect(screen.getByText("locked:true")).toBeTruthy();
   });

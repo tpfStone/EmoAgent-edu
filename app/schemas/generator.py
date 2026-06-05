@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.safety import ConversationMessage
-from app.schemas.scenario import ScenarioLabel
+from app.schemas.scenario import EmotionIntensity, ScenarioLabel, SupportMode
 
 
 GeneratorOrientation = Literal["情感共情型", "认知共情型"]
@@ -14,6 +14,10 @@ class GeneratorGenerateRequest(BaseModel):
     user_message: str = Field(..., min_length=1)
     history: list[ConversationMessage] = Field(default_factory=list)
     scenario: ScenarioLabel
+    support_mode: SupportMode = "balanced"
+    emotion_intensity: EmotionIntensity = "medium"
+    help_seeking: bool = False
+    dialogue_stage: str = "first_contact"
     rag_examples: list[str] = Field(default_factory=list)
 
 

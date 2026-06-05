@@ -1,26 +1,27 @@
 # F4 Critic（EPITOME 打分器）规格
 
-> **模块定位**：运行时管线第④环。对生成器产出的候选回应打分并择优。中文情感教育系统（用户为初中生 12–15 岁）。
+> **模块定位**：后台质量评估与 session guidance 生成器。对生成器产出的候选回应打分、标记边界风险，并把可执行的质量建议写回下一轮对话。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（复用 emoagent）。
 
 ---
 
 ## 0. 当前状态 / 已完成 / 待办 / 后续计划
 
-**当前状态**：已接入运行时，且仍是 `/chat` 默认择优器。`app/services/critic_service.py` 使用 EPITOME/CASEL pointwise 分数、`weighted_total` 和 boundary 过滤选择 `best_candidate_id`；pairwise 仍是离线/下一阶段目标，不是 runtime 默认。
+**当前状态**：模块接口已接入，但不再作为 `/chat` 在线阻塞择优器。`app/services/critic_service.py` 仍使用 EPITOME/CASEL pointwise 分数、`weighted_total` 和 boundary 过滤输出质量信号；`OrchestratorService` 在首次回复流式返回后异步调用 F4，把结果转换为 `session guidance` 写入 Redis。下一轮对话如果 guidance 已完成，再注入生成 prompt；如果还没完成，不等待、不阻塞学生。
 
 **已完成**：
-- `/api/critic/evaluate`、`/chat` F4 链路与 DAO 记录已实现。
+- `/api/critic/evaluate` 模块接口、后台 F4 链路与 DAO 记录已实现。
+- `/chat` 已从同步双候选 critic 择优调整为“先流式返回，再后台 F4”。
 - `CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro`、`CRITIC_LLM_MAX_TOKENS=4096`、JSON response format 已作为 critic 专用配置接入。
 - `CRITIC_SAMPLE_COUNT=3` 默认取中位数，降低单次打分抖动。
-- boundary 候选已排除在 argmax 外；全部越界时返回 `CRITIC_FALLBACK_MESSAGE`。
+- boundary 候选在模块接口中仍会排除在 argmax 外；后台模式下主要用于生成下一轮 guidance 和质量标签。
 - CASEL 分数按激活维度归一，使用 mean bonus 进入 `weighted_total`。
 - F9 后续修订的 audit tags、ER/IP cap、内部提示外泄、格式异常、事实编造 hard boundary 已在代码侧执行。
 - 服务与接口测试覆盖 `tests/test_services/test_critic_service.py`、`tests/test_handlers/test_critic_handler.py`、`tests/test_services/test_orchestrator_service.py`。
 
 **待办**：
 - Pointwise 诊断线显示 ER/IP 高分饱和与稳定性仍未完全过 gate；不应把 pointwise 分数继续作为新的 DPO 主判据。
-- 当前公开 schema 尚未包含 `audit_tags`、`selection_method` 或 pairwise trace；这些属于后续迁移扩展。
+- 当前公开 schema 尚未包含 `audit_tags`、`selection_method` 或 pairwise trace；后台 guidance 当前写入 Redis，不作为学生端展示字段。
 - 正式人工 F9 仍暂停，需等待新的 gate 口径或 pairwise rerun 通过。
 
 **后续计划入口**：
@@ -31,7 +32,7 @@
 
 ## 1. 职责（一句话）
 
-接收一组候选回应（在给定用户倾诉 + 历史的语境下），对每条用 EPITOME 三维打分（每维 0/1/2），加权后用 argmax 选出最佳候选；输出最佳候选、全部候选的分数和越界标记。当前 `preference_pair` 是历史兼容字段和诊断材料，不再作为新的 DPO 主来源。
+接收一组候选回应（在给定用户倾诉 + 历史的语境下），对每条用 EPITOME 三维打分（每维 0/1/2），输出全部候选的分数、越界标记和诊断理由。模块接口仍会给出 `best_candidate_id`，但 `/chat` 在线路径不等待它；后台只把 F4 结果转换为下一轮可用的简短 guidance。当前 `preference_pair` 是历史兼容字段和诊断材料，不再作为新的 DPO 主来源。
 
 ---
 
@@ -87,7 +88,32 @@
 
 ---
 
-## 4. EPITOME 打分定义（已对 ER/IP 补充明确定义）
+## 4. `/chat` 中的后台使用方式
+
+首次对话的在线路径不等待 F4：
+
+```text
+F1 -> F2 -> F3 单候选流式返回 -> schedule_background_critic()
+```
+
+后台 F4 完成后，编排层会从 score 和 boundary 信息中提取简短 guidance，例如：
+
+- 避免过早建议。
+- 不要推断学生没有说出的事实。
+- 避免成人化 coaching 问题。
+- 避免模板化安慰，要回应具体场景。
+
+guidance 通过 Redis 写入：
+
+```text
+emoedu:f4_guidance:{session_id}
+```
+
+下一轮对话开始时，如果 guidance 已存在，`GeneratorService.stream_followup_text()` 会把它作为内部约束注入；如果不存在或 F4 仍在运行，直接忽略。学生端不展示 critic 过程。
+
+---
+
+## 5. EPITOME 打分定义（已对 ER/IP 补充明确定义）
 
 | 维度 | 0 | 1 | 2 |
 |---|---|---|---|
@@ -115,7 +141,7 @@ F9 audit tag 与最终 cap 规则：
 
 ---
 
-## 5. 打分 Prompt（中文，可直接用）
+## 6. 打分 Prompt（中文，可直接用）
 
 ```
 你是一个情感教育系统的回应质量评估模块，面向中国初中生（12–15岁）。给定用户的倾诉和一条候选回应，你要按 EPITOME 框架为这条回应打分。你不改写回应，只打分。
@@ -164,7 +190,7 @@ F9 audit tag 与最终 cap 规则：
 
 ---
 
-## 6. 计分与防偏差
+## 7. 计分与防偏差
 
 - **加权总分** = ER + IP + EX + CASEL_TOTAL_WEIGHT × mean(casel_scores)
 - **初始权重（等权起步，不依赖专家）**：EPITOME 三维各权重 = 1.0；CASEL 辅助维作为整体平均 bonus 计入，`CASEL_TOTAL_WEIGHT = 0.5`。当 `activated_casel=[]` 时，CASEL bonus = 0，保持 EPITOME-only 行为。后续若用 pairwise / 人工验证数据反推权重，必须另开实验，不能直接用旧 pointwise 偏好对调参。
@@ -176,7 +202,7 @@ F9 audit tag 与最终 cap 规则：
 
 ---
 
-## 7. 测试用例
+## 8. 测试用例
 
 | # | 场景 | 期望 |
 |---|---|---|
@@ -195,7 +221,7 @@ F9 audit tag 与最终 cap 规则：
 
 ---
 
-## 8. 验收标准（DoD）
+## 9. 验收标准（DoD）
 
 - [x] FastAPI 端点，IO 符合 §3 schema
 - [x] 用 §5 prompt，JSON 解析容错（失败则该候选记为最低分并标记，不静默）
@@ -204,12 +230,14 @@ F9 audit tag 与最终 cap 规则：
 - [x] `activated_casel` 非空时 CASEL 分数按 mean bonus 进入 `weighted_total`；为空时保持 EPITOME-only 行为
 - [x] preference_pair 在候选≥2且有明确高低时生成并写入 PostgreSQL；当前仅作兼容和诊断，新的 DPO 主线见 pairwise 规格
 - [x] 每次打分写运行记录（候选、各维分、总分、是否越界）
+- [x] `/chat` 中 F4 作为后台任务运行，不阻塞学生端流式返回。
+- [x] 后台 F4 结果可转换为下一轮 `session guidance`。
 - [ ] `CASEL_TOTAL_WEIGHT` 等权重如需实验调参，应迁移为配置项。
 - [ ] 不再扩大 pointwise DPO 用途；后续偏好对主线迁移见 `f4-pairwise-selection.md`。
 
 ---
 
-## 9. 不在本模块范围
+## 10. 不在本模块范围
 
 - 不生成、不改写候选回应（那是 F3）。
 - 不做安全危机分级（那是 F1，已前置）。注意：F4 的 boundary 检测是"回应内容是否越界/适龄"，与 F1 的"用户是否处于危机"不同，二者不重复。

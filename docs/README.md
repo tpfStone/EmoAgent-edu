@@ -1,99 +1,91 @@
-﻿# 文档结构总览
+# 文档结构总览
 
-本目录同时保存项目方案、开发规格、验收记录、语料/F9 实验产物、前端设计和历史归档。阅读时应先区分两类内容：
+本目录保存项目方案、模块规格、前端说明、实验记录和历史归档。当前阅读时要先区分三类内容：
 
-- **主线文档**：解释项目为什么这样设计、当前应做什么。
-- **证据/产物**：保存某次验收、某次 run、某轮 F9 或 pairwise 试验的输入、输出和报告。
+- **产品运行口径**：学生真实交互走快路径，优先安全、流式和可持续对话。
+- **研究实验口径**：F3 双候选、F4 critic、pairwise、F9 和 DPO 属于可复现实验链路。
+- **历史证据/产物**：旧 F9、旧 pointwise 和 pairwise pilot 记录用于追溯，不自动代表当前上线策略。
 
 ## 当前状态
 
-截至 2026-05-29，当前 `master` 已集成：
+截至 2026-06-05，当前实现口径如下：
 
-- 后端 `/chat` 编排运行时：F1 安全门、F2 情境分析、F3 双取向生成、F4 pointwise critic。
-- F9/corpus/pairwise 离线实验产物。
-- `frontend/` pnpm workspace：学生端、研究分析台、shared API/type 层。
-- `docs/frontend/github-pages-mock-local-live.md`：GitHub Pages mock 与本机 live 演示说明。
+- `/chat` 和 `/chat/stream` 已接入快慢双路径。首次对话走 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`；后续对话走轻量 CBT 支持，并在 F4 guidance 已完成时注入。
+- F1 在 `/chat` 中默认使用本地分类器，不再依赖 LLM prompt。LLM 版 `/api/safety/evaluate` 保留用于兼容和对照。
+- F2 输出情境、CASEL 维度、`support_mode`、`emotion_intensity`、`help_seeking`，并包含 `secondary_safety` 作为 LLM 兜底安全复核。
+- F3 生产路径按 F2 路由生成单候选；模块接口仍可生成 `c1 情感共情型` 和 `c2 认知共情型` 双候选用于实验。
+- F4 pointwise critic 已从在线阻塞择优器调整为后台质量评估和 session guidance 生成器。
+- `frontend/` pnpm workspace 已支持学生端 SSE 流式交互、研究分析台、shared API/type 层。
+- `exp/` 是当前算法实验的最高优先级入口，记录 PsyQA 标注、F1 分类器、F3 RAG 和 F4 pairwise 对照实验。
 
-旧文档中若仍保留分支集成时期的事实源说明，应按当前 `master` 已集成状态理解或修正。2026-05-29 文档清理审查记录已归档至 `archive/2026-05-29/docs-review-matrix.md`。
+旧文档中若仍写“每轮完整同步串联 F1-F4”“F4 是 `/chat` 默认择优器”，应按当前快慢双路径理解并逐步修正。
 
 ## 当前 F4 主线口径
 
-F4 的目标主线已从“逐项打分后按总分择优”调整为“成对偏好比较（pairwise）”。具体分数仍是历史路径和兼容字段：它们可用于追溯旧实验、解释现有代码和迁移过程，但不应再被写成未来择优或 DPO 数据的主判据。
+F4 有两个层次：
 
-当前实现状态需要分清：
+- **生产层**：F4 不阻塞学生回复。首次回复完成后后台运行，生成质量标签和 `session guidance`；下一轮若 guidance 已完成，再注入轻量生成。
+- **研究层**：F4 pairwise 仍是后续偏好数据和 DPO 的目标主线，但模型 judge 与人工偏好一致性还不足，不能直接作为权威偏好来源。
 
-- 目标方向：F4 以 pairwise 产出 winner/loser 和训练用偏好对。
-- 代码现状：`/chat` 运行时仍主要使用 pointwise 分数、`weighted_total` 和 `scores`，尚未切换到 pairwise。
-- 试验证据：Phase A rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise。
-- 后续门槛：运行时、API、数据库和前端控制台迁移前，必须重新通过 pairwise 样本验证；不稳定或无效的 pairwise 结果不得进入 DPO。
+当前结论是：F4 可以做后台评估、prompt 反哺和 DPO 候选数据构造；正式 DPO 前仍需要更多人工校准样本和稳定的 pairwise gate。
 
 ## 顶层目录
 
 | 路径 | 定位 | 主要入口 |
-|---|---|---|
+| --- | --- | --- |
 | `overview/` | 项目总纲、工程拆分、比赛/论文路径 | `emoedu-mas-plan.md`、`emoedu-development-framework.md`、`emoedu-post-mvp-guide.md` |
 | `specs/` | 面向实现的模块规格 | `f1-*`、`f2-*`、`f3-*`、`f4-*`、`f9-reliability-guide.md` |
-| `corpus/` | 合成语料方法、probe/production 产物、F9 实验链路 | `README.md`、`emoedu-corpus-synthesis.md`、`f9/README.md` |
-| `acceptance/` | 后端/编排层验收流程与实跑证据 | `orchestrator-mvp/2026-05-21/README.md`、`backend-infrastructure/2026-05-26/backend-infrastructure-smoke.md` |
-| `frontend/` | 前端设计基准、接口契约、重建计划、前端 UX 图 | `emoagent-frontend-design-baseline.md`、`frontend-cc-spec.md` |
+| `frontend/` | 前端设计、接口契约、mock/live 说明 | `README.md`、`frontend-cc-spec.md` |
+| `corpus/` | 旧合成语料方法、F9 和 pairwise pilot 产物 | `README.md`、`emoedu-corpus-synthesis.md`、`f9/README.md` |
+| `acceptance/` | 后端/编排层历史验收流程与实跑证据 | `orchestrator-mvp/`、`backend-infrastructure/` |
 | `issues/` | 开发过程问题记录 | `2026-05-20-f1-f4-development-issues.md`、`2026-05-22-f3-prompt-iteration-issues.md` |
 | `figures/` | 论文/方案图 | `figure-*.svg` |
 | `archive/` | 已归档的历史规划 | `2026-05-21/README.md` |
+| `../exp/` | 当前算法实验台账 | `../exp/README.md` |
 
 ## 推荐阅读路径
 
-### 1. 快速理解项目
+### 1. 快速理解当前系统
 
-1. `overview/emoedu-mas-plan.md`：系统方案、理论依据、generator-critic 闭环。
-2. `overview/emoedu-development-framework.md`：F1-F9 工程拆分、运行时链路、技术栈。
-3. `overview/emoedu-post-mvp-guide.md`：pairwise-aware 的后续开发关键路径。
+1. 根目录 `README.md`：本地运行、API、快慢双路径和实验入口。
+2. `../exp/README.md`：当前算法实验结论，包括 F1/F3/F4 的数据支撑。
+3. `specs/README.md`：F1-F4 的当前模块状态和接口边界。
 
-### 2. 开发某个后端模块
+### 2. 开发后端模块
 
-1. 先读对应 `specs/f*-*.md`，确认职责、IO schema、prompt、配置、测试与 DoD。
-2. 再读 `issues/` 中对应模块的问题记录，确认已知残留和边界。
-3. 如涉及编排或落库，补读 `acceptance/orchestrator-mvp/2026-05-21/` 下的验收材料。
+1. 先读对应 `specs/f*-*.md`，确认职责、IO schema、配置和 DoD。
+2. 再读 `issues/` 中对应模块的问题记录，确认历史残留。
+3. 涉及 `/chat` 编排时，优先以 `app/services/orchestrator_service.py` 的快慢双路径为准。
 
-### 3. 处理 F9 / F3 / F4 主线
+### 3. 处理 F1/F2/F3 在线链路
 
-1. `corpus/f9/README.md`：当前最高优先级入口，说明 F9 如何反向牵出 F3/F4 修复、两条实验线和推荐阅读顺序。
-2. `corpus/f9/pointwise-diagnostics/execution-summary.md`：pointwise 诊断线的历史执行总结。
-3. `specs/f9-reliability-guide.md`：正式人工 F9 的执行方法。
-4. `corpus/f9/validation*/`：自动验收与稳定性复跑证据。
+1. `specs/f1-safety-gate.md`：本地分类器、阈值、soft rule 和保守短路。
+2. `specs/f2-scenario-analysis.md`：情境、CASEL lookup、support mode 和二次安全兜底。
+3. `specs/f3-multi-orientation-generator.md`：PsyQA support card、c1/c2 取向和生产单候选策略。
+4. `../exp/README.md`：F1 训练指标与 F3 support probe 结果。
 
-当前口径：正式人工 F9 仍暂停。主线已转为 F3/F4 质量收敛与 pairwise gate；不要把现有 rerun 包或旧 pointwise 偏好对直接当作正式人工 F9 / DPO 入口。
+### 4. 处理 F4 / Pairwise / DPO
 
-### 4. 处理 F4 pairwise 主线
+1. `specs/f4-critic-epitome.md`：后台 F4 pointwise critic 的当前职责。
+2. `specs/f4-pairwise-selection.md`：pairwise 目标主线和迁移条件。
+3. `../exp/README.md`：F4 eval package、模型对照和人工一致性结论。
+4. `corpus/f9/README.md`：旧 F9 和 pairwise pilot 的历史上下文。
 
-1. `specs/f4-pairwise-selection.md`：pairwise 改造规格。
-2. `corpus/f9/pairwise-selection-pilot/f4-pairwise-selection-pilot-plan.md`：试点总方案。
-3. `corpus/f9/pairwise-selection-pilot/reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`：Phase A rerun 当前结论。
+当前口径：F4 pairwise 是研究方向，不是 `/chat` 在线默认路径。未通过人工校准前，不把模型 judge 偏好直接用于 DPO。
 
-当前口径：pairwise 是 F4 的目标主线，但还不是 `/chat` 默认运行时。Phase A rerun 结论为 `inconclusive`，说明旧试点不能直接支撑上线；下一阶段应先修 F3 候选生成、frozen package 设计和 pairwise 判定稳定性，再评估是否迁移 runtime。
+### 5. 处理前端
 
-### 5. 处理合成语料与 DPO
+1. `frontend/README.md`：前端文档入口。
+2. `frontend/frontend-cc-spec.md`：接口契约、mock/live 切换和 DoD。
+3. `frontend/github-pages-mock-local-live.md`：GitHub Pages mock 和本机 live 演示。
 
-1. `corpus/emoedu-corpus-synthesis.md`：合成语料方法、字段、prompt、可执行管线。
-2. `corpus/generation_config.json`：生成配置。
-3. `corpus/production_quota_after_probe_001.json`：probe 后的放量 quota。
-4. `corpus/f9/pairwise-selection-pilot/`：pairwise pilot 输入、运行与报告产物。
-
-注意：F9 / pairwise 验证通过前，合成管线产出的偏好对只能视为 `judge_unverified`，不得作为 DPO 训练依据。由 pointwise 分数推导出的旧偏好对应记录为历史产物，不再作为新的训练主线。
-
-### 6. 处理前端
-
-1. `frontend/emoagent-frontend-design-baseline.md`：学生端和研究分析台的视觉/交互基准。
-2. `frontend/frontend-cc-spec.md`：前端模块边界、接口契约、mock/live 切换和 DoD。
-3. `frontend/2026-05-26-frontend-rebuild-plan.md`：实施计划与自审记录。
-
-当前口径：前端代码位于仓库根目录 `frontend/`，文档入口见 `frontend/README.md` 与 `docs/frontend/README.md`。GitHub Pages mock 与本机 live 演示见 `docs/frontend/github-pages-mock-local-live.md`。
+当前口径：学生端应使用 `/chat/stream`，只展示用户需要看到的回复与基本状态；研究分析台可以展示完整 trace。
 
 ## 维护规则
 
-- 根目录 `README.md` 只维护结构索引和阅读路径；具体状态以各子目录 README 或主线文档为准。
-- `overview/` 给战略和论证，不应承载大量 run 证据。
-- `specs/` 是实现契约；改代码行为时同步更新对应 spec。
-- `corpus/f9/README.md` 是 F9 当前状态的最高优先级入口；历史 pointwise 细节归入 `corpus/f9/pointwise-diagnostics/`。
-- `acceptance/` 和 `corpus/**/runs/` 保存证据，不作为新需求入口。
-- 历史规划移入 `archive/` 后，只用于追溯，不再作为当前执行依据。
-- 若移动实验产物，必须同步更新对应 README、manifest、报告里的路径引用。
+- 根目录 `README.md` 维护运行入口和当前架构，不承载详细实验数据。
+- `exp/README.md` 维护实验结果、复现命令和问题记录，是算法实验的事实源。
+- `specs/` 是实现契约；改代码行为、schema、prompt 或编排顺序时同步更新对应 spec。
+- `overview/` 给战略和论证，不放大量 run 证据。
+- `corpus/f9/` 和 `archive/` 主要用于历史追溯；不能覆盖当前 `exp/` 结论。
+- 若移动实验产物，必须同步更新对应 README、manifest 和报告路径。

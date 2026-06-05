@@ -9,9 +9,15 @@ describe("fetchStudentChat", () => {
       current_message: "最近和家里沟通很累，不知道怎么处理。",
     });
 
-    expect(Object.keys(view)).toEqual(["session_id", "reply_text", "risk_level"]);
+    expect(Object.keys(view)).toEqual([
+      "session_id",
+      "anonymous_user_id",
+      "reply_text",
+      "risk_level",
+    ]);
     expect(view).toEqual({
       session_id: "syn_0032",
+      anonymous_user_id: null,
       reply_text: expect.any(String),
       risk_level: expect.any(String),
     });
