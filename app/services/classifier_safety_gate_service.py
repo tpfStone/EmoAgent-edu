@@ -56,7 +56,11 @@ class ClassifierSafetyGateService:
     def _response_from_prediction(self, prediction: F1SafetyPrediction) -> SafetyGateResponse:
         signals = []
         if prediction.risk_level != "green":
-            signals = prediction.matched_keywords[:12] or ["probability_threshold"]
+            signals = (
+                prediction.matched_keywords[:12]
+                or prediction.rule_signals[:12]
+                or ["probability_threshold"]
+            )
         probabilities = prediction.probabilities
         rationale = (
             f"本地 F1 安全分类器判定为 {prediction.risk_level}；"

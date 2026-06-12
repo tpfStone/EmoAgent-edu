@@ -261,6 +261,52 @@ class OrchestratorService:
         history: list[ConversationMessage],
         max_messages: int,
     ):
+        try:
+            safety = await self.safety_service.evaluate(
+                SafetyGateRequest(
+                    session_id=request.session_id,
+                    current_message=request.current_message,
+                    history=history,
+                )
+            )
+        except Exception as exc:
+            response = await self._module_failed(
+                request=request,
+                failed_module="safety",
+                exc=exc,
+                risk_level="yellow",
+                history_window=max_messages,
+            )
+            async for event in self._buffered_response_events(response):
+                yield event
+            return
+
+        if safety.action.block_generation:
+            response = await self._finalize(
+                request=request,
+                status="blocked_by_safety",
+                reply_text=safety.action.referral_message
+                or self.settings.CHAT_FALLBACK_MESSAGE,
+                risk_level=safety.risk_level,
+                scenario=None,
+                activated_casel=[],
+                candidates=[],
+                scores=[],
+                best_candidate_id=None,
+                preference_pair=None,
+                support_mode=None,
+                emotion_intensity=None,
+                help_seeking=None,
+                selected_by=None,
+                failed_module=None,
+                failure_reason="",
+                fallback_message="",
+                history_window=max_messages,
+            )
+            async for event in self._buffered_response_events(response):
+                yield event
+            return
+
         guidance = await self._load_f4_guidance(request.session_id)
         selected_by = (
             "fast_cbt_followup_stream_with_f4_guidance"
@@ -272,7 +318,7 @@ class OrchestratorService:
             anonymous_user_id=request.anonymous_user_id,
             status="answered",
             reply_text="",
-            risk_level="green",
+            risk_level=safety.risk_level,
             scenario=None,
             support_mode=None,
             emotion_intensity=None,
@@ -306,7 +352,7 @@ class OrchestratorService:
             request=request,
             status="answered",
             reply_text=selected.text,
-            risk_level="green",
+            risk_level=safety.risk_level,
             scenario=None,
             activated_casel=[],
             candidates=[selected],
@@ -491,6 +537,46 @@ class OrchestratorService:
         history: list[ConversationMessage],
         max_messages: int,
     ) -> ChatResponse:
+        try:
+            safety = await self.safety_service.evaluate(
+                SafetyGateRequest(
+                    session_id=request.session_id,
+                    current_message=request.current_message,
+                    history=history,
+                )
+            )
+        except Exception as exc:
+            return await self._module_failed(
+                request=request,
+                failed_module="safety",
+                exc=exc,
+                risk_level="yellow",
+                history_window=max_messages,
+            )
+
+        if safety.action.block_generation:
+            return await self._finalize(
+                request=request,
+                status="blocked_by_safety",
+                reply_text=safety.action.referral_message
+                or self.settings.CHAT_FALLBACK_MESSAGE,
+                risk_level=safety.risk_level,
+                scenario=None,
+                activated_casel=[],
+                candidates=[],
+                scores=[],
+                best_candidate_id=None,
+                preference_pair=None,
+                support_mode=None,
+                emotion_intensity=None,
+                help_seeking=None,
+                selected_by=None,
+                failed_module=None,
+                failure_reason="",
+                fallback_message="",
+                history_window=max_messages,
+            )
+
         guidance = await self._load_f4_guidance(request.session_id)
         try:
             selected = await self.generator_service.generate_followup(
@@ -504,7 +590,7 @@ class OrchestratorService:
                 request=request,
                 failed_module="followup_generator",
                 exc=exc,
-                risk_level="green",
+                risk_level=safety.risk_level,
                 history_window=max_messages,
             )
 
@@ -512,7 +598,7 @@ class OrchestratorService:
             request=request,
             status="answered",
             reply_text=selected.text,
-            risk_level="green",
+            risk_level=safety.risk_level,
             scenario=None,
             activated_casel=[],
             candidates=[selected],

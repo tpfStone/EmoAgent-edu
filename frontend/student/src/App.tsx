@@ -38,6 +38,9 @@ export default function App() {
 
   const messages = currentSession?.messages ?? [];
   const hasMessages = messages.length > 0;
+  const chatScrollClassName = referralLocked
+    ? `${styles.chatScroll} ${styles.chatScrollReferralLocked}`
+    : styles.chatScroll;
 
   useEffect(() => {
     activeSessionIdRef.current = currentId;
@@ -173,7 +176,12 @@ export default function App() {
           <TransitionSlot viewKey={activeView} className={styles.mainTransition}>
             {activeView === "chat" ? (
               <>
-              <div className={styles.chatScroll} ref={scrollRef}>
+              <div
+                className={chatScrollClassName}
+                data-referral-locked={String(referralLocked)}
+                data-testid="student-chat-scroll"
+                ref={scrollRef}
+              >
                 {hasMessages ? (
                   <MessageList messages={messages} />
                 ) : (

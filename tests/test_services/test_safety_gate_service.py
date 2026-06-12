@@ -59,9 +59,11 @@ async def test_yellow_result_uses_fixed_referral(fake_llm_client, safety_log_dao
 
     assert response.risk_level == "yellow"
     assert response.action.block_generation is True
-    assert "12356" in response.action.referral_message
-    assert "12355" in response.action.referral_message
+    assert "12356" not in response.action.referral_message
+    assert "12355" not in response.action.referral_message
     assert "爸爸妈妈、老师" in response.action.referral_message
+    assert "下面的支持资源" in response.action.referral_message
+    assert "你愿意和我说说，是很勇敢的一步。" in response.action.referral_message
 
 
 @pytest.mark.asyncio
@@ -84,8 +86,11 @@ async def test_red_result_uses_emergency_referral(fake_llm_client, safety_log_da
 
     assert response.risk_level == "red"
     assert response.action.block_generation is True
-    assert "120 / 110" in response.action.referral_message
+    assert "12356" not in response.action.referral_message
+    assert "120 / 110" not in response.action.referral_message
     assert "立刻联系你信任的大人" in response.action.referral_message
+    assert "下面的紧急资源" in response.action.referral_message
+    assert "你不是一个人，有人愿意帮你。" in response.action.referral_message
 
 
 @pytest.mark.asyncio
@@ -133,7 +138,7 @@ async def test_invalid_llm_json_defaults_to_yellow(fake_llm_client):
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["llm_parse_failure"]
     assert response.action.block_generation is True
-    assert "12356" in response.action.referral_message
+    assert "下面的支持资源" in response.action.referral_message
 
 
 @pytest.mark.asyncio

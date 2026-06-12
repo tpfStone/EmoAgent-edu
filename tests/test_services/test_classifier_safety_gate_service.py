@@ -27,7 +27,7 @@ class FakeSafetyClassifier:
         return self.prediction
 
 
-def _prediction(level: str, keywords=None, probabilities=None):
+def _prediction(level: str, keywords=None, probabilities=None, rule_signals=None):
     probabilities = probabilities or {"green": 0.9, "yellow": 0.05, "red": 0.05}
     return F1SafetyPrediction(
         risk_level=level,
@@ -35,6 +35,7 @@ def _prediction(level: str, keywords=None, probabilities=None):
         probabilities=probabilities,
         matched_keywords=keywords or [],
         latency_ms=12.3,
+        rule_signals=rule_signals or [],
     )
 
 
@@ -68,7 +69,27 @@ async def test_classifier_yellow_result_uses_fixed_referral():
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["活着"]
     assert response.action.block_generation is True
-    assert "12356" in response.action.referral_message
+    assert "12356" not in response.action.referral_message
+    assert "下面的支持资源" in response.action.referral_message
+
+
+@pytest.mark.asyncio
+async def test_classifier_result_uses_rule_signals_when_keywords_are_empty():
+    classifier = FakeSafetyClassifier(
+        _prediction(
+            "yellow",
+            keywords=[],
+            probabilities={"green": 0.99, "yellow": 0.001, "red": 0.001},
+            rule_signals=["passive_death_ideation"],
+        )
+    )
+    service = ClassifierSafetyGateService(classifier, None, Settings())
+
+    response = await service.evaluate(_request("\u5982\u679c\u6211\u6d88\u5931\u4e86"))
+
+    assert response.risk_level == "yellow"
+    assert response.matched_signals == ["passive_death_ideation"]
+    assert response.action.block_generation is True
 
 
 @pytest.mark.asyncio
@@ -87,7 +108,8 @@ async def test_classifier_red_result_uses_emergency_referral():
     assert response.risk_level == "red"
     assert response.matched_signals == ["自杀", "药"]
     assert response.action.block_generation is True
-    assert "120 / 110" in response.action.referral_message
+    assert "120 / 110" not in response.action.referral_message
+    assert "下面的紧急资源" in response.action.referral_message
 
 
 @pytest.mark.asyncio

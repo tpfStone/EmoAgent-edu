@@ -97,7 +97,8 @@ async def test_secondary_safety_can_block_generation(fake_llm_client):
     assert response.secondary_safety.risk_level == "red"
     assert response.secondary_safety.matched_signals == ["今晚吃药"]
     assert response.secondary_safety.action.block_generation is True
-    assert "120 / 110" in response.secondary_safety.action.referral_message
+    assert "120 / 110" not in response.secondary_safety.action.referral_message
+    assert "下面的紧急资源" in response.secondary_safety.action.referral_message
 
 
 @pytest.mark.asyncio

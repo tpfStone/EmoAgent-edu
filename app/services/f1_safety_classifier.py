@@ -115,6 +115,8 @@ PASSIVE_DEATH_PATTERNS = [
     "不想醒来",
     "不想存在",
     "想消失",
+    "消失了",
+    "如果我消失",
     "不想活",
     "不想再活",
     "活不下去",
@@ -127,6 +129,7 @@ ACTIVE_SUICIDE_PATTERNS = [
     "死了算",
     "结束生命",
     "结束自己的生命",
+    "结束这一切",
 ]
 SELF_HARM_PATTERNS = [
     "自残",
@@ -182,6 +185,30 @@ NEGATION_PATTERNS = [
     "不会真的",
     "不是真的",
     "只是觉得",
+]
+SAFE_SHORT_UTTERANCES = {
+    "hi",
+    "hello",
+    "嗨",
+    "你好",
+    "您好",
+    "早",
+    "早上好",
+    "晚上好",
+    "谢谢",
+    "再见",
+    "拜拜",
+}
+TECHNICAL_COMMAND_PATTERNS = [
+    r"(?m)^\s*(cd|set|python|pnpm|npm|docker|git|uvicorn)\b",
+    r"\$env:[a-z0-9_]+\s*=",
+    r"\b[a-z]:\\",
+    r"\\\.venv\\",
+    r"\bpython(?:\.exe)?\s+-m\b",
+    r"\buvicorn\b",
+    r"--[a-z0-9][a-z0-9-]*",
+    r"\b[a-z0-9_]{3,}\s*=\s*[\"']?[^ \t\r\n\"']+",
+    r"\.(exe|ps1|py|mjs|json)\b",
 ]
 
 
@@ -289,6 +316,31 @@ def contains_any(value: str, patterns: list[str]) -> bool:
     return any(pattern in value for pattern in patterns)
 
 
+def is_safe_short_utterance(text: Any) -> bool:
+    return compact_for_char(text) in SAFE_SHORT_UTTERANCES
+
+
+def is_technical_command_text(text: Any) -> bool:
+    value = str(text or "")
+    if not value.strip():
+        return False
+
+    lower_value = value.lower()
+    marker_count = sum(
+        1 for pattern in TECHNICAL_COMMAND_PATTERNS if re.search(pattern, lower_value)
+    )
+    nonempty_line_count = sum(1 for line in value.splitlines() if line.strip())
+    has_env_assignment = bool(re.search(r"\$env:[a-z0-9_]+\s*=", lower_value))
+    has_command_flag = bool(re.search(r"--[a-z0-9][a-z0-9-]*", lower_value))
+    has_executable = bool(re.search(r"\bpython(?:\.exe)?\b|\.exe\b", lower_value))
+
+    return (
+        marker_count >= 4
+        or (nonempty_line_count >= 2 and marker_count >= 3)
+        or (has_env_assignment and has_command_flag and has_executable)
+    )
+
+
 def analyze_safety_rule_signals(text: Any) -> SafetyRuleSignals:
     value = normalize_text(text)
     has_idiom = contains_any(value, IDIOM_PATTERNS)
@@ -343,11 +395,32 @@ def apply_soft_rule_postprocess(
     yellow_or_red_threshold: float,
 ) -> tuple[str, SafetyRuleSignals]:
     signals = analyze_safety_rule_signals(text)
+    p_red = probabilities.get("red", 0.0)
+    p_yellow_or_red = probabilities.get("yellow", 0.0) + p_red
+    risk_intent_signals = {
+        "passive_death_ideation",
+        "active_suicide_ideation",
+        "self_harm_expression",
+    }
+    has_risk_intent = any(signal in signals.signals for signal in risk_intent_signals)
+
+    if is_safe_short_utterance(text) and not signals.signals:
+        return "green", signals
+    if signals.red_necessary:
+        return "red", signals
+    if has_risk_intent:
+        return "yellow", signals
+    if is_technical_command_text(text):
+        return "green", signals
+    if (
+        candidate_level == "yellow"
+        and not signals.signals
+        and p_yellow_or_red < yellow_or_red_threshold + 0.10
+    ):
+        return "green", signals
     if candidate_level != "red":
         return candidate_level, signals
 
-    p_red = probabilities.get("red", 0.0)
-    p_yellow_or_red = probabilities.get("yellow", 0.0) + p_red
     if signals.idiom_without_intent:
         level = "yellow" if p_yellow_or_red >= yellow_or_red_threshold else "green"
     elif signals.bullying_without_self_harm:
