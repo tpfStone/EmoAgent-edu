@@ -13,6 +13,7 @@
 | F4 pairwise 目标 | [f4-pairwise-selection.md](f4-pairwise-selection.md) | 离线工具链和实验包存在；不是 runtime 默认；人工一致性不足，暂不解锁 DPO | `app/services/critic_pairwise.py`, `exp/f4_pairwise_model_runner.py`, `exp/f4_human_model_agreement.py` | `exp/runs/f4_eval_package/`, `exp/runs/f4_pairwise_model_probe/` |
 | F6 memory/RAG | 暂无独立 spec | 应用侧接口已预留；默认关闭；后续用于长期记忆和检索缓存 | `app/services/memory_rag_service.py`, `app/handlers/memory_handler.py` | `GET /api/memory/status`, `DELETE /api/memory` |
 | F9 信度校验 | [f9-reliability-guide.md](f9-reliability-guide.md) | 历史 F9 作为追溯材料；当前主 gate 转为 pairwise 人工 A/B 和 critic-human agreement | `docs/corpus/f9/`, `exp/f4_eval_package_builder.py` | `docs/corpus/f9/README.md`, `exp/README.md` |
+| Exp 集成地图 | [exp-integration-map.md](exp-integration-map.md) | `exp` 纳入完整体系，但实验脚本不进入 `/chat` 在线阻塞路径 | `exp/artifacts.manifest.json`, `exp/README.md` | `tests/test_exp/test_exp_integration_manifest.py` |
 
 ## 当前 `/chat` 运行时主链路
 
@@ -52,6 +53,8 @@ Redis 读取最近历史
 - `/api/generator/generate` 可以生成 c1/c2 双候选。
 - `/api/critic/evaluate` 可以同步评估候选。
 - `exp/f3_support_probe.py`、`exp/f3_route_f4_probe.py`、`exp/f4_pairwise_model_runner.py` 用于继续做离线实验。
+
+`exp` 资产的 runtime/background/offline/archive 分级记录在 [exp-integration-map.md](exp-integration-map.md) 和 `../../exp/artifacts.manifest.json`。维护原则是：`app/` 可以读取稳定数据和模型产物，但不能直接 import `exp/*.py` 实验脚本。
 
 ## 当前改造主线
 

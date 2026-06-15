@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "purpose": "Classify exp assets by integration tier so experiment code remains reproducible without becoming the synchronous /chat runtime path.",
+  "integration_tiers": {
+    "runtime": "Stable artifact or service used directly by /chat or production module endpoints.",
+    "runtime_reference": "Stable data or prompt evidence read by runtime services, with service code living under app/.",
+    "background": "Runtime-adjacent work that runs after the student-facing response or outside the blocking request path.",
+    "offline": "Experiment, reproduction, evaluation, or training workflow that must not be imported by app/ runtime code.",
+    "archive": "Historical evidence retained for traceability and comparison, not current runtime policy."
+  },
+  "runtime_boundary": {
+    "policy": "app/ may read stable artifacts under exp/data or configured model paths, but must not import exp/*.py experiment scripts.",
+    "online_path": "F1 local safety gate -> F2 scenario/support routing -> F3 single routed candidate -> stream response -> async F4 guidance.",
+    "offline_path": "PsyQA labeling -> F1 training/probes -> F3 probes -> F4 pairwise/human agreement -> reports and future prompt/DPO inputs."
+  },
+  "artifacts": [
+    {
+      "id": "psyqa_labelled_data",
+      "name": "PsyQA labelled data",
+      "path": "exp/data/psyqa_labelled.json",
+      "category": "data",
+      "integration_tier": "runtime_reference",
+      "generated_by": ["exp/psyqa_labelled.py"],
+      "runtime_entrypoints": ["app/services/f3_support_service.py"],
+      "runtime_usage": "Provides strategy priors and short support-card fragments for F3SupportService; raw PsyQA outputs are not copied into student replies.",
+      "owner_docs": ["exp/README.md", "docs/specs/f3-multi-orientation-generator.md"],
+      "tests": ["tests/test_services/test_f3_support_service.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "Runtime should treat this as reference data only. Full relabeling remains an offline experiment."
+    },
+    {
+      "id": "f1_safety_model_manual_a_pattern_v1",
+      "name": "F1 local safety classifier artifacts",
+      "path": "exp/models/f1_safety_gate/manual-A-pattern-v1",
+      "category": "model",
+      "integration_tier": "runtime",
+      "generated_by": ["exp/f1_train_manual_keywords.py", "exp/f1_safety_policy_experiment.py"],
+      "runtime_entrypoints": ["app/services/f1_safety_classifier.py", "app/services/classifier_safety_gate_service.py", "app/main.py"],
+      "runtime_usage": "Primary /chat F1 safety gate when local model artifacts are available; model files are downloaded locally and not committed.",
+      "owner_docs": ["README.md", "docs/specs/f1-safety-gate.md", "exp/README.md"],
+      "tests": ["tests/test_services/test_f1_safety_classifier_rules.py", "tests/test_services/test_classifier_safety_gate_service.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "Set F1_SAFETY_REQUIRED=true for production or formal reproduction so missing artifacts fail fast."
+    },
+    {
+      "id": "f1_training_scripts",
+      "name": "F1 training and policy experiment scripts",
+      "path": "exp/f1_*.py",
+      "category": "experiment_scripts",
+      "integration_tier": "offline",
+      "generated_by": [],
+      "runtime_entrypoints": [],
+      "runtime_usage": "Offline-only training, keyword probing, threshold search, and latency benchmarking.",
+      "owner_docs": ["exp/README.md", "docs/specs/f1-safety-gate.md"],
+      "tests": ["tests/test_exp/test_exp_smoke.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "These scripts may generate runtime artifacts, but app/ must not import them."
+    },
+    {
+      "id": "f3_support_runtime_service",
+      "name": "F3 support-card runtime service",
+      "path": "app/services/f3_support_service.py",
+      "category": "service",
+      "integration_tier": "runtime_reference",
+      "generated_by": ["exp/f3_support_probe.py", "exp/psyqa_strategy_visual_report.py"],
+      "runtime_entrypoints": ["app/services/f3_support_service.py", "app/services/generator_service.py", "app/main.py"],
+      "runtime_usage": "Loads PsyQA-labelled reference data once and formats strategy priors plus short support cards for F3 generation.",
+      "owner_docs": ["docs/specs/f3-multi-orientation-generator.md", "exp/README.md"],
+      "tests": ["tests/test_services/test_f3_support_service.py", "tests/test_services/test_generator_service.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "The service is the runtime boundary. Probe scripts remain offline."
+    },
+    {
+      "id": "f3_probe_scripts",
+      "name": "F3 orientation, support, and route probes",
+      "path": "exp/f3_*.py",
+      "category": "experiment_scripts",
+      "integration_tier": "offline",
+      "generated_by": [],
+      "runtime_entrypoints": [],
+      "runtime_usage": "Offline-only validation of c1/c2 orientation separation, support cards, route selection, and F4 filtering assumptions.",
+      "owner_docs": ["exp/README.md", "docs/specs/f3-multi-orientation-generator.md"],
+      "tests": ["tests/test_exp/test_exp_smoke.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "The online first turn uses a single routed candidate, not the full probe chain."
+    },
+    {
+      "id": "f4_pointwise_background_critic",
+      "name": "F4 pointwise critic as background guidance",
+      "path": "app/services/critic_service.py",
+      "category": "service",
+      "integration_tier": "background",
+      "generated_by": ["exp/f3_route_f4_probe.py"],
+      "runtime_entrypoints": ["app/services/critic_service.py", "app/services/orchestrator_service.py"],
+      "runtime_usage": "Runs after first-turn response scheduling and writes session guidance for later turns when available.",
+      "owner_docs": ["docs/specs/f4-critic-epitome.md", "docs/specs/README.md", "exp/README.md"],
+      "tests": ["tests/test_services/test_critic_service.py", "tests/test_services/test_orchestrator_service.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "F4 must not block the student-facing first response."
+    },
+    {
+      "id": "f4_pairwise_eval_toolchain",
+      "name": "F4 pairwise evaluation package and model agreement toolchain",
+      "path": "exp/f4_*.py",
+      "category": "experiment_scripts",
+      "integration_tier": "offline",
+      "generated_by": [],
+      "runtime_entrypoints": [],
+      "runtime_usage": "Offline-only pair construction, model judge runs, and human-model agreement analysis for future DPO or prompt iteration.",
+      "owner_docs": ["exp/README.md", "docs/specs/f4-pairwise-selection.md"],
+      "tests": ["tests/test_exp/test_exp_smoke.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "Not a runtime default because current human-model agreement is not strong enough to unlock automatic preference training."
+    },
+    {
+      "id": "f9_reliability_archive",
+      "name": "F9 reliability and corpus archive",
+      "path": "docs/corpus/f9",
+      "category": "archive",
+      "integration_tier": "archive",
+      "generated_by": ["scripts/corpus/f9_*.py"],
+      "runtime_entrypoints": [],
+      "runtime_usage": "Historical reliability evidence and comparison material only; it does not override current exp conclusions.",
+      "owner_docs": ["docs/specs/f9-reliability-guide.md", "docs/corpus/f9/README.md", "exp/README.md"],
+      "tests": ["tests/test_corpus/test_f9_reliability.py", "tests/test_exp/test_exp_integration_manifest.py"],
+      "notes": "Current gate policy is pairwise/human agreement plus critic guidance, not the old F9 archive alone."
+    }
+  ]
+}
