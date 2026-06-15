@@ -207,7 +207,20 @@ F1 本地安全门
 
 ## 复现顺序
 
-下面命令默认在 EmoAgent-edu 项目根目录运行，并且已配置 `DASHSCOPE_API_KEY`。
+下面命令默认在 EmoAgent-edu 项目根目录运行。先安装主依赖和实验依赖：
+
+```powershell
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-exp.txt
+```
+
+默认自动测试只检查 `exp/*.py` 的语法和 `__main__` 入口结构：
+
+```powershell
+python -m pytest tests/test_exp/test_exp_smoke.py -q
+```
+
+完整实验运行还需要 `.env`、模型文件、API key，以及本地 `exp/runs/` 历史产物。调用 DashScope 的脚本需要配置 `DASHSCOPE_API_KEY`。
 
 生成 PsyQA 标注：
 

@@ -64,6 +64,12 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+To reproduce algorithm experiments and report scripts under `exp/`, install the extra experiment dependencies:
+
+```powershell
+python -m pip install -r requirements-exp.txt
+```
+
 If PowerShell blocks activation:
 
 ```powershell
@@ -240,6 +246,17 @@ pnpm --dir frontend build:pages
 - Student app: http://localhost:5173
 - Research console: http://localhost:5174
 
+## Tests
+
+Recommended check order:
+
+```powershell
+python -m pytest tests -q
+pnpm --dir frontend test
+pnpm --dir frontend typecheck
+python -m pytest tests/test_exp/test_exp_smoke.py -q
+```
+
 ## Experiments
 
 Algorithm experiments are kept under `exp/`:
@@ -248,6 +265,8 @@ Algorithm experiments are kept under `exp/`:
 - `exp/data/psyqa_labelled.json`: labeled PsyQA-derived data.
 - `exp/models/f1_safety_gate/manual-A-pattern-v1/`: local F1 classifier artifacts downloaded from HuggingFace.
 - `exp/runs/`: F1/F3/F4 experiment outputs. Raw run artifacts are large and are ignored by default; key results are summarized in `exp/README.md`.
+
+The default test suite only checks `exp/*.py` syntax and entrypoint structure. Full experiment runs also need `requirements-exp.txt`, `.env`, model files, API keys, and local `exp/runs/` data.
 
 The core experimental conclusion is that full multi-agent reasoning should remain available for offline validation and background quality control, while the student-facing system should stay fast and readable.
 

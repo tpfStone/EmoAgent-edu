@@ -80,6 +80,12 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+如果要复现 `exp/` 下的算法实验和报告脚本，再安装实验依赖：
+
+```powershell
+python -m pip install -r requirements-exp.txt
+```
+
 若 PowerShell 拦截 `Activate.ps1`：
 
 ```powershell
@@ -260,10 +266,13 @@ pnpm --dir frontend build:pages
 
 ## Tests
 
+推荐检查顺序：
+
 ```powershell
-python -m pytest tests/test_services -q
-python -m pytest tests/test_handlers -q
 python -m pytest tests -q
+pnpm --dir frontend test
+pnpm --dir frontend typecheck
+python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
 
 ## Experiment Entry
@@ -274,6 +283,8 @@ python -m pytest tests -q
 - `exp/data/psyqa_labelled.json`：PsyQA 标注后数据。
 - `exp/models/f1_safety_gate/manual-A-pattern-v1/`：已迁入生产的 F1 分类器，本地从 HuggingFace 下载，不提交 GitHub。
 - `exp/runs/`：F1/F3/F4 各轮实验输出；原始 run 产物体积较大，默认不提交 GitHub，关键指标已整理在 `exp/README.md`。
+
+默认测试只保证 `exp/*.py` 的语法和入口结构。完整实验运行还需要 `requirements-exp.txt`、`.env`、模型文件、API key 和本地 `exp/runs/` 数据。
 
 ## Documentation
 
