@@ -45,7 +45,7 @@ def _candidate_row(
         "source": "phase-a-rerun",
         "candidate_id": candidate_id,
         "scenario": scenario,
-        "orientation": "情感共情型" if candidate_id == "c1" else "认知共情型",
+        "orientation": "共情型" if candidate_id == "c1" else "引导反思型",
         "user_text": user_text or f"用户倾诉 {sample_no}",
         "history_json": "[]",
         "candidate_text": candidate_text or f"候选 {sample_no} {candidate_id}",
@@ -116,12 +116,12 @@ class FakeGeneratorService:
             candidates=[
                 GeneratorCandidate(
                     candidate_id="c1",
-                    orientation="情感共情型",
+                    orientation="共情型",
                     text=f"生成候选 {sample_no} c1",
                 ),
                 GeneratorCandidate(
                     candidate_id="c2",
-                    orientation="认知共情型",
+                    orientation="引导反思型",
                     text=f"生成候选 {sample_no} c2",
                 ),
             ]
@@ -164,21 +164,21 @@ async def test_run_pairwise_rerun_generation_writes_outputs_and_manifest(tmp_pat
             {
                 "sample_no": "1",
                 "scenario": "学业压力",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "作业太多了。",
                 "候选文本": "old",
             },
             {
                 "sample_no": "2",
                 "scenario": "同伴关系",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "朋友没叫我。",
                 "候选文本": "old",
             },
             {
                 "sample_no": "3",
                 "scenario": "亲子摩擦",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "我妈误会我。",
                 "候选文本": "old",
             },
@@ -248,21 +248,21 @@ async def test_run_pairwise_rerun_generation_can_limit_sample_nos(tmp_path):
             {
                 "sample_no": "1",
                 "scenario": "学业压力",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "作业太多了。",
                 "候选文本": "old",
             },
             {
                 "sample_no": "2",
                 "scenario": "同伴关系",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "朋友没叫我。",
                 "候选文本": "old",
             },
             {
                 "sample_no": "3",
                 "scenario": "亲子摩擦",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "我妈误会我。",
                 "候选文本": "old",
             },
@@ -321,7 +321,7 @@ async def test_run_pairwise_rerun_generation_can_skip_critic_for_sidecar(tmp_pat
             {
                 "sample_no": "1",
                 "scenario": "学业压力",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "作业太多了。",
                 "候选文本": "old",
             }

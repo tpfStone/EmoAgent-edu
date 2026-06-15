@@ -30,17 +30,12 @@ RUN_COLUMNS = [
     "stable_winner_id",
     "invalid",
     "reason",
-    "judgment_1_epitome_comparison_json",
-    "judgment_2_epitome_comparison_json",
-    "judgment_1_casel_comparisons_json",
-    "judgment_2_casel_comparisons_json",
 ]
 
 SUMMARY_COLUMNS = [
     "pair_id",
     "sample_no",
     "scenario",
-    "activated_casel_json",
     "c1_orientation",
     "c2_orientation",
     "pairwise_sample_count",
@@ -94,29 +89,12 @@ def _history_from_json(raw_history: str) -> list[ConversationMessage]:
     return history
 
 
-def _activated_casel_from_json(raw_activated_casel: str) -> list[str]:
-    if not raw_activated_casel:
-        return []
-    try:
-        items = json.loads(raw_activated_casel)
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(items, list):
-        return []
-    return [str(item) for item in items]
-
-
-def _json_text(value) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True)
-
-
 def _context_from_pair_row(row: dict[str, str]) -> PairwiseContext:
     return PairwiseContext(
         pair_id=row["pair_id"],
         session_id=f"pairwise-{row['pair_id']}",
         user_message=row["user_text"],
         history=_history_from_json(row.get("history_json", "")),
-        activated_casel=_activated_casel_from_json(row.get("activated_casel_json", "")),
     )
 
 
@@ -141,18 +119,6 @@ def _run_row(pair_row: dict[str, str], sample) -> dict[str, str]:
         "stable_winner_id": sample.stable_winner_id or "",
         "invalid": _bool_text(sample.invalid),
         "reason": sample.reason,
-        "judgment_1_epitome_comparison_json": _json_text(
-            sample.judgment_1_epitome_comparison
-        ),
-        "judgment_2_epitome_comparison_json": _json_text(
-            sample.judgment_2_epitome_comparison
-        ),
-        "judgment_1_casel_comparisons_json": _json_text(
-            sample.judgment_1_casel_comparisons
-        ),
-        "judgment_2_casel_comparisons_json": _json_text(
-            sample.judgment_2_casel_comparisons
-        ),
     }
 
 
@@ -161,7 +127,6 @@ def _summary_row(pair_row: dict[str, str], aggregate) -> dict[str, str]:
         "pair_id": pair_row["pair_id"],
         "sample_no": pair_row["sample_no"],
         "scenario": pair_row.get("scenario", ""),
-        "activated_casel_json": pair_row.get("activated_casel_json", ""),
         "c1_orientation": pair_row.get("c1_orientation", ""),
         "c2_orientation": pair_row.get("c2_orientation", ""),
         "pairwise_sample_count": str(aggregate.pairwise_sample_count),

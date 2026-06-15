@@ -15,12 +15,12 @@ class FakeGeneratorService:
             candidates=[
                 GeneratorCandidate(
                     candidate_id="c1",
-                    orientation="情感共情型",
+                    orientation="共情型",
                     text="听起来你有点受伤。",
                 ),
                 GeneratorCandidate(
                     candidate_id="c2",
-                    orientation="认知共情型",
+                    orientation="引导反思型",
                     text="你愿意说说最在意的是什么吗？",
                 ),
             ]
@@ -48,12 +48,12 @@ async def test_generator_endpoint_returns_f4_ready_candidates():
         assert response.json()["candidates"] == [
             {
                 "candidate_id": "c1",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "text": "听起来你有点受伤。",
             },
             {
                 "candidate_id": "c2",
-                "orientation": "认知共情型",
+                "orientation": "引导反思型",
                 "text": "你愿意说说最在意的是什么吗？",
             },
         ]

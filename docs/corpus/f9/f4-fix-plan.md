@@ -1,4 +1,4 @@
-﻿# F4 F9 评分修复完整方案
+# F4 F9 评分修复完整方案
 
 > **给 agentic workers：** 执行本方案时使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans`，逐项完成并在每个阶段运行对应测试。
 
@@ -6,7 +6,7 @@
 
 **核心方案：** 保留现有 F4 单次 LLM judge 调用，但要求 LLM 先输出结构化 `audit_tags`，再输出 ER/IP/EX。代码侧规范化 `audit_tags`，并在 `_parse_score()` 内对单次 judge 结果应用确定性 cap，再进入现有中位数聚合流程。
 
-**位置约束：** 本方案属于 F9 语料验收上下文，放在 `docs/corpus/f9/plans/f4-critic-fix-plan.md`。不要放入 `docs/superpowers/`。
+**位置约束：** 本方案属于 F9 语料验收上下文，放在 `docs/corpus/f9/f4-fix-plan.md`。不要放入 `docs/superpowers/`。
 
 ---
 
@@ -84,7 +84,7 @@
   - 添加硬边界事实编造 boundary 的测试。
   - 添加第三方开脱、成人 coaching、多标签组合、非法分数防御测试。
   - 加强 prompt 契约断言。
-- 修改 `docs/specs/f4-critic-epitome.md`
+- 修改 `docs/specs/f4-critic-epitome-codex-spec.md`
   - 不把 `audit_tags` 加入公开 `CandidateScore` schema。
   - 在 F4 prompt/raw judge JSON 契约中记录 `audit_tags`。
   - 增加 audit tag 与 cap 表。
@@ -438,7 +438,7 @@ Expected:
 ### Task 4: 更新 F4 spec，避免公开 schema 混淆
 
 **Files:**
-- Modify: `docs/specs/f4-critic-epitome.md`
+- Modify: `docs/specs/f4-critic-epitome-codex-spec.md`
 
 - [ ] **Step 1: 在 prompt/raw judge JSON 契约中加入 `audit_tags`**
 
@@ -465,13 +465,13 @@ Expected:
 Run:
 
 ```powershell
-rg -n "audit_tags|hard_boundary_fabrication|unsupported_fact_completion|low_pressure_binary_question" docs\specs\f4-critic-epitome.md app\services\critic_service.py
+rg -n "audit_tags|hard_boundary_fabrication|unsupported_fact_completion|low_pressure_binary_question" docs\specs\f4-critic-epitome-codex-spec.md app\services\critic_service.py
 ```
 
 Expected:
 
 - spec 和 runtime prompt 都出现这些 tag。
-- `docs/specs/f4-critic-epitome.md` 明确说 `audit_tags` 不进入公开 response。
+- `docs/specs/f4-critic-epitome-codex-spec.md` 明确说 `audit_tags` 不进入公开 response。
 
 ### Task 5: 自动测试与 F9 validation
 

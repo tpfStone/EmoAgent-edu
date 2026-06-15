@@ -97,7 +97,7 @@ def _seed_candidates(path):
     next_turn_id = 1
     next_candidate_id = 1
     scenarios = ["学业压力", "同伴关系", "亲子摩擦"]
-    orientations = ["情感共情型", "认知共情型"]
+    orientations = ["共情型", "引导反思型"]
     scores = [3.2, 4.6, 6.7]
     for scenario in scenarios:
         for score in scores:
@@ -131,7 +131,7 @@ def test_load_candidate_rows_builds_prior_turn_history(tmp_path):
     con = _create_db(db_path)
     _insert_turn(con, 1, "real-llm-session-1", "学业压力", "第一次倾诉", "第一次回复")
     _insert_turn(con, 2, "real-llm-session-1", "学业压力", "第二次倾诉", "第二次回复")
-    _insert_candidate(con, 1, 2, "情感共情型", 4.5, er=2, ip=1, ex=2)
+    _insert_candidate(con, 1, 2, "共情型", 4.5, er=2, ip=1, ex=2)
     con.commit()
     con.close()
 

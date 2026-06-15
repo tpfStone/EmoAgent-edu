@@ -1,68 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif">
-  <style>
-    .title{font-size:22px;font-weight:700;fill:#111827}
-    .h{font-size:16px;font-weight:700;fill:#111827}
-    .s{font-size:13px;fill:#374151}
-    .note{font-size:12px;fill:#4b5563}
-    .casel{fill:#ecfdf5;stroke:#10b981}
-    .epitome{fill:#eff6ff;stroke:#3b82f6}
-    .iri{fill:#f5f3ff;stroke:#8b5cf6}
-    .judge{fill:#fff7ed;stroke:#f97316}
-    .gate{fill:#fef2f2;stroke:#ef4444}
-    .dpo{fill:#f0fdf4;stroke:#22c55e}
-    .box{fill:#ffffff;stroke:#d1d5db}
-    .arr{stroke:#6b7280;stroke-width:1.7;fill:none}
-  </style>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M2 1L8 5L2 9" fill="none" stroke="#6b7280" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-    </marker>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="470" viewBox="0 0 700 470" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif">
+<style>
+.th{font-size:13px;font-weight:600;fill:#1f2937}
+.ts{font-size:11px;fill:#4b5563}
+.teal{fill:#ecfdf5;stroke:#5eead4}
+.purple{fill:#f5f3ff;stroke:#c4b5fd}
+.coral{fill:#fff1f2;stroke:#fda4af}
+.green{fill:#f0fdf4;stroke:#86efac}
+.blue{fill:#eff6ff;stroke:#93c5fd}
+.amber{fill:#fffbeb;stroke:#fcd34d}
+.arr{stroke:#9ca3af;stroke-width:1.5;fill:none}
+</style>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<text class="th" x="20" y="26" font-size="15">三层权威框架 → pairwise gate → DPO</text>
 
-  <text class="title" x="42" y="42">理论框架到 Pairwise Gate 的证据链</text>
-  <text class="note" x="42" y="66">CASEL 定教育目标，EPITOME 解释质量语言，IRI 锚定 F3 双取向；DPO 必须等待人工 gate。</text>
+<rect class="teal" x="40" y="44" width="620" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="60" y="66">第一层 · CASEL 五大能力（顶层维度 / 教育价值兜底）</text>
+<text class="ts" x="60" y="86">自我觉察 / 自我管理 / 社会觉察 / 关系技能 / 负责任决策 — 权威，有中文版量表 SEL RF-P</text>
+<line x1="350" y1="98" x2="350" y2="120" class="arr" marker-end="url(#a)"/>
 
-  <rect class="casel" x="58" y="108" width="250" height="118" rx="14" stroke-width="1.4"/>
-  <text class="h" x="183" y="138" text-anchor="middle">CASEL</text>
-  <text class="s" x="82" y="166">• 顶层教育价值</text>
-  <text class="s" x="82" y="190">• 激活本轮 SEL 维度</text>
-  <text class="s" x="82" y="214">• 不直接决定 DPO</text>
+<rect class="purple" x="40" y="120" width="620" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="60" y="142">第二层 · EPITOME（历史评分框架，现作诊断/解释）</text>
+<text class="ts" x="60" y="162">情绪反应 ER / 解释 IP / 探索 EX — 为 pairwise 判定提供质量语言</text>
+<line x1="350" y1="174" x2="350" y2="196" class="arr" marker-end="url(#a)"/>
 
-  <rect class="epitome" x="354" y="108" width="250" height="118" rx="14" stroke-width="1.4"/>
-  <text class="h" x="479" y="138" text-anchor="middle">EPITOME</text>
-  <text class="s" x="378" y="166">• ER / IP / EX 质量语言</text>
-  <text class="s" x="378" y="190">• 当前 pointwise 诊断线</text>
-  <text class="s" x="378" y="214">• ER/IP 仍有可靠性风险</text>
+<rect class="blue" x="40" y="196" width="620" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="60" y="218">第三层 · IRI（理论锚点，不进打分回路）</text>
+<text class="ts" x="60" y="238">认知共情(观点采择) vs 情感共情(共情关注) — 说明层</text>
+<line x1="350" y1="250" x2="350" y2="272" class="arr" marker-end="url(#a)"/>
 
-  <rect class="iri" x="650" y="108" width="250" height="118" rx="14" stroke-width="1.4"/>
-  <text class="h" x="775" y="138" text-anchor="middle">IRI</text>
-  <text class="s" x="674" y="166">• c1 情感共情 / c2 认知共情</text>
-  <text class="s" x="674" y="190">• 锚定 F3 生成取向</text>
-  <text class="s" x="674" y="214">• 不作为 F4 打分维度</text>
+<rect class="coral" x="40" y="272" width="620" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="60" y="294">LLM-as-Judge 做成对偏好判断</text>
+<text class="ts" x="60" y="314">先经 F9/pairwise gate 验证；Phase A rerun 曾为 inconclusive</text>
 
-  <path class="arr" d="M183 226 L183 270 L410 270" marker-end="url(#arrow)"/>
-  <path class="arr" d="M479 226 L479 270" marker-end="url(#arrow)"/>
-  <path class="arr" d="M775 226 L775 270 L548 270" marker-end="url(#arrow)"/>
+<rect class="amber" x="40" y="356" width="300" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="60" y="378">极小规模人工：A/B 校验</text>
+<text class="ts" x="60" y="398">验证 critic pairwise 与人工偏好一致</text>
+<rect class="green" x="360" y="356" width="300" height="54" rx="10" stroke-width="1"/>
+<text class="th" x="380" y="378">稳定偏好对 (e⁺, e⁻) → DPO</text>
+<text class="ts" x="380" y="398">仅 `pairwise_stable` 可进入训练</text>
 
-  <rect class="judge" x="254" y="270" width="450" height="96" rx="14" stroke-width="1.4"/>
-  <text class="h" x="479" y="300" text-anchor="middle">F4 Judge 当前与目标</text>
-  <text class="s" x="284" y="328">当前：pointwise weighted_total 用于 /chat 默认择优</text>
-  <text class="s" x="284" y="350">目标：pairwise A/B 产出稳定 winner / loser</text>
+<path d="M255 326 L190 326 L190 354" class="arr" marker-end="url(#a)"/>
+<path d="M445 326 L510 326 L510 354" class="arr" marker-end="url(#a)"/>
+<line x1="340" y1="383" x2="358" y2="383" class="arr" marker-end="url(#a)"/>
 
-  <line class="arr" x1="479" y1="366" x2="479" y2="408" marker-end="url(#arrow)"/>
-
-  <rect class="gate" x="254" y="408" width="450" height="100" rx="14" stroke-width="1.4"/>
-  <text class="h" x="479" y="438" text-anchor="middle">F9 / Pairwise Gate</text>
-  <text class="s" x="284" y="466">人工 A/B vs critic pairwise；Phase A rerun 仍 inconclusive</text>
-  <text class="s" x="284" y="490">tie / unstable / invalid 不进入训练偏好对</text>
-
-  <line class="arr" x1="479" y1="508" x2="479" y2="548" marker-end="url(#arrow)"/>
-
-  <rect class="dpo" x="254" y="548" width="450" height="54" rx="14" stroke-width="1.4"/>
-  <text class="h" x="479" y="581" text-anchor="middle">通过 gate 后：production 放量 -> DPO + 消融</text>
-
-  <rect class="box" x="58" y="420" width="146" height="62" rx="12" stroke-width="1"/>
-  <text class="note" x="131" y="446" text-anchor="middle">旧 pointwise</text>
-  <text class="note" x="131" y="466" text-anchor="middle">只作诊断</text>
-  <path class="arr" d="M254 458 L208 458" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text class="ts" x="350" y="438" text-anchor="middle" font-style="italic">逻辑链：权威框架定标准 → pairwise 判断 → 人工 gate → 稳定偏好对 → DPO</text>
 </svg>

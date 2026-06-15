@@ -1,4 +1,4 @@
-# F4 成对比较择优 Phase A.1 工具链实施与 Smoke 记录
+# F4 成对比较择优 Phase A 实施计划
 
 > **给自动化执行者：** 必须使用 `superpowers:executing-plans` 按任务逐项执行本计划。步骤使用复选框（`- [x]`）便于追踪。
 
@@ -9,29 +9,6 @@
 **技术栈：** Python 3.13、pytest、现有 `Settings`、现有 `LLMClientProtocol`、Python 标准库 CSV/JSON 工具。
 
 ---
-
-## 0. 文档职责与时间线
-
-本文是 **Phase A.1** 的主文档，职责是记录 pairwise 离线工具链的落地、smoke 验收流程和首轮 smoke 结果。
-
-Phase A.1 的结论：工具链可用，但首轮 smoke 因候选质量噪声、样本量过小、pointwise 对照口径不正式、eval 分母不一致，不能判断 pairwise 是否优于 pointwise。
-
-后续 Phase A.2 已转入 `phase-a-rerun-plan.md`：修 F3、补 provenance、显式化模型、改成交集 eval，并完成 rerun。当前总状态以 `README.md` 和 `phase-a-rerun-plan.md` 为准。
-
-## 1. 原因：为什么先做 Phase A.1
-
-在把 pairwise 接入 `/chat` runtime 或用于 DPO 之前，需要先证明离线工具链可运行、人工 A/B 标注可对齐、pairwise judge 与 pointwise baseline 能在同一批候选对上比较。Phase A.1 因此只做离线 smoke，不改变线上默认择优逻辑。
-
-## 2. 解决方案：工具链落地范围
-
-Phase A.1 的解决方案是先搭建最小闭环：
-- `app/services/critic_pairwise.py`：成对比较 prompt、JSON 解析、双向换位和聚合。
-- `scripts/corpus/f9_pairwise_package.py`：生成冻结候选对和人工 A/B 标注模板。
-- `scripts/corpus/f9_pairwise_judge.py`：运行 pairwise judge 并输出 runs、summary、manifest。
-- `scripts/corpus/f9_pairwise_pointwise_baseline.py`：在同一候选对上生成 pointwise baseline。
-- `scripts/corpus/f9_pairwise_eval.py`：对齐人工 A/B、pairwise 和 pointwise，生成 eval。
-
-## 3. 实施任务记录
 
 ### 任务 1：成对比较 Critic 核心
 
@@ -193,13 +170,13 @@ Phase A.1 的解决方案是先搭建最小闭环：
 
 ---
 
-## 4. 验收流程：人工指引与 Smoke 验收
+## 人工指引与验收流程
 
-### 4.1 检查结果
+### 检查结果
 
 原计划已经包含自动化开发步骤和测试命令，但人工 A/B 标注步骤与阶段 A 验收流程不够明确。本节补齐这两部分，作为阶段 A 进入真实冒烟验证（smoke）/ 试点（pilot）的操作依据。
 
-### 4.2 人工填写步骤
+### 人工填写步骤
 
 1. 先生成冻结候选对输入包和人工标注模板：
 
@@ -225,7 +202,7 @@ Phase A.1 的解决方案是先搭建最小闭环：
 
 5. 旧 pointwise 人工标注不能替代这一步。`ER/IP/EX` 三档分只作为背景证据，不是 A/B 偏好真值。
 
-### 4.3 冒烟验证（Smoke）验收流程
+### 冒烟验证（Smoke）验收流程
 
 1. 生成或确认 `f9_pairwise_smoke_pairs.csv` 与 `f9_pairwise_smoke_human_ab.csv`。
 2. 人工完成 `f9_pairwise_smoke_human_ab.csv`。
@@ -256,7 +233,7 @@ Phase A.1 的解决方案是先搭建最小闭环：
    - `f9_pairwise_eval_report.md` 成功生成。
    - `critic_human_agreement`、`pointwise_human_agreement`、`agreement_delta_vs_pointwise` 均可读且分母正确。
 
-## 5. 结果：本轮 Smoke 结果记录
+### 本轮 Smoke 结果记录
 
 本轮真实 pairwise smoke 已完成，结果文件位于：
 - `docs/corpus/f9/pairwise-selection-pilot/runs/smoke/`
@@ -282,11 +259,11 @@ Phase A.1 的解决方案是先搭建最小闭环：
 
 结论修正：本轮 smoke 工具链跑通，但 agreement 数字不能用于判断 pairwise 是否优于或劣于 pointwise。原因是有效分母过小、pairwise 与 pointwise 使用的 valid 集不一致、pointwise 对照为 `CRITIC_SAMPLE_COUNT=1` 快速诊断口径，且 smoke 输入候选本身存在 `无效二选一`、`不当安抚`、`格式异常`、`缺少陪伴感` 等明显噪声。因此本轮唯一稳妥结论是：工具链可用、pairwise judge 无 invalid、格式未崩；不能上线，也不能切换为 `/chat` 默认择优器。
 
-下一步仍属于 Phase A，不是 Phase B。该段最初指向 Phase A.2；截至 2026-05-29，Phase A.2 已完成且结论为 `inconclusive`，当前执行入口改为 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 中的 Phase A.3：先做候选槽位化防污染、F3 新 IRI 取向小样本验证和均衡冻结输入包，再重新生成 15-20 对 human-valid 主集。
+下一步仍属于 Phase A，不是 Phase B。后续按 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 执行 Phase A rerun / Phase A.2：先修 F3 prompt、补 provenance、改 eval 交集口径、显式化模型，再用修复后的真实 F3 重新生成 15-20 对 human-valid 主集。
 
-2026-05-28 后续更新：Phase A.2 rerun 已完成候选生成、人工 A/B 标注、pairwise judge、pointwise baseline 和 eval，结论为 `inconclusive`。Phase A.2 的结果不再维护在本文中，详见 `phase-a-rerun-plan.md` 与 `reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md`。
+2026-05-28 更新：Phase A rerun 的执行前补丁和真实产物已完成。主 rerun 现有 24 对候选，场景分布为亲子摩擦/同伴关系/学业压力各 8；pairwise judge 为 `pairwise_sample_count=3`，结果 `pairwise_stable=14/24`、invalid `0/24`；pointwise baseline 已按正式 `CRITIC_SAMPLE_COUNT=3` 跑完 24 行。当前仍未进入 Phase B，也未得到 pairwise 优劣结论；下一步是人工填写 `docs/corpus/f9/pairwise-selection-pilot/annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv` 后运行 Phase A rerun eval。
 
-## 6. 后续规划：试点（Pilot）验收流程
+### 试点（Pilot）验收流程
 
 1. 冒烟验证通过后，将输入包扩展到 30-40 对 human-valid 样本。
 2. 对试点主集重复同样的人工 A/B 标注、pairwise judge、pointwise 基线、评估流程。

@@ -1,8 +1,8 @@
-﻿# F9 稳定性 Gate 审查计划
+# F9 稳定性 Gate 审查计划
 
 日期：2026-05-26
 
-> 给后续执行者：本计划按任务清单推进。已完成项用 `[x]` 标记；需要人工判断的步骤不能由脚本、F4 或自动化工具代替。
+> 给后续执行者：本计划按任务清单推进。已完成项用 `[x]` 标记；需要人工判断的步骤不能由脚本、F4 或 Codex 代替。
 
 ## 目标
 
@@ -77,7 +77,7 @@
   - 测试差集脚本按 sample_no 对比，并保留人工 review 字段。
 - 修改：`docs/corpus/f9/README.md`
   - 记录稳定性 gate 的当前阻塞和后续决策口径。
-- 修改：`docs/corpus/f9/pointwise-diagnostics/execution-summary.md`
+- 修改：`docs/corpus/f9/f4-fix-execution-summary.md`
   - 记录 sample 39 bug、差集 review queue 路径、人工结论和后续三跑结果。
 
 ---
@@ -292,7 +292,7 @@ docs/corpus/f9/validation-stability/run-2/f9_high_score_diff_review_queue.csv
 人工填写后，需要更新：
 
 ```text
-docs/corpus/f9/pointwise-diagnostics/execution-summary.md
+docs/corpus/f9/f4-fix-execution-summary.md
 ```
 
 ### 当前 Task 3 要做什么
@@ -334,7 +334,7 @@ human_notes: 简短理由
 
 ### agent 不能做什么
 
-自动化工具可以辅助解释列含义、整理人工填写后的统计结果，但不能替代人工填写 `human_*` 列。
+Codex 可以帮你解释列含义、整理你填完后的统计结果，但不能替你填 `human_*` 列。
 
 ### Step 1：人工审查 8 行差集队列
 
@@ -411,11 +411,11 @@ C:\Python313\python.exe -m pytest tests\test_services\test_critic_service.py tes
 - `scripts/corpus/f9_validation.py`
 - `tests/test_corpus/test_f9_validation.py`
 - `docs/corpus/f9/README.md`
-- `docs/corpus/f9/pointwise-diagnostics/execution-summary.md`
+- `docs/corpus/f9/f4-fix-execution-summary.md`
 
 - [ ] **Step 1：人工批准新阈值**
 
-自动化工具可以汇总证据，但新阈值数字必须由人工批准。
+Codex 可以汇总证据，但新阈值数字必须由人工批准。
 
 候选口径：
 
@@ -492,7 +492,7 @@ C:\Python313\python.exe scripts\corpus\f9_validation.py --output-dir docs\corpus
 
 **执行内容：**
 
-- [x] 更新 `docs/specs/f4-critic-epitome.md`：
+- [x] 更新 `docs/specs/f4-critic-epitome-codex-spec.md`：
   - ER=1：准确说出、分析或深化情绪，但像旁观者描述，没有"有人在陪我、在乎我"的感觉。
   - ER=2：既贴合接住情绪，又让孩子感到有人陪着他、关心他。
   - IP=1：只复述孩子已经明说的事实或情绪，例如"气死了""是不是我哪里不好"。

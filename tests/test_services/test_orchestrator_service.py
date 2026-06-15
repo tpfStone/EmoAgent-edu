@@ -57,12 +57,12 @@ class RecordingGeneratorService:
             candidates=[
                 GeneratorCandidate(
                     candidate_id="c1",
-                    orientation="情感共情型",
+                    orientation="共情型",
                     text="我听见你很难受。",
                 ),
                 GeneratorCandidate(
                     candidate_id="c2",
-                    orientation="认知共情型",
+                    orientation="引导反思型",
                     text="你愿意说说发生了什么吗？",
                 ),
             ]

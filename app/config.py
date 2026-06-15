@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     CRITIC_LLM_RESPONSE_FORMAT_JSON: bool = True
     CRITIC_SAMPLE_COUNT: int = Field(default=3, ge=1)
 
-    API_TITLE: str = "EmoEdu MAS API"
+    API_TITLE: str = "EmoEdu F1/F4 API"
     API_VERSION: str = "0.1.0"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}

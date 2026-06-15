@@ -7,7 +7,7 @@ from app.schemas.critic import CandidateInput, CriticEvaluateRequest
 from app.services.critic_service import CRITIC_FALLBACK_MESSAGE, CriticService
 
 
-def _candidate(candidate_id: str, text: str, orientation: str = "情感共情型"):
+def _candidate(candidate_id: str, text: str, orientation: str = "共情型"):
     return CandidateInput(candidate_id=candidate_id, orientation=orientation, text=text)
 
 

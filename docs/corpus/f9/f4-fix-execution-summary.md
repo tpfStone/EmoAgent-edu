@@ -1,10 +1,10 @@
-﻿# F4 F9 修复执行总结
+# F4 F9 修复执行总结
 
 日期：2026-05-26
 
 ## 执行结果
 
-已执行 `docs/corpus/f9/plans/f4-critic-fix-plan.md` 中的 F4 critic 修复方案。
+已执行 `docs/corpus/f9/f4-fix-plan.md` 中的 F4 critic 修复方案。
 
 已完成的改动：
 
@@ -46,11 +46,11 @@ F4/F9 修复组建议放在一起：
 
 - `app/services/critic_service.py`
 - `tests/test_services/test_critic_service.py`
-- `docs/specs/f4-critic-epitome.md`
+- `docs/specs/f4-critic-epitome-codex-spec.md`
 - `scripts/corpus/f9_validation.py`
 - `tests/test_corpus/test_f9_validation.py`
-- `docs/corpus/f9/plans/f4-critic-fix-plan.md`
-- `docs/corpus/f9/pointwise-diagnostics/execution-summary.md`
+- `docs/corpus/f9/f4-fix-plan.md`
+- `docs/corpus/f9/f4-fix-execution-summary.md`
 - `docs/corpus/f9/validation/...`
 
 建议与 F4/F9 修复组分开处理：
@@ -58,7 +58,7 @@ F4/F9 修复组建议放在一起：
 - F3/generator 相关改动：
   - `app/services/generator_service.py`
   - `tests/test_services/test_generator_service.py`
-  - `docs/specs/f3-multi-orientation-generator.md`
+  - `docs/specs/f3-multi-orientation-generator-codex-spec.md`
   - `docs/corpus/emoedu-corpus-synthesis.md`
 - 通用仓库文档改动，例如 `README.md`。
 - 用户刻意删除的前端目录 `frontend/...`。
@@ -72,7 +72,7 @@ F4/F9 修复组建议放在一起：
 
 ## 下一步计划
 
-1. 按 `docs/corpus/f9/plans/f3-generator-fix-plan.md` 修复 F3 生成器问题。范围不是只替换 sample 25 的 `说明你` 字符串，而是修复 sample 25 暴露出的品质化总结、强行正向重构和固定转折模板。
+1. 按 `docs/corpus/f9/f3-fix-plan.md` 修复 F3 生成器问题。范围不是只替换 sample 25 的 `说明你` 字符串，而是修复 sample 25 暴露出的品质化总结、强行正向重构和固定转折模板。
 2. 扩展 F9 validation：
    - sample-specific hard flags 继续要求 generated/rerun 均为 0。
    - global quality probes 单独统计，generated 上限 2/20，rerun 上限 4/40。
@@ -96,7 +96,7 @@ F4/F9 修复组建议放在一起：
 
 ## F3 修复执行结果
 
-已按 `docs/corpus/f9/plans/f3-generator-fix-plan.md` 执行 F3 修复，并重跑 F9 validation。
+已按 `docs/corpus/f9/f3-fix-plan.md` 执行 F3 修复，并重跑 F9 validation。
 
 本轮 validation gate 结果：
 
@@ -126,7 +126,7 @@ F4/F9 修复组建议放在一起：
 
 ## F3 具体复述约束同步结果
 
-用户继续收紧 `docs/specs/f3-multi-orientation-generator.md` 中的提示词后，已同步到 F3 runtime prompt 和测试：
+用户继续收紧 `docs/specs/f3-multi-orientation-generator-codex-spec.md` 中的提示词后，已同步到 F3 runtime prompt 和测试：
 
 - 新增共同约束：承接必须包含对孩子说出的那一件具体的事的复述，点回刚讲的具体场景或动作。
 - 明确“换谁都会”“这种感觉很正常”“都会觉得难受”这类泛化句最多只能跟在具体复述后面作补充，不能单独充当承接。
@@ -192,7 +192,7 @@ F4/F9 修复组建议放在一起：
 
 ## Stability Gate Plan 执行进度
 
-已执行 `docs/corpus/f9/plans/stability-gate-plan.md` 中不依赖人工判断的前置任务。
+已执行 `docs/corpus/f9/f9-stability-gate-plan.md` 中不依赖人工判断的前置任务。
 
 完成内容：
 
@@ -231,7 +231,7 @@ F4/F9 修复组建议放在一起：
 
 执行与验证：
 
-- 已更新 `docs/specs/f4-critic-epitome.md`、`app/services/critic_service.py`、`tests/test_services/test_critic_service.py`。
+- 已更新 `docs/specs/f4-critic-epitome-codex-spec.md`、`app/services/critic_service.py`、`tests/test_services/test_critic_service.py`。
 - 已确认新增 prompt 断言先失败、修改后通过。
 - `C:\Python313\python.exe -m pytest tests\test_services\test_critic_service.py -q`：23 passed
 - `C:\Python313\python.exe -m pytest -q`：102 passed

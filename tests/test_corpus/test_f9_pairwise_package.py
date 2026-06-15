@@ -20,8 +20,7 @@ def _row(sample_no: str, candidate_id: str, text: str) -> dict[str, str]:
         "source": "generated",
         "candidate_id": candidate_id,
         "scenario": "同伴关系",
-        "activated_casel_json": '["自我觉察引导", "关系技能培养"]',
-        "orientation": "情感共情型" if candidate_id == "c1" else "认知共情型",
+        "orientation": "共情型" if candidate_id == "c1" else "引导反思型",
         "用户倾诉": "他们没叫我进小群。",
         "对话历史": '[{"role":"student","text":"前文"}]',
         "候选文本": text,
@@ -52,12 +51,11 @@ def test_build_pair_rows_groups_complete_c1_c2_pairs():
         "pair_id": "sample-3",
         "sample_no": "3",
         "scenario": "同伴关系",
-        "activated_casel_json": '["自我觉察引导", "关系技能培养"]',
         "user_text": "他们没叫我进小群。",
         "history_json": '[{"role":"student","text":"前文"}]',
-        "c1_orientation": "情感共情型",
+        "c1_orientation": "共情型",
         "c1_text": "候选一",
-        "c2_orientation": "认知共情型",
+        "c2_orientation": "引导反思型",
         "c2_text": "候选二",
         "source_run": "generated",
         "generator_run_id": "run-1",
@@ -76,8 +74,7 @@ def test_build_pair_rows_reads_priority_queue_style_columns():
             "review_bucket": "priority",
             "candidate_id": "c1",
             "scenario": "亲子摩擦",
-            "activated_casel_json": "",
-            "orientation": "情感共情型",
+            "orientation": "共情型",
             "user_text": "我爸很失望。",
             "history_json": "[]",
             "candidate_text": "候选一",
@@ -87,8 +84,7 @@ def test_build_pair_rows_reads_priority_queue_style_columns():
             "review_bucket": "priority",
             "candidate_id": "c2",
             "scenario": "亲子摩擦",
-            "activated_casel_json": "",
-            "orientation": "认知共情型",
+            "orientation": "引导反思型",
             "user_text": "我爸很失望。",
             "history_json": "[]",
             "candidate_text": "候选二",
@@ -99,9 +95,6 @@ def test_build_pair_rows_reads_priority_queue_style_columns():
 
     assert pair_rows[0]["user_text"] == "我爸很失望。"
     assert pair_rows[0]["c2_text"] == "候选二"
-    assert pair_rows[0]["activated_casel_json"] == (
-        '["自我觉察引导", "自我管理引导", "社会觉察培养", "关系技能培养"]'
-    )
     assert pair_rows[0]["source_run"] == "priority"
     assert pair_rows[0]["f3_prompt_bundle_hash"] == ""
 

@@ -1,155 +1,192 @@
-# EmoEdu 后续开发指南
+# EmoEdu 后续开发指南 · 比赛投稿驱动版
 
-> **当前定位**：本文是比赛投稿路线的当前工作图，不再沿用早期 pointwise-to-DPO 的推进口径。
-> **核心判断**：P0 后端主链路已跑通，但 F3/F4 质量与 judge 口径仍在整理；pairwise 是 F4 的目标主线，但 Phase A rerun 结论为 `inconclusive`，尚未解锁 `/chat` runtime 或 DPO。
-> **关键路径**：P0 已关闭 -> P1 F3/F4 与 pairwise gate 收敛 -> P2 F9/pairwise 人工校验 -> P3 corpus production 放量 -> P4 DPO + 消融 -> 论文可投。RAG 与第三取向仍是余力项。
-
----
-
-## 0. 当前位置
-
-### 已经成立的事实
-
-- `/chat` 运行时已串起 F1 安全门、F2 情境分析、F3 双取向生成和 F4 pointwise critic。
-- 真实 LLM 45 条验收曾跑通：request_ok 45/45，F2 情境准确率 43/45，落库 candidates=90，旧 pointwise 逻辑生成 preference_pairs=43。
-- F1 单列验收已补齐，异常/解析失败按 yellow 保守转介。
-- 合成语料 probe-001 已完成 3 个代表格：raw=480、accepted=479、旧 pointwise 口径下 `judge_unverified_preference_pairs=433`。
-- F4 pairwise 离线工具链已存在：候选包生成、pairwise judge、pointwise baseline、人工 A/B 表和评估脚本均已落地。
-
-### 不能再按旧口径推进的部分
-
-- 旧 43 对和 probe-001 的 433 对只证明“pointwise pipeline 能产出差异”，不证明这些偏好对可用于 DPO。
-- Pointwise 诊断线显示 F3/F4 仍不稳定：旧主包单次 PASS，但 stability rerun 失败；post-erip 多轮仍有 ER/IP 高分饱和。
-- R8 priority 10 条人工复核显示候选质量和 F4 高分判断仍有系统偏差。
-- F4 已切到 `deepseek-v4-pro`、4096 token、JSON mode，但 priority smoke 仅从 10/20 改善到 11/20，不能单靠模型升级解锁 F9。
-- Pairwise Phase A rerun 为 `inconclusive`：有效交集不足、critic-human agreement 不足，且 stable winner 有 `c1` 偏斜。
-
-### 当前结论
-
-F3/F4 不是“整理完成后等 F9”，而是仍处于收敛阶段。下一步应优先让 pairwise 路线形成可信 gate：先修 F3 候选质量、冻结/清洗 pairwise 输入包、处理 pairwise judge 稳定性和 `c1` 偏斜，再跑人工 A/B 校验。正式人工 F9、production 放量和 DPO 都不能跳过这个 gate。
+> **目标**：冲国际比赛投稿，要的是完整证据链，不是功能堆叠。
+> **关键路径**：P0 收尾(并行) → P1 F9 信度校验(闸门) → P-corpus 语料放量 → P2 DPO + 消融 → 论文可投；P3 RAG / P4 第三取向为余力加分项。
+> **顺序要点**：F9 在放量之前。F9 的标注料现已足够（90 条真实候选 + probe 的 433 对），不必等放量；而放量产出的偏好对在 F9 通过前只能是 `judge_unverified`，不能进 DPO。先验金石（F9 确认 F4 判分可信），再铸币（放量）。若 F9 暴露 F4 需改，改完再放量，避免用旧 F4 跑出的偏好对全作废。
+> **第一性原理**：先让系统输出可被信任（F9），再让它变强（DPO/RAG）。没有 F9，DPO 和系统效果的一切结论都站不住——这是你自己文档（mas-plan §十三、roadmap §5）反复写明的命门。
+> **2026-05-29 状态补充**：本文保留为比赛投稿路线的历史参考，里面的“F4 判分”“高低分偏好对”等表述不再代表当前 F4 主线。当前主线见 `docs/README.md` 与 `docs/specs/f4-pairwise-selection-codex-spec.md`：F4 目标改为 pairwise，具体分数只作为历史路径、兼容字段和诊断材料；DPO 只应使用通过 F9/pairwise gate 的稳定偏好对。
 
 ---
 
-## P0：后端主链路验收（已关闭）
+## 0. 当前位置（基于 test-summary 真实数据）
 
-P0 只保留为回归维护，不再作为当前阻塞项。
+真实 LLM 验收已跑通且达标（`real-llm-20260522-215717`）：
 
-- [x] F1 八用例实测与安全门单列验收。
-- [x] F1 异常兜底语义：解析失败或调用失败均按 yellow 保守转介。
-- [x] `/chat` mock 与真实 LLM 主链路验收已完成。
-- [x] PostgreSQL/Alembic、Redis history store 和 `/chat` mock orchestrator integration 已在 2026-05-26 复验。
+- request_ok **45/45**，无未捕获异常。
+- F2 情境准确率 **95.6%**（43/45），分情境最低 93.3%——远超门槛（总体≥85%、每类≥80%）。
+- 落库校验 **PASS**：turns=45、messages=90、candidates=90、**preference_pairs=43**。
+- 发现 2 个缺陷（syn_0012 内部提示外泄、syn_0032 事实编造），已改 F3/F4 prompt 修复，52 passed，小样本复验通过。
 
-维护要求：改 F1/F2/F3/F4 schema 或编排顺序时，同步跑服务、handler 和 orchestrator 测试。
+**两个重要修正（相对早期假设）：**
 
----
+1. **偏好对不缺**。45 条出 43 对，说明两取向候选在 F4 眼里有真实质量梯度，`orientation_not_distinct` 不成立。DPO 的料按比例可攒——瓶颈不在「能否生成偏好对」，在「合成管线能否批量产情境」（见 P2）。
+2. **P0 基本完成**，只剩两个收尾项（见下）。
 
-## P1：F3/F4 与 Pairwise Gate 收敛（当前主线）
+**仍未关闭的两件事：**
 
-目标不是继续打磨 pointwise 分数，而是让“候选生成 -> pairwise 判断 -> 人工 A/B 对照”这条链路可验证、可复跑、可解释。
-
-### P1.1 F3 候选质量
-
-- [ ] 减少“复述 + 加深情绪 + 分析提问”的默认模式，避免两取向候选在策略上趋同。
-- [ ] 针对亲子/同伴情境继续控制第三方动机推测、事实补全、品质化总结和成人化 coaching。
-- [ ] 对 flash/pro 或不同生成配置的侧线比较只作为候选质量证据，不混入 Phase A 主指标。
-- [ ] pairwise rerun 前冻结输入包，记录模型、prompt hash、候选来源和生成配置。
-
-### P1.2 F4 pointwise 诊断线
-
-- [ ] Pointwise 分数继续保留为历史兼容和诊断字段，不再作为新的 DPO 主判据。
-- [ ] 若继续跑 priority 10 的完整 v4-pro count=3 对照，应只回答“pointwise judge 是否仍偏宽”，不能直接解锁 DPO。
-- [ ] 新增或修改 F4 prompt 时，同步更新 `docs/specs/f4-critic-epitome.md` 和 `docs/corpus/f9/pointwise-diagnostics/`。
-
-### P1.3 Pairwise 试点线
-
-- [ ] 重新生成或清洗 Phase A 输入包，保证有效交集数量达到计划下限。
-- [ ] 人工 A/B 标注要保留 tie/无效样本，不把难分样本强行转换成 winner/loser。
-- [ ] 专项检查 `c1` 偏斜：同一 pair 正反顺序、隐藏标签、identical-text control 和 physical swap control 都要保留。
-- [ ] 只有 `pairwise_stable` 且通过人工 gate 的 winner/loser 才能进入 DPO 候选池。
-
-P1 产出：
-
-- 一份 pairwise rerun conclusion，明确 go/no-go。
-- 一份 `c1` 偏斜或位置偏差诊断。
-- 一份冻结样本包 manifest，能复现候选、judge 和人工标注来源。
+- **F1 八用例实测未回填**（Step -1 仍空）+ F1 异常兜底语义未确认。F2/链路过了不代表 F1 危机识别过了——45 条非危机语料只能验 F1 不误报，**验不了不漏报**。这是安全底线，必须单独补。
+- **第三方动机推测残留**：syn_0012 复验仍出现「也许不是她觉得你不够好，而是她太希望你好了…」这类替家长猜动机的句子，违反「不替第三方解释动机」。已记 issue 未根治。**这个会污染 F9（见 P1）。**
 
 ---
 
-## P2：F9 / Pairwise 人工校验
+## 阶段 P0：验收收尾（基本完成，只剩两项）
 
-当前 F9 主问题应从“EPITOME 0/1/2 分数是否可信”转为：
+真实 45 条已跑通达标（见 §0），P0 不再是「跑验收」，而是补两个未关闭项——都不大，但其中一个是安全底线。
 
-> 对同一批候选对，critic pairwise 的偏好判断是否与人工 A/B 偏好达到可接受一致性？
+- [ ] **补 F1 八用例实测（安全底线，不可省）**：用真实 LLM 跑 F1 spec §7 的 8 个固定用例，确认无危机漏判（red/yellow 不得判 green，red 不得降 yellow），回填验收文档 Step -1。45 条非危机语料验不了 F1 漏报，这步是唯一能验「不漏报」的地方。
+- [ ] **确认 F1 异常兜底语义**：F1 异常时 orchestrator 返回 yellow 转介（F1 spec §8 要求），还是通用兜底「我现在有点没反应过来」（implementation-plan Task 5 伪代码）？后者等于放过一次可能的危机信号，必须改成保守非 green。
+- [ ] **第三方动机推测（走绕法 A：当 limitation，不阻塞）**：你已为此改过一轮 prompt，再改边际收益递减、且收太紧会误伤引导反思型「打开新视角」的核心能力。**决定：不再强改，F9 抽样时把这类亲子/同伴候选标为已知噪声、单独统计，论文写成 limitation**（「F3 在亲子/同伴场景存在替第三方归因倾向，F4 boundary 当前未完全捕获」）。这符合项目一贯的「诚实标注局限」调性。
 
-### 校验方式
-
-- [ ] 对冻结候选对做人工 A/B 盲标，标注者看不到 critic 结果和 pointwise 分数。
-- [ ] 计算人工间一致性与人工-critic 一致性；pairwise 可先报 simple agreement，也可对 winner/tie/invalid 使用 Cohen's kappa。
-- [ ] Pointwise ER/IP/EX 可附带算 weighted kappa，但只作为诊断维度可靠性，不再作为 DPO 解锁的主证据。
-- [ ] 不稳定、tie、invalid 或 `pairwise_unresolved` 样本不得进入训练偏好对。
-
-### 通过条件
-
-通过条件需在 rerun plan 中先写死，不能看结果后调阈值。最低要求：
-
-- 有效交集数量满足计划下限。
-- critic-human agreement 明显高于 pointwise baseline 或达到预设可接受线。
-- 位置偏见和 `c1` 偏斜有控制实验解释。
-- 人工标注表、judge runs、eval report 和 conclusion 均能复现。
+> **P0 不阻塞 P1**：F1 八用例是半天的并行活，第三方动机已转为 limitation。两项都不卡后续——P0 与 P1 可并行启动。
 
 ---
 
-## P3：Corpus Production 放量
+## 阶段 P1：F9 信度校验（论文命门 + 放量闸门，现在就做）
 
-production 放量必须在 P2 gate 通过后启动。probe-001 已经可用于估算损耗率，但不能直接作为 DPO 数据来源。
+> **料已足够，不必等放量。** F9 标注对象是真实候选回应 + F4 打分，你手上已有：`real-llm-20260522-215717` 的 90 条候选 + probe 产出的 433 对（含 F4 打分）。抽 30-50 条即可，一条都不用等放量。详细执行见单独文档 `emoedu-f9-reliability-guide.md`。
 
-- [x] probe-001 已完成，overall_yield 约 90.2%。
-- [x] 已生成首轮 production quota：`docs/corpus/production_quota_after_probe_001.json`。
-- [ ] P2 gate 通过后，按剩余 12 格 quota 跑 production。
-- [ ] 每条倾诉过 F1，非 green 或异常进 quarantine，不进常规池。
-- [ ] production 后用真实 usable pair 数和心理-策略多样性决定是否补量。
+### 落地步骤（文档只给了「做什么」，这里给「怎么做不踩坑」）
 
-注意：文本事件多样不等于 DPO 信息多样。反刍×同伴 probe 已暴露“事件换皮但心理结构同质”的风险；production 要优先覆盖 15 格心理结构和 variant_tags，而不是单格堆量。
+**抽样**：从已跑通的真实 `candidates` 表（`real-llm-20260522-215717` 那批 90 条候选）抽 30-50 条**候选回应**。建议覆盖三类情境 + 两种取向，别全抽同一类。
 
----
+> **特别留意亲子/同伴情境的候选**：syn_0012 残留的「替第三方猜动机」问题集中在这两类。如果 P0 没收掉这个问题，F9 抽样时这类候选会成为人工与 F4 的系统性分歧源——人工按「不该替家长猜动机」标低分，F4 若没接住就标高分，直接拉低 κ。要么 P0 先收，要么标注时明确记为已知噪声、单独统计。
 
-## P4：DPO + 消融
+**标注纪律（决定 κ 可信度）**：
+- [ ] 你和队友按 F4 spec §4 的 0/1/2 锚点，对每条候选**独立**标 ER/IP/EX。
+- [ ] 标注者之间**先不互通**，各标各的——这样你能同时算出「人工 vs 人工」和「人工 vs LLM」两个 κ。
+- [ ] 标注时**不要看 F4 的输出**，否则会无意识对齐，κ 虚高。
 
-DPO 只接受通过 P2 gate 的稳定偏好对。
+**算什么**：quadratically weighted Cohen's κ（对标原论文 Kumar & Groh 2025）。0/1/2 是有序量纲，普通 κ 低估一致性，必须用二次加权。三维分开算，CASEL 维若标了也分开算。
 
-- [ ] 偏好对来源必须标注 `pairwise_stable` / `human_validated` 等来源字段。
-- [ ] 旧 pointwise 推导出的 `judge_unverified_preference_pairs` 不得直接进训练。
-- [ ] 训练栈可选 trl `DPOTrainer` 或 LLaMA-Factory；DeepSeek API 不能直接 DPO，需要可训练底座。
-- [ ] 换底座后必须重验 F3：取向分化、temperature、回应风格、边界行为都可能变化。
-- [ ] 消融实验应比较 DPO 前后同一批测试情境的候选质量，并使用通过 gate 的 judge 或人工评估。
+**预期会遇到的坑（文档已诚实预告）**：你大概率会发现 EX 维 κ 不错，ER/IP 偏低。**这不是 bug，是 EPITOME 框架的已知局限**（F4 spec §2、framework §4 都写了：原论文里 ER/IP 操作定义不清、专家可靠性低，只有 EX 高）。
 
----
+**怎么在论文里兜住**：你已经对 ER/IP 补了更明确的中文操作定义（F4 spec §4 那张表）。论文就写：「我们针对 EPITOME 原框架 ER/IP 可靠性偏低的已知问题，补充了面向初中生场景的中文操作定义；校验显示 [EX κ=X，ER/IP κ=Y]，并在 limitation 中如实讨论 ER/IP 的残余局限。」**主动承认 + 给出缓解措施 = 方法严谨性,而非漏洞。**
 
-## P5：RAG 与第三取向（余力项）
+**达标线**：EX ≥0.6（substantial），整体 ≥0.4（moderate）可投，并诚实讨论。若三维都异常高，反查标注者是否偷看了 LLM 输出。
 
-- F6 RAG 是增强项，不应排在 pairwise gate 和 DPO 主链前面。
-- F8 行动建议型对初中生有说教和过早建议风险，仍放在最后；只有 P1-P4 完成且有余力时再做。
+### P1 产出（论文里的东西）
+
+- 一张 κ 表（三维 × 人工间/人机间）。
+- 一段 limitation 论述（ER/IP 残余局限）。
+- 一句结论：「LLM-judge 在本任务上达到与人工可比的一致性」——**这句是 DPO 一切结论的地基**。
 
 ---
 
-## 当前最小可投路径
+## 阶段 P-corpus：合成语料放量（F9 通过后启动）
+
+> 合成管线方法/脚本/config 已就绪（`emoedu-corpus-synthesis.md`），状态是「待 probe 校准后放量」。它不是临时脚本，是有 F1 清洗、损耗实测、命名红线的生产管线。这一段产出的就是 P2 DPO 要吃的偏好对。
+>
+> **启动前置：F9 必须先通过。** 放量前确认 F4 判分已经 F9 校验。若 F9 导致 F4 prompt/评分定义修改，必须用改后的 F4 重新生成偏好对——包括 probe 那 433 对也作废重跑。这就是 F9 排在放量前的核心原因：避免用未验证的 F4 大规模铸币。
+
+### 目标（已钉死）
+
+- 单位是 **usable preference pairs**，不是倾诉条数。目标 ~1200，最低 1000，软上限 1500。
+- 不要求格间均匀；适应型、压抑型（短句低信息量）偏少是预期，不强补。
+
+### 执行顺序
+
+- [ ] **先 dry-run**：`--mode probe --dry-run` 验脚本逻辑，不烧 API。
+- [ ] **跑 probe（试水批次）**：3 个代表格（反刍×同伴、外放×学业、适应×亲子）各 160 条，走完整链路。代表格跨越了产出谱系（高产格 + 低产适应型），实测系数更可信。
+- [ ] **实测损耗率**：记录 `accepted_rate / pair_rate / overall_yield`。**回到本节把实测 `overall_yield` 填这里**：`______`（probe 后回填）。
+- [ ] **校准放量**：用实测 yield 反推其余 12 格的 quota（per-cell 按格可变，非常量）；压抑型 3 格默认 +20% buffer。
+- [ ] **F1 当清洗器**：每条倾诉过 F1，非 green 或异常进 `quarantine_safety_only.jsonl`，不进常规池。这步同时又测了一轮 F1（和 P0 的八用例互补）。
+
+### 两个提醒
+
+- **子情境多样性已配置**（确定性轮换），所以 probe 的 yield 是可复现、可用来校准的——别中途改 config 否则系数失效。
+- **probe 系数若意外偏低**，先查是不是去重砍太狠（多样性不够），而不是急着加生成量。
+
+### probe 实测发现：文本多样 ≠ DPO 需要的多样（重要）
+
+probe（反刍×同伴 160 条）确认了去重有效、`accepted_rate=99.8%` 是真的——这 160 条事件载体真实变化（密室/篮球/奶茶店、擦黑板/拖地/值日…），不是换汤不换药。**但发现一个更深的问题：**
+
+这 160 条**事件多样，心理结构却高度同质**——全是「某社交挫折 + 是不是我哪里不好/我太敏感/我不够好」的自我归因反刍。这符合反刍型定义、prompt 没写错。问题在 DPO 视角：
+
+- DPO 学的不是「事件是密室还是篮球」，是「给定一类心理困境，好回应 vs 坏回应的策略梯度」。
+- 160 条心理同质 → F3 回应趋同 → F4 偏好对的差异模式也趋同 → **DPO 在「同一种心理困境」上反复训练 160 次，有效信息量远小于 160**。
+- 你的去重器查的是**文本相似度**（所以放过了这 160 条，字面确实不同），但 DPO 要的是**心理-策略多样性**，这个维度去重和多样性注入都没覆盖。
+
+**好消息：这个问题在跨网格层面自动缓解。** 压抑型（回避、说没事）、外放型（指责发泄）、适应型（能沟通）的心理结构彼此差异巨大，DPO 的心理多样性主要来自**格间**而非格内。
+
+### 据此调整放量策略（不返工 probe）
+
+- **per-cell 从 160 降到 ~80-100**：格内主要是事件换皮、心理同质，堆到百条以上边际收益低。省下的预算用于「15 格全覆盖 + 每格 variant_tags 组合尽量铺开」。**跨格多样性比格内深度对 DPO 更值钱。** probe 那格已生成的 160 条保留不动，仅对剩余 14 格生效。
+- **yield 算 raw 数量用 90.2% 没问题**（synthesis 算法对），**但别把 1200 对当成 1200 份 DPO 信息量**——真实有效信息量更接近「15 格 × 每格少数几种心理-回应模式」。
+- **这影响 P2 的预期，不影响现在放量**：若 P2 的 DPO 消融提升不明显，第一嫌疑是「偏好对心理多样性不足」，而非「数据量不够」。论文要诚实写这一点。
+
+### 放量后的加分检查（不阻塞）
+
+从最终偏好对里做**跨格抽样**：每格抽几对，人眼看「不同格的 winner 回应策略是否真的不同」。若不同格的好回应也长得差不多 → 警惕 F3 取向在不同心理结构上坍缩成同一种共情话术 → 这会直接打脸「多取向反趋同」主创新，需回查 F3 取向 prompt。
+
+---
+
+
+
+### 为什么排 RAG 前面
+
+mas-plan §十二把主创新定义为「用经校验的 LLM-judge 把权威量表算子化成可 **DPO** 的奖励信号，并实现自进化」。roadmap §5 的核心证据表里，「F7 DPO 见效 → 对标 CogMAS」是命门级消融。RAG 只是普通的「有无 RAG」消融，锦上添花。比赛时间有限，**先保 DPO 主链**。
+
+### 前置 & 实现要点
+
+- [ ] **偏好对来源**：你的 `preference_pairs` 表天然就是 DPO 训练料（winner=e⁺, loser=e⁻），免费。45 条情境出了 43 对，质量梯度真实。放量后的偏好对由 **P-corpus** 阶段产出（目标 ~1200 对）。
+- [ ] **命名红线（synthesis §7 焊死）**：F9 校验通过前，这些偏好对只能叫 `judge_unverified_preference_pairs`，**不得进 DPO 训练**。这把 P1→P2 的依赖从「建议」升级成数据命名层的强制——谁也没法偷偷拿未校验的对去训。**这是 F9 必须在 P2 前的第二重保险。**
+- [ ] **训练栈选型**（framework §3 标的 🚧）：LLaMA-Factory 或 trl 都行。比赛场景建议 trl 的 `DPOTrainer`——文档全、社区例子多、和 HF 生态无缝。底座先用一个能本地/低成本微调的小模型（DeepSeek API 不能直接 DPO，需换可训练的开源小模型作 F3 底座）。
+- [ ] **换底座后必须重验 F3**：同一套 system prompt 在新底座（Qwen 等）上行为会变——取向分化、temperature、回应风格都要重跑一遍 F3 的验证。**这是 P2 工作量的大头，预留好。**
+- [ ] **防坍缩**：DPO 必须带参考模型 KL 约束（trl 默认有），否则生成会坍缩。
+
+### P2 的消融实验（论文核心表）
+
+- [ ] **有无 DPO 对比**：同一批测试情境，DPO 前 vs DPO 后的 F3 输出，用**已经过 F9 校验的 F4** 打分，报告 EPITOME 三维提升。这就是「系统能自进化」的证据，直接对标 CogMAS。
+- [ ] 注意：评测用的 F4 必须是 F9 校验过的那版，否则又回到「AI 教 AI 无锚点」。**这就是为什么 F9 必须在 P2 之前。**
+
+---
+
+## 阶段 P3：F6 RAG + 消融（余力则做，不致命）
+
+- [ ] **向量库选型**（framework §3 🚧）：直接 **pgvector**。你 PostgreSQL 已在跑，几百条 RAG 语料不值得引第二个数据库。
+- [ ] **语料**：roadmap §4 阶段 3 写了批量生成 500-750 条 RAG 语料填池，接 F3 的 `rag_examples`（F3 spec 已留好这个空字段，MVP 传空）。
+- [ ] **消融**：有无 RAG 的回应质量对比，同样用 F9 校验过的 F4 评。
+- [ ] **时间不够就砍**：RAG 是加分项不是命门。比赛 deadline 紧时，P3 可以只在论文里作为 future work 或小规模 demo。
+
+---
+
+## 阶段 P4：F8 第三取向（明确放最后）
+
+文档反复强调的克制（framework §4、F3 spec §2）：「行动建议型」对初中生急着出主意，是 EPITOME「探索」的反面，**故意后加**。比赛阶段不碰，除非 P2/P3 全部完成且有余力。
+
+---
+
+## 两个带硬期限的技术债（别等冲刺时爆）
+
+- [ ] **DeepSeek 别名停用**：`deepseek-chat` 是兼容别名，**2026-07-24 停用**（roadmap 写明）。现在登记成带日期的 issue。迁移动作：默认模型改 `deepseek-v4-flash`，OpenAI SDK 调用传 `extra_body={"thinking": {"type": "disabled"}}` 显式关思考模式。
+- [ ] **F1 异常兜底语义**：见 P0 第一项，进 P0 前确认。
+
+---
+
+## 关键路径甘特（比赛视角）
 
 ```
-P0 已关闭
-  -> P1 F3/F4 + pairwise gate 收敛
-  -> P2 人工 A/B 校验通过
-  -> P3 corpus production 放量
-  -> P4 DPO + 消融
-  -> 论文可投
+P0 收尾 ─┐
+（并行）  │
+P1 F9校验 ─→ [F9过?] ─是→ P-corpus放量 ─→ P2 DPO+消融 ─→ 论文可投
+（闸门）      │                                              │
+             └─否→ 改F4 → 重测F9 → 再放量                   ├─→ P3 F6 RAG（余力/加分）
+                                                            └─→ P4 F8 第三取向（可砍）
 ```
 
-若 P2 不通过，返回 P1 修候选生成、输入包或 pairwise judge，不进入 production 和 DPO。
+- **F9 是闸门，不是普通一环**：它既是论文命门（证明 LLM-judge 可信），又是放量的前置（未过则偏好对只能 `judge_unverified`，且 F4 一改前期偏好对全作废）。
+- **顺序**：F9 → 放量 → DPO。先验金石再铸币。
+- **P0 并行**：F1 八用例 + 第三方动机收尾，不卡主链。
+- **可砍**：P3、P4 挂在 P2 之后，deadline 紧就降级为 future work。
+- **论文最小可投集**：P0 + P1 + P-corpus + P2，闭合「量表算子化 → F9 校验 → DPO 自进化」证据链。
 
 ---
 
-## 需要同步更新的文件
+## probe 跑完后，回来同步这些
 
-- F4 runtime 或 selection schema 变化：`docs/specs/f4-critic-epitome.md`、`docs/specs/f4-pairwise-selection.md`。
-- F9 / pairwise 结论变化：`docs/corpus/f9/README.md`、`docs/specs/f9-reliability-guide.md`。
-- 前端 trace 展示变化：`docs/frontend/` 与 `frontend/shared/src/types.ts`。
-- production 放量完成：本文件 P3、`docs/corpus/README.md`、`docs/corpus/production_quota_after_probe_001.json` 的后续说明。
+你现在去跑 probe。回来后 guide 需要用真实数字更新：
+
+- [ ] P-corpus 的 `overall_yield` 实测值填进去。
+- [ ] 用实测 yield 确认 1200 对目标要生成多少原始倾诉、各格 quota。
+- [ ] 若 probe 的 `pair_rate` 异常低（比如适应型/压抑型格趋近 0），评估是否要把目标从 1200 下调，或调整格子分配——这会反过来影响 P2 的 DPO 数据量预期。
+- [x] **Backend infrastructure acceptance gate (2026-05-26)**: PostgreSQL/Alembic migration, Redis history store, and `/chat` mock orchestrator integration were re-verified. Evidence: `docs/acceptance/backend-infrastructure/2026-05-26/backend-infrastructure-smoke.md`.

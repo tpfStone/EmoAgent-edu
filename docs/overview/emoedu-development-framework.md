@@ -1,7 +1,7 @@
 # 情感教育多智能体系统 · 开发框架文档
 
 > **用途**：开发总纲。明确「需求功能 + 逻辑链 + 各模块问题与注意点」，技术栈已定（复用 emoagent），具体实现细节标注为「🚧 后续盘」。
-> **配套**：F4 成对偏好主线见 `../specs/f4-pairwise-selection.md`；历史评分依据见 `emoedu-mas-plan.md`；语料合成见 `../corpus/emoedu-corpus-synthesis.md`。
+> **配套**：F4 成对偏好主线见 `../specs/f4-pairwise-selection-codex-spec.md`；历史评分依据见 `emoedu-mas-plan.md`；语料合成见 `../corpus/emoedu-corpus-synthesis.md`。
 > **定位**：面向初中生（12–15 岁）中文情感教育对话系统；国际比赛投稿。
 > **当前状态**：本文描述目标架构。现有 `/chat` 运行时仍使用 pointwise 分数择优；F4 目标主线已改为 pairwise，但 runtime/API/数据库/前端尚未完成迁移。
 
@@ -18,7 +18,7 @@
 ### 必做（MVP 范围）
 - **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red），黄红中断生成走转介。**必须读对话历史窗口**（危机信号常跨轮累积），非单条判断。
 - **F2 情境分析**：判定情境类型（学业压力/同伴关系/亲子摩擦）+ 激活的 CASEL 维度子集。对标 CogMAS 的 Q-matrix lookup。
-- **F3 多取向生成器**：≥2 个取向（情感共情型、认知共情型）并行生成候选。同底座 LLM + 不同 system prompt。
+- **F3 多取向生成器**：≥2 个取向（共情型、引导反思型）并行生成候选。同底座 LLM + 不同 system prompt。
 - **F4 Critic 成对偏好择优**：目标主线为 pairwise 比较候选回应，稳定时产出 winner/loser；EPITOME/CASEL 分数仅作为历史兼容和诊断材料。
 - **F5 回复 + 日志**：返回最佳回应；记录情境、候选、pairwise 判定、稳定性和必要的兼容字段，供后续验证与 DPO。
 
@@ -94,7 +94,7 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 - 🚧 用 prompt 分类 vs 复用 BERT 分类，后续盘。
 
 ### F3 多取向生成器
-- **⚠️ 初期只做 2 取向**（情感共情 + 认知共情）。认知共情型不是旧“引导反思型”，只把孩子已有视角和未说出口的担忧理解准，不递新角度、不催他往前走。第三取向作 F8 后加。
+- **⚠️ 初期只做 2 取向**（共情 + 引导反思）。「行动建议型」与情感辅导「共情优先」有张力——急着给初中生出主意常是 EPITOME「探索」的反面。第三取向作 F8 后加。
 - 多取向 = 同底座 + 不同 system prompt，不需多个模型；当前已实现两取向，第三取向是 F8 后续项。
 
 ### F4 Critic
@@ -157,25 +157,25 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 
 ---
 
-## 8. 工程落地状态（当前评估）
+## 8. 能否让 Codex 直接开发？（当前评估）
 
-| 模块 | 当前状态 | 下一步 |
+| 模块 | 信息是否齐 | 可否交 Codex |
 |---|---|---|
-| F1 安全门 | 已实现 C-SSRS 风险分级、历史窗口、yellow/red 转介和保守异常兜底；单列验收已通过。 | 继续维护危机样本回归集，避免后续 prompt 或模型切换造成漏报。 |
-| F2 情境分析 | `/chat` 已接入三类情境与 CASEL 激活维度。 | 评估 prompt 分类与 BERT 分类的成本、稳定性和可解释性。 |
-| F3 生成器 | `/chat` 已接入两取向候选生成；第三取向仍是 F8 后续项。 | 修复 pairwise pilot 暴露的候选质量和取向坍缩风险。 |
-| F4 Critic | 当前 `/chat` 仍使用 pointwise `weighted_total` 择优；pairwise 服务与离线脚本已存在，但尚未成为默认 runtime。 | 先修 pairwise 判定稳定性和输入包，再迁移 runtime/API/数据库/前端 trace。 |
-| F5 日志 | 已落库对话、候选、分数和当前偏好对记录。 | pairwise runtime 上线时补齐 winner/loser、稳定性、invalid/unstable 原因等字段。 |
-| F6 RAG | 仍为后续增强项；合成语料可作为候选池来源，但当前 `/chat` 传空 `rag_examples`。 | 放量语料通过安全清洗后，再评估 pgvector 等实现。 |
-| F7 DPO | 未启动；依赖 F9/pairwise gate。 | 只使用通过验证的稳定偏好对，训练栈另行选型。 |
+| F1 安全门 | ✅ 齐（C-SSRS 分级 + 12356/12355 + 历史窗口要求） | ✅ 可写完整规格后全权 |
+| F2 情境分析 | 🟡 基本齐（三类情境定义有，分类实现方式待定） | 🟡 规格补全后可 |
+| F3 生成器 | 🟡 取向定了，system prompt 未写 | 🟡 补 prompt 后可 |
+| F4 Critic | 🟡 pairwise 目标规格已定；runtime/API/数据层/前端尚未迁移 | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |
+| F5 日志 | ✅ 齐 | ✅ |
+| F6 RAG | ❌ 依赖语料 + 向量库选型 | ❌ 暂不 |
+| F7 DPO | ❌ 依赖 F9 + 训练栈 | ❌ 暂不 |
 
-**结论**：当前后端已跑通 F1-F4 与 `/chat`，但 F4 pairwise 仍处在离线验证和迁移前状态。下一阶段优先级是修复 pairwise gate 暴露的问题，再做 runtime adapter、trace、API、数据库和前端控制台迁移。
+**结论**：整体不能一次性全权。当前后端已跑通 F1-F4 与 `/chat`，下一阶段优先级应转为：先完成 F4 pairwise runtime adapter 与 trace，再同步 API、数据库和前端控制台，最后重新跑 F9/pairwise gate。
 
 ---
 
 ## 9. 下一步待办
 
-- [ ] 写 F1 安全门完整实现规格（prompt 全文 + 含历史窗口的 IO schema + 三级转介 + 测试用例）
+- [ ] 写 F1 安全门完整 Codex 规格（prompt 全文 + 含历史窗口的 IO schema + 三级转介 + 测试用例）
 - [ ] 将 F4 从 pointwise runtime 迁移到 pairwise runtime adapter
 - [ ] 更新 API schema、数据库记录和前端控制台 trace，停止把分数作为主证据
 - [ ] 定 F2 分类实现（prompt vs 复用 BERT）

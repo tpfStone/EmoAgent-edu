@@ -32,7 +32,7 @@ async def test_critic_run_dao_persists_run_and_candidate_scores(db_session):
         history=[],
         activated_casel=[],
         candidates=[
-            {"candidate_id": "c1", "orientation": "情感共情型", "text": "我听见你很难受。"}
+            {"candidate_id": "c1", "orientation": "共情型", "text": "我听见你很难受。"}
         ],
         scores=[
             {

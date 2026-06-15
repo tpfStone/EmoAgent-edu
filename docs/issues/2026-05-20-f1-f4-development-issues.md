@@ -1,4 +1,4 @@
-﻿# F1/F4 开发问题记录
+# F1/F4 开发问题记录
 
 > 记录时间：2026-05-20
 > 处理策略：记录并继续开发。以下问题不阻塞 F1/F4 第一版实现。
@@ -7,7 +7,7 @@
 
 1. EPITOME 评分尺度存在文档口径不一致。
    - `docs/overview/emoedu-mas-plan.md` 中曾出现 `1-5` 分表述。
-   - `docs/overview/emoedu-development-framework.md` 与 `docs/specs/f4-critic-epitome.md` 明确要求 EPITOME 使用原框架 `0/1/2`。
+   - `docs/overview/emoedu-development-framework.md` 与 `docs/specs/f4-critic-epitome-codex-spec.md` 明确要求 EPITOME 使用原框架 `0/1/2`。
    - 本轮实现按 F4 规格执行：`ER/IP/EX = 0/1/2`。
 
 2. `docs/figures/figure-1-three-phase-lifecycle.svg` 中“人在环偏好标注”容易被理解为大量人工标注。

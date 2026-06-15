@@ -82,13 +82,6 @@ LOW_SCORE_REVIEW_COLUMNS = [
     "候选文本",
 ]
 
-LEGACY_ORIENTATION_SLOT_MAP = {
-    # Historical F9 analysis files used the old labels. These are slot mappings
-    # for rerun compatibility only; they do not imply semantic equivalence.
-    "共情型": "c1",
-    "引导反思型": "c2",
-}
-
 
 @dataclass(frozen=True)
 class F9Case:
@@ -377,11 +370,6 @@ def _selected_orientation_candidate(generated_response, orientation: str):
     for candidate in generated_response.candidates:
         if candidate.orientation == orientation:
             return candidate
-    legacy_candidate_id = LEGACY_ORIENTATION_SLOT_MAP.get(orientation)
-    if legacy_candidate_id is not None:
-        for candidate in generated_response.candidates:
-            if candidate.candidate_id == legacy_candidate_id:
-                return candidate
     raise ValueError(f"generated response has no orientation {orientation!r}")
 
 

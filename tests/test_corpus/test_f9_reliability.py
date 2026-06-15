@@ -55,7 +55,7 @@ def test_analyze_f9_annotations_merges_scores_and_writes_summary(tmp_path):
             {
                 "sample_no": 1,
                 "scenario": "学业压力",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "倾诉1",
                 "对话历史": "[]",
                 "候选文本": "候选1",
@@ -70,7 +70,7 @@ def test_analyze_f9_annotations_merges_scores_and_writes_summary(tmp_path):
             {
                 "sample_no": 2,
                 "scenario": "同伴关系",
-                "orientation": "认知共情型",
+                "orientation": "引导反思型",
                 "用户倾诉": "倾诉2",
                 "对话历史": "[]",
                 "候选文本": "候选2",
@@ -85,7 +85,7 @@ def test_analyze_f9_annotations_merges_scores_and_writes_summary(tmp_path):
             {
                 "sample_no": 3,
                 "scenario": "亲子摩擦",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "倾诉3",
                 "对话历史": "[]",
                 "候选文本": "候选3",
@@ -156,7 +156,7 @@ def test_analyze_f9_annotations_rejects_missing_human_scores(tmp_path):
             {
                 "sample_no": 1,
                 "scenario": "学业压力",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "倾诉",
                 "对话历史": "[]",
                 "候选文本": "候选",

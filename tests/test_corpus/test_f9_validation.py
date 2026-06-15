@@ -14,9 +14,7 @@ from scripts.corpus.f9_validation import (
     load_cases,
     low_score_review_rows,
     make_blind_row,
-    _selected_orientation_candidate,
 )
-from app.schemas.generator import GeneratorCandidate, GeneratorGenerateResponse
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict]):
@@ -36,14 +34,14 @@ def test_load_cases_joins_analysis_and_blind_history(tmp_path):
             {
                 "sample_no": "3",
                 "scenario": "同伴关系",
-                "orientation": "情感共情型",
+                "orientation": "共情型",
                 "用户倾诉": "他们没叫我。",
                 "候选文本": "旧候选",
             },
             {
                 "sample_no": "15",
                 "scenario": "学业压力",
-                "orientation": "认知共情型",
+                "orientation": "引导反思型",
                 "用户倾诉": "作业很多。",
                 "候选文本": "旧候选2",
             },
@@ -109,7 +107,7 @@ def test_make_blind_row_contains_no_f4_scores():
     row = make_blind_row(
         sample_no=1,
         scenario="同伴关系",
-        orientation="情感共情型",
+        orientation="共情型",
         user_message="我很难受。",
         history_json="[]",
         candidate_text="候选",
@@ -119,26 +117,6 @@ def test_make_blind_row_contains_no_f4_scores():
     assert "F4_ER" not in row
     assert row["A_ER"] == ""
     assert row["B_EX"] == ""
-
-
-def test_selected_orientation_candidate_maps_legacy_labels_to_current_slots():
-    response = GeneratorGenerateResponse(
-        candidates=[
-            GeneratorCandidate(
-                candidate_id="c1",
-                orientation="情感共情型",
-                text="候选一",
-            ),
-            GeneratorCandidate(
-                candidate_id="c2",
-                orientation="认知共情型",
-                text="候选二",
-            ),
-        ]
-    )
-
-    assert _selected_orientation_candidate(response, "共情型").candidate_id == "c1"
-    assert _selected_orientation_candidate(response, "引导反思型").candidate_id == "c2"
 
 
 def test_golden_sample_order_keeps_positive_controls():

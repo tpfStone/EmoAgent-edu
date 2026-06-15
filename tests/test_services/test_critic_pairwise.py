@@ -14,7 +14,7 @@ from app.services.critic_pairwise import (
 from app.services.llm_client import MockLLMClient
 
 
-def _candidate(candidate_id: str, text: str, orientation: str = "情感共情型"):
+def _candidate(candidate_id: str, text: str, orientation: str = "共情型"):
     return PairwiseCandidate(
         candidate_id=candidate_id,
         orientation=orientation,
@@ -31,30 +31,11 @@ def _context():
     )
 
 
-def _context_with_casel():
-    return PairwiseContext(
-        pair_id="p001",
-        session_id="session-1",
-        user_message="我听说同学在背后说我爱表现。",
-        history=[ConversationMessage(role="student", text="前文")],
-        activated_casel=["自我觉察引导", "关系技能培养"],
-    )
-
-
-def _judge(
-    winner: str,
-    reason: str = "A 更具体",
-    *,
-    epitome_comparison: dict[str, str] | None = None,
-    casel_comparisons: dict[str, str] | None = None,
-):
+def _judge(winner: str, reason: str = "A 更具体"):
     return json.dumps(
         {
             "winner": winner,
             "reason": reason,
-            "epitome_comparison": epitome_comparison
-            or {"ER": "A", "IP": "tie", "EX": "A"},
-            "casel_comparisons": casel_comparisons or {},
             "boundary_concern": False,
             "boundary_reason": "",
         },
@@ -101,115 +82,6 @@ async def test_judge_sample_prompt_hides_candidate_metadata(fake_llm_client):
 
 
 @pytest.mark.asyncio
-async def test_judge_sample_prompt_includes_only_activated_casel_dimensions(
-    fake_llm_client,
-):
-    llm = fake_llm_client(
-        [
-            _judge(
-                "A",
-                casel_comparisons={"自我觉察引导": "A", "关系技能培养": "tie"},
-            ),
-            _judge(
-                "B",
-                casel_comparisons={"自我觉察引导": "B", "关系技能培养": "tie"},
-            ),
-        ]
-    )
-    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
-
-    await service.judge_sample(
-        _context_with_casel(),
-        _candidate("c1", "AAA"),
-        _candidate("c2", "BBB", "reflection"),
-        sample_no=1,
-    )
-
-    combined_prompts = "\n".join(item["prompt"] for item in llm.prompts)
-    assert "CASEL" in combined_prompts
-    assert "casel_comparisons" in combined_prompts
-    assert "自我觉察引导" in combined_prompts
-    assert "关系技能培养" in combined_prompts
-    assert "社会觉察培养" not in combined_prompts
-
-
-@pytest.mark.asyncio
-async def test_judge_sample_records_pairwise_epitome_and_casel_trace(
-    fake_llm_client,
-):
-    llm = fake_llm_client(
-        [
-            _judge(
-                "A",
-                epitome_comparison={"ER": "A", "IP": "tie", "EX": "B"},
-                casel_comparisons={"自我觉察引导": "A", "关系技能培养": "tie"},
-            ),
-            _judge(
-                "B",
-                epitome_comparison={"ER": "B", "IP": "tie", "EX": "A"},
-                casel_comparisons={"自我觉察引导": "B", "关系技能培养": "tie"},
-            ),
-        ]
-    )
-    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
-
-    result = await service.judge_sample(
-        _context_with_casel(),
-        _candidate("c1", "AAA"),
-        _candidate("c2", "BBB", "reflection"),
-        sample_no=1,
-    )
-
-    assert result.stable is True
-    assert result.stable_winner_id == "c1"
-    assert result.judgment_1_epitome_comparison == {
-        "ER": "c1",
-        "IP": "tie",
-        "EX": "c2",
-    }
-    assert result.judgment_2_epitome_comparison == {
-        "ER": "c1",
-        "IP": "tie",
-        "EX": "c2",
-    }
-    assert result.judgment_1_casel_comparisons == {
-        "自我觉察引导": "c1",
-        "关系技能培养": "tie",
-    }
-    assert result.judgment_2_casel_comparisons == {
-        "自我觉察引导": "c1",
-        "关系技能培养": "tie",
-    }
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "casel_comparisons",
-    [
-        {},
-        {"自我觉察引导": "A", "关系技能培养": "tie", "社会觉察培养": "B"},
-        {"自我觉察引导": "C", "关系技能培养": "tie"},
-    ],
-)
-async def test_judge_sample_rejects_invalid_activated_casel_trace(
-    fake_llm_client,
-    casel_comparisons,
-):
-    llm = fake_llm_client([_judge("A", casel_comparisons=casel_comparisons)])
-    service = CriticPairwiseService(llm, Settings(CRITIC_SAMPLE_COUNT=1))
-
-    result = await service.judge_sample(
-        _context_with_casel(),
-        _candidate("c1", "AAA"),
-        _candidate("c2", "BBB", "reflection"),
-        sample_no=1,
-    )
-
-    assert result.invalid is True
-    assert "casel_comparisons" in result.reason
-
-
-@pytest.mark.asyncio
 async def test_judge_sample_maps_two_independent_orders_to_same_candidate(
     fake_llm_client,
 ):
@@ -219,7 +91,7 @@ async def test_judge_sample_maps_two_independent_orders_to_same_candidate(
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "你反复想是不是自己做错了，会很堵。"),
-        _candidate("c2", "别太在意，大家都会这样。", "认知共情型"),
+        _candidate("c2", "别太在意，大家都会这样。", "引导反思型"),
         sample_no=1,
     )
 
@@ -244,7 +116,7 @@ async def test_judge_sample_marks_position_conflict_unstable(fake_llm_client):
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "认知共情型"),
+        _candidate("c2", "候选二", "引导反思型"),
         sample_no=1,
     )
 
@@ -325,7 +197,7 @@ async def test_judge_sample_marks_parse_failure_invalid(fake_llm_client):
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "认知共情型"),
+        _candidate("c2", "候选二", "引导反思型"),
         sample_no=1,
     )
 
@@ -400,7 +272,7 @@ async def test_project_mock_llm_returns_valid_pairwise_json():
     result = await service.judge_sample(
         _context(),
         _candidate("c1", "候选一"),
-        _candidate("c2", "候选二", "认知共情型"),
+        _candidate("c2", "候选二", "引导反思型"),
         sample_no=1,
     )
 

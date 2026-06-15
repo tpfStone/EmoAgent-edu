@@ -4,15 +4,13 @@
 
 ## 0. 当前结论
 
-`docs/specs/f4-pairwise-selection.md` 的方向成立，但不能直接按原文实现。原文把 pairwise 改造写成“在现有 pointwise prompt 后追加一段”的增量改造；实际代码中 F4 critic 是逐候选独立打分，再用 `weighted_total` 做 argmax 择优。因此，这一轮必须先做 **离线 pairwise pilot + 人工 A/B 验证**，在证据达标前不切换 `/chat` 的默认择优器。
+`docs/specs/f4-pairwise-selection-codex-spec.md` 的方向成立，但不能直接按原文实现。原文把 pairwise 改造写成“在现有 pointwise prompt 后追加一段”的增量改造；实际代码中 F4 critic 是逐候选独立打分，再用 `weighted_total` 做 argmax 择优。因此，这一轮必须先做 **离线 pairwise pilot + 人工 A/B 验证**，在证据达标前不切换 `/chat` 的默认择优器。
 
-2026-05-27 追加：Phase A.1 的 10 对 smoke 已完成，结论是工具链可用但不足以判断 pairwise 优劣。下一步仍是 Phase A 修正重跑，不进入 Phase B；执行口径见 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`。
+2026-05-27 追加：10 对 smoke 已完成，结论是工具链可用但不足以判断 pairwise 优劣。下一步仍是 Phase A 修正重跑，不进入 Phase B；执行口径见 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md`。
 
-2026-05-28 追加：Phase A.2 rerun 已完成候选生成、人工 A/B 标注、pairwise judge、正式 3-sample pointwise baseline 和 eval。主 rerun 24 对，三方交集 `comparison_intersection_pairs=7`，低于计划下限 `12`；`critic_human_agreement=0.429`，`agreement_delta_vs_pointwise=0.000`。本轮结论为 `inconclusive`，不能进入 Phase B，也不能切换 `/chat` 默认择优器。当前状态以 `docs/corpus/f9/pairwise-selection-pilot/README.md`、`phase-a-rerun-plan.md` 和 `reports/phase-a-rerun/f9_pairwise_rerun_conclusion.md` 为准。
+2026-05-28 追加：Phase A rerun 已完成候选生成、pairwise judge 与正式 3-sample pointwise baseline；主 rerun 产物见 `docs/corpus/f9/pairwise-selection-pilot/inputs/phase-a-rerun/`、`runs/phase-a-rerun/`、`annotations/phase-a-rerun/`。当前 24 对主集场景均衡（亲子/同伴/学业各 8），pairwise stable 为 `14/24`、无 invalid，pointwise baseline 为 `24/24` 且 `pointwise_sample_count=3`。人工 A/B 标注尚未完成，因此还没有 go/no-go 结论，下一步是填写 `annotations/phase-a-rerun/f9_pairwise_rerun_human_ab.csv` 后运行 eval。
 
-2026-05-29 追加：F3 已切到 IRI 取向：`情感共情型` 与 `认知共情型`。当前阶段 A 的执行入口改为 `phase-a-rerun-plan.md` 中的 Phase A.3。`c1/c2` 只表示候选槽位，不表示取向；正式 pairwise 实验必须在冻结输入包中均衡或随机映射取向到候选槽位，并在 eval 中按候选槽位、取向和 raw pattern 分层检查。
-
-上一轮五条评审意见的回应合理，全部采纳：
+Claude 对 Codex 五条评审意见的回应合理，全部采纳：
 
 1. **调用形态不匹配**：采纳。pairwise 是 per-pair 调用形态，不是 per-candidate prompt 的局部追加。
 2. **单次调用不能干净抵消位置偏见**：采纳。pilot 默认使用两次独立调用，先求验证干净，再评估降本。
@@ -54,11 +52,11 @@ docs/corpus/f9/pairwise-selection-pilot/
 - 验证 pairwise judge 是否比当前 pointwise `weighted_total` argmax 更接近人工偏好。
 - 建立一套可复跑的 F9 A/B 验证流程：同一 turn 两个候选、人工 A/B 真值、critic pairwise 判断、agreement 指标。
 - 保留当前 EPITOME/CASEL/boundary pointwise 打分作为诊断分，不再把它未经验证地当成择优真值。
-- 为未来 Phase B 受控运行时集成准备清晰的 schema、配置和数据口径，但本轮不直接上线。
+- 为未来 runtime 切换准备清晰的 schema、配置和数据口径，但本轮不直接上线。
 
 ### 非目标
 
-- 不修改 F1/F2/F3 的运行时接口。
+- 不修改 F1/F2/F3 的 runtime 接口。
 - 不把 `CRITIC_SELECTION_MODE=pairwise` 设为默认。
 - 不把旧 pointwise 人工标注转译成 pairwise 真值。
 - 不生成正式 DPO 数据集；本轮最多生成“DPO 候选池”，且只包含 `pairwise_stable` 来源。
@@ -105,7 +103,7 @@ pair_id,sample_no,scenario,user_text,history_json,c1_orientation,c1_text,c2_orie
 输入来源优先级：
 
 1. **优先：重新从 F3 生成冻结候选对**  
-   使用当前 `GeneratorService` 对选定样本生成 IRI 两取向候选：`情感共情型` 与 `认知共情型`。F3 运行时输出可以仍使用 `c1/c2` 作为兼容候选槽位，但正式 pairwise 冻结输入包必须均衡或随机映射取向到 `c1/c2`，并记录映射。这样既贴近未来运行时场景，又避免把候选槽位和取向绑死。
+   使用当前 `GeneratorService` 对选定样本生成 `c1=共情型` 和 `c2=引导反思型`，保留两个候选。这样最贴近未来 runtime 场景。
 
 2. **可用于 smoke：已有包含双候选的 golden generated 包**  
    例如 `docs/corpus/f9/validation/golden/f9_golden_generated_scores.csv` 已按 generated candidates 输出多行，可用于小样本 smoke。但它不是完整正式 pilot 输入。
@@ -268,15 +266,13 @@ estimated_cost_or_latency
   - `agreement_delta_vs_pointwise >= +10pp`。若 pointwise baseline 明显低于旧 R10 的 11/20，也要解释原因。
   - `boundary_selection_error_count = 0`。
 
-如果 pilot 未达标，不能切换运行时；应回到 pairwise prompt、模型、输入包质量或 F3 生成策略继续定位。
+如果 pilot 未达标，不能切换 runtime；应回到 pairwise prompt、模型、输入包质量或 F3 生成策略继续定位。
 
-### 阶段 B：受控运行时集成候选方案
+### 阶段 B：Runtime 切换候选方案
 
 阶段 B 只有在阶段 A 达标并经人工确认后启动。
 
-阶段 B 不是“直接把 `/chat` 默认切到 pairwise”。它是受控运行时集成阶段，至少包括运行时 adapter、配置开关、schema/log 字段、fallback、灰度或 shadow 验证；默认切换必须等 Phase B gate 通过。
-
-未来运行时集成应做：
+未来 runtime 切换应做：
 
 - 新增 response schema：
   - `selection_method`
@@ -286,7 +282,7 @@ estimated_cost_or_latency
   - `pointwise`
   - `pairwise_offline_only`
   - `pairwise`
-- 运行时初期默认仍使用两次独立 pairwise 调用；单次调用双排序只作为后续降本实验。
+- runtime 初期默认仍使用两次独立 pairwise 调用；单次调用双排序只作为后续降本实验。
 - `turns` / `critic_runs` 是否新增 `selection_method`、`pairwise_result` 需要配套 Alembic migration。
 - DPO 导出脚本只导出 `selection_method=pairwise_stable` 且 `pairwise_confidence in {unanimous, majority_with_unstable}` 的样本；`split_majority` 默认需人工复核。
 
@@ -318,7 +314,7 @@ estimated_cost_or_latency
 以下内容放到阶段 A 达标后再做：
 
 - 单次 LLM 调用内同时输出 `(c1,c2)` 与 `(c2,c1)`，与两次独立调用做一致性和成本对照。
-- 把 pointwise 与 pairwise 合并到同一个 per-pair 运行时 prompt。
+- 把 pointwise 与 pairwise 合并到同一个 per-pair runtime prompt。
 - 3+ 候选 pairwise tournament、Bradley-Terry 或 Elo 聚合。
 - 数据库正式记录 `selection_method`、`pairwise_result`、`pairwise_confidence`。
 - DPO 数据抽取加入 pairwise confidence 分层和人工复核队列。
@@ -334,13 +330,13 @@ estimated_cost_or_latency
 4. 写 `f9_pairwise_pointwise_baseline.py`，在同一候选对上生成旧 pointwise `weighted_total` 对照。
 5. 写 `f9_pairwise_eval.py`，对齐人工 A/B、pairwise、pointwise baseline，输出 smoke report。
 6. smoke report 通过后，扩展到 30-40 对 pilot 主集。
-7. pilot 达标后，再写 Phase B 受控运行时集成 spec 和实施计划。
+7. pilot 达标后，再写 runtime 切换 spec 和实施计划。
 
 ---
 
 ## 8. 已落地的阶段 A 工具
 
-当前已完成离线阶段 A 的基础工具，不改变 `/chat` 运行时：
+当前已完成离线阶段 A 的基础工具，不改变 `/chat` runtime：
 
 | 工具 | 作用 | 主要产物 |
 |---|---|---|
@@ -374,9 +370,9 @@ C:\Python313\python.exe -m pytest -q
 
 ## 9. 与原 pairwise 草案的关系
 
-`docs/specs/f4-pairwise-selection.md` 保留为方向性草案；本文件是阶段 A 大轮试验方案。Phase A.1 的工具链和 smoke 记录以 `phase-a-implementation-plan.md` 为准；Phase A.2 的 rerun 计划、结果和下一步以 `phase-a-rerun-plan.md` 为准。若文档冲突，优先级为：`README.md` 当前状态 > `phase-a-rerun-plan.md` > `phase-a-implementation-plan.md` > 本文件 > 原 spec。
+`docs/specs/f4-pairwise-selection-codex-spec.md` 保留为方向性草案；本文件是阶段 A 初版执行基准。10 对 smoke 后的下一轮执行以 `docs/corpus/f9/pairwise-selection-pilot/phase-a-rerun-plan.md` 为准。若三者冲突，优先级为：`phase-a-rerun-plan.md` > 本文件 > 原 spec。
 
 - 以两次独立调用为 pilot 默认，而不是单次调用双排序。
-- 以离线 pilot 验证为前置，而不是直接改运行时默认择优。
+- 以离线 pilot 验证为前置，而不是直接改 runtime 默认择优。
 - 以人工 A/B 新标注为真值，而不是旧 pointwise 人标。
 - 以 `pairwise_stable` 作为 DPO 候选入口，其他 selection method 只做诊断。

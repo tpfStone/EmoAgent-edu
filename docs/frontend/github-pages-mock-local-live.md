@@ -44,7 +44,7 @@ GitHub Actions workflow：`.github/workflows/pages-mock.yml`。
 启用方式：
 
 1. 在 GitHub 仓库 Settings -> Pages 中选择 **GitHub Actions** 作为 source。
-2. 推送到 `master` / `main`，或手动运行 `Deploy mock frontends to GitHub Pages` workflow。
+2. 推送到 `main` 或手动运行 `Deploy mock frontends to GitHub Pages` workflow。
 3. 打开 Pages URL，进入 `/student/` 或 `/console/`。
 
 ## 本机 Live

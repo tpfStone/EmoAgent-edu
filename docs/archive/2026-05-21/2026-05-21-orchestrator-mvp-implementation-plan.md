@@ -1,4 +1,4 @@
-﻿# Orchestrator MVP Implementation Plan
+# Orchestrator MVP Implementation Plan
 
 > **Archive note:** This 2026-05-21 implementation plan is kept for historical task breakdown and execution context. Current acceptance status lives in `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`; current post-MVP planning lives in `docs/overview/emoedu-post-mvp-guide.md`.
 
@@ -32,7 +32,7 @@
   - Add Redis async client dependency.
 - Modify `app/services/critic_service.py`
   - Bound CASEL contribution by averaging activated CASEL scores before applying the auxiliary weight.
-- Modify `docs/specs/f4-critic-epitome.md`
+- Modify `docs/specs/f4-critic-epitome-codex-spec.md`
   - Update the scoring formula from per-dimension CASEL sum to bounded CASEL mean.
 - Modify `app/config.py`
   - Add `REDIS_URL`, `CHAT_HISTORY_TTL_SECONDS`, and chat fallback config.
@@ -75,7 +75,7 @@
 **Files:**
 - Modify: `app/services/critic_service.py`
 - Modify: `tests/test_services/test_critic_service.py`
-- Modify: `docs/specs/f4-critic-epitome.md`
+- Modify: `docs/specs/f4-critic-epitome-codex-spec.md`
 
 - [ ] **Step 1: Update CASEL weighting tests**
 
@@ -170,7 +170,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Update F4 spec**
 
-In `docs/specs/f4-critic-epitome.md`, replace the CASEL scoring formula text with:
+In `docs/specs/f4-critic-epitome-codex-spec.md`, replace the CASEL scoring formula text with:
 
 ```markdown
 - **加权总分** = ER + IP + EX + CASEL_TOTAL_WEIGHT * mean(casel_scores)

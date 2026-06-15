@@ -13,7 +13,7 @@ export type RiskLevel = "green" | "yellow" | "red";
 
 export type ScenarioLabel = "学业压力" | "同伴关系" | "亲子摩擦" | "其他";
 
-export type GeneratorOrientation = "情感共情型" | "认知共情型";
+export type GeneratorOrientation = "共情型" | "引导反思型";
 
 export interface GeneratorCandidate {
   candidate_id: string;
