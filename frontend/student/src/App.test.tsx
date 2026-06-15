@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
 
 const localRecordNotice =
-  '这里只整理这台设备上的聊天记录，方便你回到刚才的话题。我不会分析或记住"你是什么样的人"，也不会把这些发到别处。';
+  "这里会整理这台设备上的聊天记录，方便你回到刚才的话题。点“让我忘记”后，会清除本地记录，并请求后端删除同一匿名身份下的记忆缓存。";
 const breathingCopy = "吸气四秒，呼气四秒。";
 
 describe("student screenshot-style information architecture", () => {

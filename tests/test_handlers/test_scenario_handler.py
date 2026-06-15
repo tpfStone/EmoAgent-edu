@@ -3,6 +3,7 @@ import pytest
 
 from app.dependencies import get_scenario_service
 from app.main import app
+from app.schemas.safety import SafetyAction, SafetyGateResponse
 from app.schemas.scenario import ScenarioAnalyzeResponse
 
 
@@ -12,6 +13,12 @@ class FakeScenarioService:
             scenario="同伴关系",
             scenario_confidence=0.91,
             activated_casel=["自我觉察引导", "社会觉察培养", "关系技能培养"],
+            secondary_safety=SafetyGateResponse(
+                risk_level="green",
+                matched_signals=[],
+                rationale="F2 二次安全复核通过。",
+                action=SafetyAction(block_generation=False, referral_message=""),
+            ),
             rationale="与同伴互动受挫有关。",
         )
 

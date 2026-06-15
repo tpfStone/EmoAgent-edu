@@ -29,7 +29,7 @@ class FakeAsyncOpenAI:
 
 
 @pytest.mark.asyncio
-async def test_deepseek_client_forwards_thinking_config(monkeypatch):
+async def test_deepseek_client_forwards_disabled_thinking_config(monkeypatch):
     FakeAsyncOpenAI.instances = []
     monkeypatch.setattr(llm_client_module, "AsyncOpenAI", FakeAsyncOpenAI)
     client = DeepSeekLLMClient(
@@ -45,3 +45,41 @@ async def test_deepseek_client_forwards_thinking_config(monkeypatch):
     call = FakeAsyncOpenAI.instances[0].completions.calls[0]
     assert call["model"] == "deepseek-v4-flash"
     assert call["extra_body"] == {"thinking": {"type": "disabled"}}
+
+
+@pytest.mark.asyncio
+async def test_deepseek_client_forwards_enabled_thinking_config(monkeypatch):
+    FakeAsyncOpenAI.instances = []
+    monkeypatch.setattr(llm_client_module, "AsyncOpenAI", FakeAsyncOpenAI)
+    client = DeepSeekLLMClient(
+        api_key="key",
+        base_url="https://api.deepseek.com",
+        model="deepseek-v4-flash",
+        thinking_type="enabled",
+    )
+
+    result = await client.generate("prompt")
+
+    assert result == "ok"
+    call = FakeAsyncOpenAI.instances[0].completions.calls[0]
+    assert call["model"] == "deepseek-v4-flash"
+    assert call["extra_body"] == {"thinking": {"type": "enabled"}}
+
+
+@pytest.mark.asyncio
+async def test_deepseek_client_omits_thinking_config_when_unset(monkeypatch):
+    FakeAsyncOpenAI.instances = []
+    monkeypatch.setattr(llm_client_module, "AsyncOpenAI", FakeAsyncOpenAI)
+    client = DeepSeekLLMClient(
+        api_key="key",
+        base_url="https://api.deepseek.com",
+        model="deepseek-v4-flash",
+        thinking_type=None,
+    )
+
+    result = await client.generate("prompt")
+
+    assert result == "ok"
+    call = FakeAsyncOpenAI.instances[0].completions.calls[0]
+    assert call["model"] == "deepseek-v4-flash"
+    assert "extra_body" not in call

@@ -1,5 +1,10 @@
 import { MOCK_SAMPLES, getSampleById } from "./samples";
-import type { ChatRequest, FullChatResponse, StudentChatView } from "./types";
+import type {
+  ChatRequest,
+  ChatStreamEvent,
+  FullChatResponse,
+  StudentChatView,
+} from "./types";
 
 const env =
   ((import.meta as unknown as { env?: Record<string, string | undefined> }).env ??
@@ -53,6 +58,19 @@ function buildChatUrl(): string {
   return `${baseUrl.replace(/\/$/, "")}/chat`;
 }
 
+function buildChatStreamUrl(): string {
+  return `${baseUrl.replace(/\/$/, "")}/chat/stream`;
+}
+
+function buildMemoryUrl(anonymousUserId: string): string {
+  const root =
+    baseUrl.replace(/\/$/, "") ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost");
+  const url = new URL(`${root}/api/memory`);
+  url.searchParams.set("anonymous_user_id", anonymousUserId);
+  return url.toString();
+}
+
 export async function fetchChat(request: ChatRequest): Promise<FullChatResponse> {
   if (mode === "mock") {
     return getMockResponse(request) ?? MOCK_SAMPLES[0];
@@ -73,15 +91,118 @@ export async function fetchChat(request: ChatRequest): Promise<FullChatResponse>
   return (await response.json()) as FullChatResponse;
 }
 
+export interface StreamChatOptions {
+  onEvent?: (event: ChatStreamEvent) => void;
+  onDelta?: (text: string) => void;
+}
+
+export async function fetchStudentChatStream(
+  request: ChatRequest,
+  options: StreamChatOptions = {},
+): Promise<StudentChatView> {
+  if (mode === "mock") {
+    const response = getMockResponse(request) ?? MOCK_SAMPLES[0];
+    const view = toStudentView(response, request.anonymous_user_id ?? null);
+    const { reply_text: _replyText, ...metadata } = response;
+    options.onEvent?.({ event: "metadata", data: metadata });
+    for (let index = 0; index < response.reply_text.length; index += 2) {
+      const text = response.reply_text.slice(index, index + 2);
+      options.onDelta?.(text);
+      options.onEvent?.({ event: "delta", data: { text } });
+      await Promise.resolve();
+    }
+    options.onEvent?.({ event: "done", data: { ...response, anonymous_user_id: view.anonymous_user_id ?? null } });
+    return view;
+  }
+
+  const response = await fetch(buildChatStreamUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Chat stream failed with status ${response.status}`);
+  }
+  if (!response.body) {
+    throw new Error("Chat stream response body is empty");
+  }
+
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffer = "";
+  let finalResponse: FullChatResponse | null = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split(/\n\n/);
+    buffer = events.pop() ?? "";
+    for (const rawEvent of events) {
+      const parsed = parseSseEvent(rawEvent);
+      if (!parsed) continue;
+      options.onEvent?.(parsed);
+      if (parsed.event === "delta") {
+        options.onDelta?.(parsed.data.text);
+      }
+      if (parsed.event === "done") {
+        finalResponse = parsed.data;
+      }
+      if (parsed.event === "error") {
+        throw new Error(parsed.data.message);
+      }
+    }
+  }
+
+  if (!finalResponse) {
+    throw new Error("Chat stream ended before done event");
+  }
+
+  return toStudentView(finalResponse, request.anonymous_user_id ?? null);
+}
+
 export async function fetchStudentChat(
   request: ChatRequest,
 ): Promise<StudentChatView> {
   const response = await fetchChat(request);
 
   // Transport still uses /chat; the returned public value is narrowed here.
+  return toStudentView(response, request.anonymous_user_id ?? null);
+}
+
+export async function clearAnonymousMemory(anonymousUserId: string): Promise<void> {
+  if (mode === "mock" || !anonymousUserId) {
+    return;
+  }
+  const response = await fetch(buildMemoryUrl(anonymousUserId), {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Memory delete failed with status ${response.status}`);
+  }
+}
+
+function toStudentView(
+  response: FullChatResponse,
+  fallbackAnonymousUserId: string | null,
+): StudentChatView {
   return {
     session_id: response.session_id,
+    anonymous_user_id: response.anonymous_user_id ?? fallbackAnonymousUserId,
     reply_text: response.reply_text,
     risk_level: response.risk_level,
   };
+}
+
+function parseSseEvent(raw: string): ChatStreamEvent | null {
+  const lines = raw.split(/\n/);
+  const eventLine = lines.find((line) => line.startsWith("event:"));
+  const dataLine = lines.find((line) => line.startsWith("data:"));
+  if (!eventLine || !dataLine) return null;
+  const event = eventLine.slice("event:".length).trim();
+  const data = JSON.parse(dataLine.slice("data:".length).trim());
+  return { event, data } as ChatStreamEvent;
 }

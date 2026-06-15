@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
-import { fetchStudentChat } from "@emoedu/shared";
+import { fetchStudentChatStream } from "@emoedu/shared";
 import type { ChatRequest, RiskLevel, StudentChatView } from "@emoedu/shared";
 
 const FALLBACK_TEXT = "我现在有点没反应过来，要不你再说一次？";
 
 interface SendOptions {
   isCurrent?: () => boolean;
+  onDelta?: (text: string) => void;
 }
 
-export function useStudentChat(sessionId: string) {
+export function useStudentChat(sessionId: string, anonymousUserId: string) {
   const [pendingSessionIds, setPendingSessionIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -32,9 +33,16 @@ export function useStudentChat(sessionId: string) {
     try {
       const request: ChatRequest = {
         session_id: requestSessionId,
+        anonymous_user_id: anonymousUserId,
         current_message: text,
       };
-      const view = await fetchStudentChat(request);
+      const view = await fetchStudentChatStream(request, {
+        onDelta: (delta: string) => {
+          if (options.isCurrent?.() ?? true) {
+            options.onDelta?.(delta);
+          }
+        },
+      });
 
       if (options.isCurrent?.() ?? true) {
         lastKnownRisk.current = view.risk_level;

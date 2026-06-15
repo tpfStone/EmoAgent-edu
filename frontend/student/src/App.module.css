@@ -61,7 +61,13 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 3.4rem min(6.2vw, 6.8rem) 12.8rem;
+  padding: 3.4rem min(6.2vw, 6.8rem) 1.6rem;
+  scroll-padding-bottom: 1.6rem;
+}
+
+.chatScrollReferralLocked {
+  padding-bottom: 2rem;
+  scroll-padding-bottom: 2rem;
 }
 
 .openingState {
@@ -97,13 +103,14 @@
 }
 
 .composerArea {
-  position: absolute;
-  right: min(5.8vw, 6.4rem);
-  bottom: 2.25rem;
-  left: min(5.8vw, 6.4rem);
   display: grid;
+  flex: 0 0 auto;
   gap: 0.9rem;
   justify-items: center;
+  max-height: min(46vh, 24rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 min(5.8vw, 6.4rem) 2.25rem;
   pointer-events: none;
 }
 
@@ -222,8 +229,7 @@
   }
 
   .composerArea {
-    right: 2.2rem;
-    left: 2.2rem;
+    padding-inline: 2.2rem;
   }
 }
 
@@ -261,7 +267,7 @@
   }
 
   .chatScroll {
-    padding: 2.35rem 1.1rem 13.5rem;
+    padding: 2.35rem 1.1rem 1.25rem;
   }
 
   .openingText {
@@ -270,9 +276,8 @@
   }
 
   .composerArea {
-    right: 0.85rem;
-    bottom: 1rem;
-    left: 0.85rem;
+    max-height: min(52vh, 27rem);
+    padding: 0 0.85rem 1rem;
   }
 
   .toolView {
@@ -287,6 +292,6 @@
   }
 
   .chatScroll {
-    padding-bottom: 14.5rem;
+    padding-bottom: 1.2rem;
   }
 }

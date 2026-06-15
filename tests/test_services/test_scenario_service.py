@@ -15,9 +15,19 @@ def _request(message: str, history=None):
     )
 
 
-def _scenario_response(scenario: str, confidence: float = 0.9):
+def _scenario_response(
+    scenario: str,
+    confidence: float = 0.9,
+    safety_level: str = "green",
+    matched_signals: list[str] | None = None,
+):
     return json.dumps(
         {
+            "secondary_safety": {
+                "risk_level": safety_level,
+                "matched_signals": matched_signals or [],
+                "rationale": "F2 二次安全复核完成。",
+            },
             "scenario": scenario,
             "scenario_confidence": confidence,
             "rationale": f"判断为{scenario}。",
@@ -50,6 +60,8 @@ async def test_scenario_maps_to_configured_casel(
     assert response.scenario == scenario
     assert response.scenario_confidence == 0.82
     assert response.activated_casel == expected_casel
+    assert response.secondary_safety.risk_level == "green"
+    assert response.secondary_safety.action.block_generation is False
     assert response.rationale == f"判断为{scenario}。"
     assert llm.prompts[0]["temperature"] == 0.0
 
@@ -66,6 +78,30 @@ async def test_scenario_parser_accepts_wrapped_json(fake_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_secondary_safety_can_block_generation(fake_llm_client):
+    llm = fake_llm_client(
+        [
+            _scenario_response(
+                "学业压力",
+                confidence=0.88,
+                safety_level="red",
+                matched_signals=["今晚吃药"],
+            )
+        ]
+    )
+    service = ScenarioService(llm, Settings())
+
+    response = await service.analyze(_request("考试太差了，我今晚吃药算了"))
+
+    assert response.scenario == "学业压力"
+    assert response.secondary_safety.risk_level == "red"
+    assert response.secondary_safety.matched_signals == ["今晚吃药"]
+    assert response.secondary_safety.action.block_generation is True
+    assert "120 / 110" not in response.secondary_safety.action.referral_message
+    assert "下面的紧急资源" in response.secondary_safety.action.referral_message
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("llm_response", ["不是JSON", TimeoutError("timeout")])
 async def test_invalid_or_failed_scenario_defaults_to_other(
     fake_llm_client, llm_response
@@ -78,4 +114,6 @@ async def test_invalid_or_failed_scenario_defaults_to_other(
     assert response.scenario == "其他"
     assert response.scenario_confidence == 0.0
     assert response.activated_casel == ["自我觉察引导"]
+    assert response.secondary_safety.risk_level == "yellow"
+    assert response.secondary_safety.action.block_generation is True
     assert response.rationale

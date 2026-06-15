@@ -17,6 +17,7 @@ export interface SessionRecord {
 
 const STORAGE_KEY = "emoagent.student.sessions.v1";
 const CURRENT_ID_KEY = "emoagent.student.currentSessionId.v1";
+const ANONYMOUS_USER_ID_KEY = "emoagent.student.anonymousUserId.v1";
 const DEFAULT_TITLE = "新的对话";
 const TITLE_LIMIT = 20;
 
@@ -147,6 +148,21 @@ function readCurrentId(sessions: SessionRecord[]): string {
   return exists && stored ? stored : sessions[0].id;
 }
 
+function readAnonymousUserId(): string {
+  if (typeof localStorage === "undefined") {
+    return createId();
+  }
+
+  const stored = localStorage.getItem(ANONYMOUS_USER_ID_KEY);
+  if (stored) {
+    return stored;
+  }
+
+  const id = createId();
+  localStorage.setItem(ANONYMOUS_USER_ID_KEY, id);
+  return id;
+}
+
 function persist(sessions: SessionRecord[], currentId: string): void {
   if (typeof localStorage === "undefined") {
     return;
@@ -159,6 +175,9 @@ function persist(sessions: SessionRecord[], currentId: string): void {
 export function useStudentSessions() {
   const [sessions, setSessions] = useState<SessionRecord[]>(() => readSessions());
   const [currentId, setCurrentId] = useState<string>(() => readCurrentId(sessions));
+  const [anonymousUserId, setAnonymousUserId] = useState<string>(() =>
+    readAnonymousUserId(),
+  );
   const sessionsRef = useRef(sessions);
   const currentIdRef = useRef(currentId);
 
@@ -228,6 +247,29 @@ export function useStudentSessions() {
     return appendMessage("agent", text, sessionId);
   }
 
+  function updateAgentMessage(
+    messageId: string,
+    text: string,
+    sessionId = currentIdRef.current,
+  ): void {
+    updateSessions((previous) =>
+      previous.map((session) => {
+        if (session.id !== sessionId) {
+          return session;
+        }
+        return {
+          ...session,
+          updatedAt: Date.now(),
+          messages: session.messages.map((message) =>
+            message.id === messageId && message.role === "agent"
+              ? { ...message, text }
+              : message,
+          ),
+        };
+      }),
+    );
+  }
+
   function newSession(): SessionRecord {
     const session = createSession();
 
@@ -258,14 +300,26 @@ export function useStudentSessions() {
     persist([session], session.id);
   }
 
+  function resetAnonymousUserId(): string {
+    const next = createId();
+    setAnonymousUserId(next);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ANONYMOUS_USER_ID_KEY, next);
+    }
+    return next;
+  }
+
   return {
     sessions,
     currentId,
+    anonymousUserId,
     currentSession,
     appendUserMessage,
     appendAgentMessage,
+    updateAgentMessage,
     newSession,
     switchSession,
     clearSessions,
+    resetAnonymousUserId,
   };
 }

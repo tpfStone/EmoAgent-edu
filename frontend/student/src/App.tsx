@@ -11,6 +11,7 @@ import {
   type StudentMainView,
 } from "./components/StudentSidebar";
 import { TransitionSlot } from "./components/TransitionSlot";
+import { clearAnonymousMemory } from "@emoedu/shared";
 import { useStudentChat } from "./hooks/useStudentChat";
 import { useStudentSessions } from "./hooks/useStudentSessions";
 
@@ -21,19 +22,25 @@ export default function App() {
   const {
     sessions,
     currentId,
+    anonymousUserId,
     currentSession,
     appendUserMessage,
     appendAgentMessage,
+    updateAgentMessage,
     newSession,
     switchSession,
     clearSessions,
+    resetAnonymousUserId,
   } = useStudentSessions();
   const { loading, riskLevel, referralLocked, send, resetReferral } =
-    useStudentChat(currentId);
+    useStudentChat(currentId, anonymousUserId);
   const activeSessionIdRef = useRef(currentId);
 
   const messages = currentSession?.messages ?? [];
   const hasMessages = messages.length > 0;
+  const chatScrollClassName = referralLocked
+    ? `${styles.chatScroll} ${styles.chatScrollReferralLocked}`
+    : styles.chatScroll;
 
   useEffect(() => {
     activeSessionIdRef.current = currentId;
@@ -53,10 +60,22 @@ export default function App() {
 
     const targetSessionId = currentId;
     appendUserMessage(trimmed, targetSessionId);
+    const agentMessage = appendAgentMessage("", targetSessionId);
+    let streamedText = "";
     const view = await send(trimmed, {
       isCurrent: () => activeSessionIdRef.current === targetSessionId,
+      onDelta: (delta) => {
+        streamedText += delta;
+        if (agentMessage) {
+          updateAgentMessage(agentMessage.id, streamedText, targetSessionId);
+        }
+      },
     });
-    appendAgentMessage(view.reply_text, targetSessionId);
+    if (agentMessage) {
+      updateAgentMessage(agentMessage.id, view.reply_text, targetSessionId);
+    } else {
+      appendAgentMessage(view.reply_text, targetSessionId);
+    }
   }
 
   function handlePrompt(label: string) {
@@ -72,9 +91,11 @@ export default function App() {
     setSidebarOpen(false);
   }
 
-  function handleClearSessions() {
+  async function handleClearSessions() {
     activeSessionIdRef.current = "";
+    await clearAnonymousMemory(anonymousUserId).catch(() => undefined);
     clearSessions();
+    resetAnonymousUserId();
     resetReferral();
     setSidebarOpen(false);
   }
@@ -155,7 +176,12 @@ export default function App() {
           <TransitionSlot viewKey={activeView} className={styles.mainTransition}>
             {activeView === "chat" ? (
               <>
-              <div className={styles.chatScroll} ref={scrollRef}>
+              <div
+                className={chatScrollClassName}
+                data-referral-locked={String(referralLocked)}
+                data-testid="student-chat-scroll"
+                ref={scrollRef}
+              >
                 {hasMessages ? (
                   <MessageList messages={messages} />
                 ) : (

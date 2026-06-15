@@ -1,6 +1,7 @@
 export interface ChatRequest {
   session_id: string;
   current_message: string;
+  anonymous_user_id?: string;
 }
 
 export type ChatStatus =
@@ -44,10 +45,15 @@ export interface PreferencePair {
 
 export interface FullChatResponse {
   session_id: string;
+  anonymous_user_id?: string | null;
   status: ChatStatus;
   reply_text: string;
   risk_level: RiskLevel;
   scenario: ScenarioLabel | null;
+  support_mode?: "emotion_first" | "solution_seeking" | "balanced" | null;
+  emotion_intensity?: "low" | "medium" | "high" | null;
+  help_seeking?: boolean | null;
+  selected_by?: string | null;
   activated_casel: string[];
   best_candidate_id: string | null;
   candidates: GeneratorCandidate[];
@@ -59,6 +65,14 @@ export interface FullChatResponse {
 
 export interface StudentChatView {
   session_id: string;
+  anonymous_user_id?: string | null;
   reply_text: string;
   risk_level: RiskLevel;
 }
+
+export type ChatStreamEvent =
+  | { event: "stage"; data: { name: string } }
+  | { event: "metadata"; data: Omit<FullChatResponse, "reply_text"> }
+  | { event: "delta"; data: { text: string } }
+  | { event: "done"; data: FullChatResponse }
+  | { event: "error"; data: { message: string; session_id?: string; anonymous_user_id?: string | null } };

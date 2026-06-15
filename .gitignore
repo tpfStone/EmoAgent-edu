@@ -30,6 +30,10 @@ docs/corpus/runs/
 *.db
 *.sqlite
 *.sqlite3
+.hf_test_download/
+exp/models/
+exp/runs/
+exp/data/vector_store/
 
 # Build artifacts
 build/

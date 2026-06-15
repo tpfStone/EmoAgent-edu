@@ -68,7 +68,34 @@ async def test_generator_handles_empty_rag_examples(fake_llm_client):
     response = await service.generate(_request(rag_examples=[]))
 
     assert len(response.candidates) == 2
-    assert "【参考（可选，仅供风格参考，不要照抄）】无" in llm.prompts[0]["prompt"]
+    assert "【策略先验（来自 PsyQA 标注统计，只作内部生成约束）】无" in llm.prompts[0]["prompt"]
+    assert "【PsyQA 支持卡（可选，仅供语言动作和风格参考，不要照抄）】无" in llm.prompts[0]["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_generator_injects_f3_strategy_prior_and_support_cards(fake_llm_client):
+    class FakeF3SupportService:
+        def build_context(self, *, scenario, user_message, external_examples):
+            assert scenario == "同伴关系"
+            assert user_message == "他们周末出去玩没叫我，我有点难受。"
+            assert external_examples == ["外部参考：先接住被落下的感觉。"]
+
+            class Context:
+                strategy_prior = "同伴关系先用具体复述和温和承接；Direct Guidance 延后。"
+                support_cards_text = "【支持卡 1】相似倾诉：朋友出去玩没叫我。"
+
+            return Context()
+
+    llm = fake_llm_client(["共情回应", "反思回应"])
+    service = GeneratorService(llm, Settings(), FakeF3SupportService())
+
+    await service.generate(
+        _request(rag_examples=["外部参考：先接住被落下的感觉。"])
+    )
+
+    prompt = llm.prompts[0]["prompt"]
+    assert "同伴关系先用具体复述和温和承接；Direct Guidance 延后。" in prompt
+    assert "【支持卡 1】相似倾诉：朋友出去玩没叫我。" in prompt
 
 
 @pytest.mark.asyncio
