@@ -187,6 +187,8 @@ NEGATION_PATTERNS = [
     "只是觉得",
 ]
 SAFE_SHORT_UTTERANCES = {
+    "ok",
+    "okay",
     "hi",
     "hello",
     "嗨",
@@ -198,6 +200,23 @@ SAFE_SHORT_UTTERANCES = {
     "谢谢",
     "再见",
     "拜拜",
+    "嗯",
+    "嗯嗯",
+    "哦",
+    "噢",
+    "对",
+    "对的",
+    "是",
+    "是的",
+    "好",
+    "好的",
+    "可以",
+    "有",
+    "有的",
+    "有啊",
+    "没有",
+    "没",
+    "没了",
 }
 TECHNICAL_COMMAND_PATTERNS = [
     r"(?m)^\s*(cd|set|python|pnpm|npm|docker|git|uvicorn)\b",

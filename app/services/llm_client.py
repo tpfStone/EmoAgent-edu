@@ -220,14 +220,23 @@ class OpenAICompatibleLLMClient:
 
     def _extra_body(self) -> dict[str, Any] | None:
         thinking = (self.thinking_type or "").strip().lower()
-        if thinking in {"", "disabled", "none", "off", "false", "0"}:
-            if self.extra_body_style == "dashscope-deepseek":
-                return {"enable_thinking": False}
-            return None
+
         if self.extra_body_style == "dashscope-deepseek":
+            if thinking in {"", "disabled", "none", "off", "false", "0"}:
+                return {"enable_thinking": False}
             return {"enable_thinking": True}
+
         if self.extra_body_style == "dashscope-qwen":
+            if thinking in {"", "disabled", "none", "off", "false", "0"}:
+                return None
             return {"enable_thinking": True}
+
+        if thinking == "":
+            return None
+        if thinking in {"disabled", "none", "off", "false", "0"}:
+            return {"thinking": {"type": "disabled"}}
+        if thinking in {"enabled", "on", "true", "1"}:
+            return {"thinking": {"type": "enabled"}}
         return {"thinking": {"type": self.thinking_type}}
 
 

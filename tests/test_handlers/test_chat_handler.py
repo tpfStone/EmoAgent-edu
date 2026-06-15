@@ -72,3 +72,21 @@ async def test_chat_stream_endpoint_returns_sse_events():
         assert '"anonymous_user_id": "anon-1"' in body
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_allows_local_vite_cors_preflight():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.options(
+            "/chat/stream",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "POST" in response.headers["access-control-allow-methods"]

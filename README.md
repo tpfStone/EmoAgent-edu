@@ -25,7 +25,7 @@ F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺
 - F3 使用 PsyQA 标注数据生成策略先验和 support card，首轮按 F2 的 `support_mode` 生成单候选。
 - F4 critic 不再阻塞在线响应，而是在后台生成 `session guidance`，下一轮对话可使用。
 - `exp/` 保存 PsyQA 标注、F1 训练、F3 RAG 验证和 F4 pairwise 对照实验，详见 `exp/README.md`。
-- 默认 `LLM_PROVIDER=mock`，可无外网运行测试；真实交互建议使用 DashScope 兼容接口和 `qwen3.7-plus`。
+- 默认 `LLM_PROVIDER=mock`，可无外网运行测试；真实交互推荐使用 DeepSeek v4：在线生成走 `deepseek-v4-flash`，后台 critic 走 `deepseek-v4-pro`。
 
 ## Architecture
 
@@ -150,7 +150,25 @@ F1_SAFETY_REQUIRED=true
 
 此时模型缺失会直接失败并提示下载命令，避免安全门能力和预期不一致。
 
-### 3. DashScope API Key
+### 3. DeepSeek / DashScope API Key
+
+推荐的真实 LLM 交互配置使用 DeepSeek OpenAI 兼容接口。F1 安全门默认使用本地分类器，不依赖 DeepSeek；DeepSeek 主要用于 F2 情境/支持模式、F3 回复生成和后台 F4 critic。
+
+1. 创建 DeepSeek API Key。
+2. 确认账户有可用额度。
+3. 在 `.env` 中填入：
+
+```env
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-xxx
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_THINKING=disabled
+CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro
+CRITIC_DEEPSEEK_THINKING=enabled
+```
+
+`deepseek-v4-flash` 用于在线低延迟回复；`deepseek-v4-pro` 用于后台 F4 critic 和质量评估。旧的 `deepseek-chat` 只适合临时兼容验证，不建议用于正式复现。
 
 真实 LLM 交互使用阿里云百炼 DashScope 兼容 OpenAI 接口：
 

@@ -43,6 +43,28 @@ def test_benign_short_greeting_overrides_spurious_red_model_score():
     assert signals.signals == []
 
 
+def test_benign_short_acknowledgement_overrides_spurious_red_model_score():
+    level, signals = _postprocess(
+        "red",
+        {"green": 0.4322, "yellow": 0.0040, "red": 0.5638},
+        "\u6709\u3002",
+    )
+
+    assert level == "green"
+    assert signals.signals == []
+
+
+def test_risk_single_character_is_not_downgraded_as_short_acknowledgement():
+    level, signals = _postprocess(
+        "red",
+        {"green": 0.4322, "yellow": 0.0040, "red": 0.5638},
+        "\u836f",
+    )
+
+    assert level == "yellow"
+    assert signals.signals == []
+
+
 def test_concrete_self_harm_method_is_red_even_when_model_scores_green():
     level, signals = _postprocess(
         "green",

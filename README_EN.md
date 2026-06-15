@@ -25,7 +25,7 @@ This keeps the theoretical generator-critic and multi-agent foundation, but avoi
 - F3 generator: uses PsyQA-derived strategy priors and support cards; the online first turn generates one routed candidate.
 - F4 critic: runs in the background and writes `session guidance` for later turns; it does not block the student-facing response.
 - Experiments: `exp/` records PsyQA labeling, F1 training, F3 RAG/support probes, and F4 pairwise judge comparisons.
-- Default mode: `LLM_PROVIDER=mock`, so local tests can run without an API key.
+- Default mode: `LLM_PROVIDER=mock`, so local tests can run without an API key. For real interaction, the recommended DeepSeek v4 setup uses `deepseek-v4-flash` online and `deepseek-v4-pro` for background critic work.
 
 ## Main APIs
 
@@ -132,7 +132,25 @@ F1_SAFETY_REQUIRED=true
 
 Then startup fails fast with a clear HuggingFace download command if the model is missing.
 
-### 3. DashScope API Key
+### 3. DeepSeek / DashScope API Key
+
+Recommended real LLM interaction uses the DeepSeek OpenAI-compatible API. The F1 safety gate uses the local classifier and does not depend on DeepSeek. DeepSeek is used for F2 scenario/support routing, F3 response generation, and background F4 critic work.
+
+1. Create a DeepSeek API key.
+2. Make sure the account has available quota.
+3. Add the following to `.env`:
+
+```env
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-xxx
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_THINKING=disabled
+CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro
+CRITIC_DEEPSEEK_THINKING=enabled
+```
+
+`deepseek-v4-flash` is used for low-latency online responses. `deepseek-v4-pro` is used for background F4 critic and quality evaluation. The old `deepseek-chat` alias is only suitable for temporary compatibility checks and is not recommended for formal reproduction.
 
 For real LLM interaction, use Alibaba Cloud Model Studio / DashScope in OpenAI-compatible mode:
 
