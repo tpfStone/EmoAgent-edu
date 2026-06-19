@@ -2,10 +2,9 @@
 
 [中文](README.md)
 
-Start with the English documentation for review and evaluation. The Chinese
-documents keep the most detailed implementation notes, historical plans, and
-working records; English pages summarize the current runtime boundary, data
-policy, and recommended reading path.
+The English documentation is the recommended review path. Detailed working
+records and historical notes are linked from the documentation map when they
+are useful for deeper inspection.
 
 ## Current Runtime
 
