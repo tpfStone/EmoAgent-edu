@@ -8,6 +8,7 @@ MANIFEST_PATH = ROOT / "exp" / "artifacts.manifest.json"
 INTEGRATION_MAP_PATH = ROOT / "docs" / "specs" / "exp-integration-map.md"
 SPECS_INDEX_PATH = ROOT / "docs" / "specs" / "README.md"
 PROJECT_README_PATH = ROOT / "README.md"
+F4_SPEC_PATH = ROOT / "docs" / "specs" / "f4-critic-epitome.md"
 
 EXPECTED_ARTIFACTS = {
     "psyqa_labelled_data": "runtime_reference",
@@ -82,6 +83,18 @@ def test_docs_link_exp_integration_map_from_public_indexes():
 
     assert "exp-integration-map.md" in specs_index
     assert "exp/artifacts.manifest.json" in project_readme
+
+
+def test_docs_record_phase_two_observability_and_f6_boundary():
+    integration_map = INTEGRATION_MAP_PATH.read_text(encoding="utf-8")
+    specs_index = SPECS_INDEX_PATH.read_text(encoding="utf-8")
+    f4_spec = F4_SPEC_PATH.read_text(encoding="utf-8")
+
+    assert "/api/critic/guidance/{session_id}" in integration_map
+    assert "/api/critic/guidance/{session_id}" in specs_index
+    assert "/api/critic/guidance/{session_id}" in f4_spec
+    assert "F6_MEMORY_ENABLE=false" in integration_map
+    assert "不注入 `/chat` prompt" in integration_map
 
 
 def _load_manifest() -> dict:

@@ -17,6 +17,7 @@
 - boundary 候选在模块接口中仍会排除在 argmax 外；后台模式下主要用于生成下一轮 guidance 和质量标签。
 - CASEL 分数按激活维度归一，使用 mean bonus 进入 `weighted_total`。
 - F9 后续修订的 audit tags、ER/IP cap、内部提示外泄、格式异常、事实编造 hard boundary 已在代码侧执行。
+- `/api/critic/guidance/{session_id}` 已提供后台 F4 guidance 的只读状态查询，用于研究和诊断，不阻塞 `/chat`。
 - 服务与接口测试覆盖 `tests/test_services/test_critic_service.py`、`tests/test_handlers/test_critic_handler.py`、`tests/test_services/test_orchestrator_service.py`。
 
 **待办**：
@@ -110,6 +111,26 @@ emoedu:f4_guidance:{session_id}
 ```
 
 下一轮对话开始时，如果 guidance 已存在，`GeneratorService.stream_followup_text()` 会把它作为内部约束注入；如果不存在或 F4 仍在运行，直接忽略。学生端不展示 critic 过程。
+
+研究侧可以通过只读接口检查后台状态：
+
+```http
+GET /api/critic/guidance/{session_id}
+```
+
+返回状态包括：
+
+```json
+{
+  "session_id": "session-1",
+  "status": "missing|pending|ready|failed",
+  "guidance": "仅 ready 时返回下一轮可用的短提示",
+  "error": "仅 failed 时返回错误摘要",
+  "updated_at": "2026-06-16T00:00:00Z"
+}
+```
+
+`pending`、`failed` 和 `missing` 都不会阻塞学生侧响应；只有 `ready` guidance 会被下一轮 follow-up 内部使用。
 
 ---
 

@@ -1,4 +1,6 @@
+import ast
 import json
+from pathlib import Path
 
 import pytest
 
@@ -206,6 +208,11 @@ class InMemoryHistoryStoreWithRedis(InMemoryHistoryStore):
         self.redis = FakeRedis()
 
 
+class ExplodingMemoryRAGService:
+    def search(self, *args, **kwargs):
+        raise AssertionError("F6 memory/RAG must not be used by default /chat path")
+
+
 def _service(
     safety=None,
     scenario=None,
@@ -248,6 +255,115 @@ def _record_background_schedule(service):
 
     service._schedule_background_critic = record
     return scheduled
+
+
+def test_orchestrator_runtime_boundary_excludes_exp_pairwise_and_memory_imports():
+    source = Path("app/services/orchestrator_service.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    forbidden_imports: list[str] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if (
+                module.startswith("exp")
+                or module == "app.services.critic_pairwise"
+                or module == "app.services.memory_rag_service"
+            ):
+                forbidden_imports.append(module)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                name = alias.name
+                if (
+                    name.startswith("exp")
+                    or name == "app.services.critic_pairwise"
+                    or name == "app.services.memory_rag_service"
+                ):
+                    forbidden_imports.append(name)
+
+    assert forbidden_imports == []
+
+
+@pytest.mark.asyncio
+async def test_f4_guidance_status_reports_missing_pending_ready_and_failed():
+    history_store = InMemoryHistoryStoreWithRedis()
+    service = _service(history_store=history_store)
+
+    missing = await service.get_f4_guidance_status("missing-session")
+    assert missing.session_id == "missing-session"
+    assert missing.status == "missing"
+    assert missing.guidance == ""
+    assert missing.error == ""
+
+    await history_store.redis.set(
+        "emoedu:f4_guidance:pending-session",
+        json.dumps(
+            {
+                "status": "pending",
+                "guidance": "not visible yet",
+                "updated_at": "2026-06-16T00:00:00Z",
+            }
+        ),
+    )
+    pending = await service.get_f4_guidance_status("pending-session")
+    assert pending.status == "pending"
+    assert pending.guidance == ""
+    assert pending.updated_at == "2026-06-16T00:00:00Z"
+
+    await history_store.redis.set(
+        "emoedu:f4_guidance:ready-session",
+        json.dumps(
+            {
+                "status": "ready",
+                "guidance": "  Use concrete emotional acknowledgment.  ",
+                "updated_at": "2026-06-16T00:01:00Z",
+            }
+        ),
+    )
+    ready = await service.get_f4_guidance_status("ready-session")
+    assert ready.status == "ready"
+    assert ready.guidance == "Use concrete emotional acknowledgment."
+    assert ready.updated_at == "2026-06-16T00:01:00Z"
+
+    await history_store.redis.set(
+        "emoedu:f4_guidance:failed-session",
+        json.dumps(
+            {
+                "status": "failed",
+                "guidance": "do not expose",
+                "error": "critic timeout",
+                "updated_at": "2026-06-16T00:02:00Z",
+            }
+        ),
+    )
+    failed = await service.get_f4_guidance_status("failed-session")
+    assert failed.status == "failed"
+    assert failed.guidance == ""
+    assert failed.error == "critic timeout"
+    assert failed.updated_at == "2026-06-16T00:02:00Z"
+
+
+@pytest.mark.asyncio
+async def test_save_f4_guidance_adds_updated_at_for_observability():
+    history_store = InMemoryHistoryStoreWithRedis()
+    service = _service(history_store=history_store)
+
+    await service._save_f4_guidance(
+        "s1",
+        {
+            "status": "pending",
+            "guidance": "",
+            "source": "f4_background",
+        },
+    )
+
+    raw = await history_store.redis.get("emoedu:f4_guidance:s1")
+    payload = json.loads(raw)
+    assert payload["updated_at"].endswith("Z")
+
+    status = await service.get_f4_guidance_status("s1")
+    assert status.status == "pending"
+    assert status.updated_at == payload["updated_at"]
 
 
 @pytest.mark.asyncio
@@ -297,6 +413,28 @@ async def test_first_turn_fast_path_records_single_candidate_and_appends_history
     assert dao.calls[0]["best_candidate_id"] == "c2"
     assert dao.calls[0]["scores"] == []
     assert dao.calls[0]["preference_pair"] is None
+
+
+@pytest.mark.asyncio
+async def test_first_turn_keeps_f6_memory_out_of_generator_even_when_enabled():
+    generator = RecordingGeneratorService()
+    service = _service(
+        generator=generator,
+        settings=Settings(
+            F6_MEMORY_ENABLE=True,
+            CHAT_FALLBACK_MESSAGE="fallback",
+        ),
+    )
+    service.memory_rag_service = ExplodingMemoryRAGService()
+    _record_background_schedule(service)
+
+    response = await service.chat(
+        ChatRequest(session_id="s1", current_message="I feel behind in math.")
+    )
+
+    assert response.status == "answered"
+    assert generator.requests[0].rag_examples == []
+    assert generator.followup_requests == []
 
 
 @pytest.mark.asyncio
@@ -393,6 +531,38 @@ async def test_follow_up_uses_ready_f4_guidance_without_rerunning_first_turn_cha
         "Use a more concrete emotional acknowledgment."
     )
     assert generator.followup_requests[0]["history"][0].text == "之前我说作业很多。"
+
+
+@pytest.mark.asyncio
+async def test_follow_up_keeps_f6_memory_out_of_prompt_even_when_enabled():
+    history_store = InMemoryHistoryStoreWithRedis()
+    await history_store.append_messages(
+        "s1",
+        [
+            ConversationMessage(role="student", text="first message"),
+            ConversationMessage(role="assistant", text="first reply"),
+        ],
+        max_messages=12,
+    )
+    generator = RecordingGeneratorService()
+    service = _service(
+        generator=generator,
+        history_store=history_store,
+        settings=Settings(
+            F6_MEMORY_ENABLE=True,
+            CHAT_FALLBACK_MESSAGE="fallback",
+        ),
+    )
+    service.memory_rag_service = ExplodingMemoryRAGService()
+
+    response = await service.chat(
+        ChatRequest(session_id="s1", current_message="what now?")
+    )
+
+    assert response.status == "answered"
+    assert generator.requests == []
+    assert generator.followup_requests[0]["f4_guidance"] == ""
+    assert generator.followup_requests[0]["history"][0].text == "first message"
 
 
 @pytest.mark.asyncio

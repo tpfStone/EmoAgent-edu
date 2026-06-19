@@ -45,3 +45,11 @@ class CriticEvaluateResponse(BaseModel):
     scores: list[CandidateScore]
     preference_pair: PreferencePair | None = None
     fallback_message: str = ""
+
+
+class CriticGuidanceStatusResponse(BaseModel):
+    session_id: str
+    status: Literal["missing", "pending", "ready", "failed"]
+    guidance: str = ""
+    error: str = ""
+    updated_at: str | None = None

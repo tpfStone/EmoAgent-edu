@@ -70,6 +70,20 @@ student response finished
 
 Future background-only extensions can include batch critic, review queues, pairwise human A/B exports, and DPO candidate packaging. Those jobs should be triggered by scripts or workers, not by the blocking `/chat` request.
 
+Research and diagnostics can inspect background F4 state through:
+
+```text
+GET /api/critic/guidance/{session_id}
+```
+
+This endpoint reports `missing`, `pending`, `ready`, or `failed`. It is not part of the student-facing blocking path: `ready` may be used by the next follow-up prompt, while `pending` and `failed` never block the student response.
+
+### Disabled F6 Memory/RAG Path
+
+`F6_MEMORY_ENABLE=false` is the default production posture. The memory/RAG service and `/api/memory/*` endpoints may exist, but the current `/chat` orchestrator does not read them and does not inject memory snippets into first-turn or follow-up prompts.
+
+Current rule: 不注入 `/chat` prompt. Before F6/RAG moves beyond observe-only mode, it must pass a separate gate for user isolation, sensitive-content handling, deletion, and quality regression. Until then, F6/RAG must not replace PsyQA support cards and must not inject into `/chat` prompt by default.
+
 ### Offline Reproduction Path
 
 ```text
