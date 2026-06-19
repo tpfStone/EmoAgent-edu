@@ -7,7 +7,8 @@
 
 ## 0. 当前状态 / 已完成 / 待办 / 后续计划
 
-**当前状态**：模块接口已接入，但不再作为 `/chat` 在线阻塞择优器。`app/services/critic_service.py` 仍使用 EPITOME/CASEL pointwise 分数、`weighted_total` 和 boundary 过滤输出质量信号；`OrchestratorService` 在首次回复流式返回后异步调用 F4，把结果转换为 `session guidance` 写入 Redis。下一轮对话如果 guidance 已完成，再注入生成 prompt；如果还没完成，不等待、不阻塞学生。
+**当前状态**：模块接口已接入，但不再作为 `/chat` 在线阻塞择优器。
+`app/services/critic_service.py` 仍使用 EPITOME/CASEL pointwise 分数、`weighted_total` 和 boundary 过滤输出质量信号；`OrchestratorService` 在首次回复流式返回后异步调用 F4，把结果转换为 `session guidance` 写入 Redis。下一轮对话如果 guidance 已完成，再注入生成 prompt；如果还没完成，不等待、不阻塞学生。
 
 **已完成**：
 - `/api/critic/evaluate` 模块接口、后台 F4 链路与 DAO 记录已实现。
@@ -25,8 +26,8 @@
 - 正式人工 F9 仍暂停，需等待新的 gate 口径或 pairwise rerun 通过。
 
 **后续计划入口**：
-- F4 修复计划：`../corpus/f9/plans/f4-critic-fix-plan.md`
-- F9 主线状态：`../corpus/f9/README.md`、`../corpus/f9/pointwise-diagnostics/execution-summary.md`
+- F4 修复计划与执行总结：`../corpus/f9/f4-fix-plan.md`、`../corpus/f9/f4-fix-execution-summary.md`
+- F9 主线状态：`../corpus/f9/README.md`
 - Pairwise 目标规格：`f4-pairwise-selection-codex-spec.md`
 - 当前运行时链路索引：见本目录 `README.md`
 

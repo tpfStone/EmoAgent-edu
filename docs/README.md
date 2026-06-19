@@ -1,5 +1,7 @@
 # 文档结构总览
 
+[English](README_EN.md)
+
 本目录同时保存项目方案、开发规格、验收记录、语料/F9 实验产物、前端设计和历史归档。阅读时应先区分三类内容：
 
 - **产品运行口径**：学生真实交互走快路径，优先安全、流式和可持续对话。
@@ -8,7 +10,7 @@
 
 ## 当前状态
 
-截至 2026-06-15，当前实现口径如下：
+截至 2026-06-19，当前实现口径如下：
 
 - `/chat` 和 `/chat/stream` 已接入快慢双路径。首次对话走 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`；后续对话走轻量 CBT 支持，并在 F4 guidance 已完成时注入。
 - F1 在 `/chat` 中默认使用本地分类器，不再依赖 LLM prompt。LLM 版 `/api/safety/evaluate` 保留用于兼容和对照。
@@ -16,7 +18,7 @@
 - F3 生产路径按 F2 路由生成单候选；模块接口仍可生成 `c1 共情型` 和 `c2 引导反思型` 双候选用于实验。
 - F4 pointwise critic 已从在线阻塞择优器调整为后台质量评估和 session guidance 生成器。
 - `frontend/` pnpm workspace 已支持学生端 SSE 流式交互、研究分析台、shared API/type 层。
-- `../exp/` 是当前算法实验入口，记录 PsyQA 标注、F1 分类器、F3 RAG 和 F4 pairwise 对照实验。
+- `../exp/` 是当前算法实验入口，记录 PsyQA 标注、F1 分类器、F3 support-card/RAG 验证和 F4 pairwise 对照实验；完整 PsyQA-derived labelled data 不随公开仓库发布。
 
 ## 当前 F4 主线口径
 
@@ -33,6 +35,7 @@ F4 有两个层次：
 |---|---|---|
 | `overview/` | 项目总纲、工程拆分、比赛/论文路径 | `emoedu-mas-plan.md`、`emoedu-development-framework.md`、`emoedu-post-mvp-guide.md` |
 | `specs/` | 面向实现的模块规格 | `f1-*-codex-spec.md`、`f2-*-codex-spec.md`、`f3-*-codex-spec.md`、`f4-*-codex-spec.md`、`f9-reliability-guide.md` |
+| `plans/` | 未完成阶段计划和 gate | `phase-2b-plan.md` |
 | `corpus/` | 合成语料方法、probe/production 产物、F9 实验链路 | `emoedu-corpus-synthesis.md`、`f9/README.md`、`f9/f9-mainline.md` |
 | `acceptance/` | 后端/编排层验收流程与实跑证据 | `orchestrator-mvp/2026-05-21/README.md`、`backend-infrastructure/2026-05-26/backend-infrastructure-smoke.md` |
 | `frontend/` | 前端设计基准、接口契约、重建计划、前端 UX 图 | `emoagent-frontend-design-baseline.md`、`frontend-cc-spec.md` |
@@ -47,7 +50,8 @@ F4 有两个层次：
 
 1. 根目录 `README.md`：本地运行、API、快慢双路径和实验入口。
 2. `../exp/README.md`：当前算法实验结论，包括 F1/F3/F4 的数据支撑。
-3. `overview/emoedu-post-mvp-guide.md`：比赛投稿和应用端更新的当前工作图。
+3. `specs/README.md` 与 `specs/exp-integration-map.md`：当前 runtime/offline/default-off 边界。
+4. `overview/emoedu-post-mvp-guide.md`：比赛投稿和应用端更新的当前工作图。
 
 ### 2. 开发后端模块
 
@@ -91,8 +95,9 @@ F4 有两个层次：
 ## 维护规则
 
 - 根目录 `README.md` 维护运行入口和当前架构，不承载详细实验数据。
-- `exp/README.md` 维护实验结果、复现命令和问题记录，是算法实验的事实源。
+- `exp/README.md` 维护实验结果、复现命令和问题记录，是算法实验的事实源；`exp/data/README.md` 维护公开数据边界。
 - `overview/` 给战略和论证，不应承载大量 run 证据。
 - `specs/` 是实现契约；改代码行为、schema、prompt 或编排顺序时同步更新对应 spec。
+- `plans/` 只放未完成计划；已完成事实应同步回入口文档和 specs。
 - `corpus/f9/` 和 `archive/` 主要用于历史追溯；不能覆盖当前 `exp/` 结论。
 - 若移动实验产物，必须同步更新对应 README、manifest 和报告路径。

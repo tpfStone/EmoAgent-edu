@@ -1,6 +1,7 @@
 # F4 成对偏好择优 · 目标规格
 
-> **状态**：目标规格 / 非运行时默认。当前 `/chat` 仍由 `CriticService` 使用 pointwise 分数和 `weighted_total` 做择优；`app/config.py` 尚无 `CRITIC_SELECTION_MODE`。本文记录 F4 下一阶段要迁移到的 pairwise 主线。
+> **状态**：目标规格 / 离线与后置准入，不是运行时默认。当前 `/chat` 首轮在线路径已经是 F1 -> F2 -> F3 单候选流式返回 -> 后台 F4 guidance。
+> `CriticService` 的 pointwise `weighted_total` 仍作为模块接口、后台质量信号和历史兼容字段存在，但不再是在线阻塞择优器。`app/config.py` 尚无 `CRITIC_SELECTION_MODE`。本文记录 F4 下一阶段要验证的 pairwise 主线。
 > **交付对象**：Codex / 编码 agent。本文档是对 `f4-critic-epitome-codex-spec.md` 的**增量改造目标**，不替代原 spec。原 spec 的 EPITOME pointwise 打分、CASEL 辅助、boundary 检测作为历史路径和兼容说明保留；本改造目标**替换“如何择优、如何产偏好对”这一环**。
 > **模块定位**：运行时管线第④环（F4 critic 内部）。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（critic 专用 client，模型 `deepseek-v4-pro`）。
@@ -30,7 +31,7 @@
 2. 对候选做 **pairwise 比较**（含正反两次消位置偏见）选出 winner —— **这是新的择优真值**。
 3. 输出最佳候选、各候选诊断分、pairwise 比较记录、偏好对（供 DPO）。
 
-当前实现尚未满足上述职责。现有 runtime 仍输出 `scores`，并用 `weighted_total` 选择 `best_candidate_id`；本文描述的是下一阶段迁移目标。
+当前实现尚未满足上述 pairwise 职责。现有 F4 模块接口仍输出 `scores`，并在模块内部用 `weighted_total` 选择 `best_candidate_id`；`/chat` 不把这个选择作为在线阻塞结果。本文描述的是下一阶段离线验证与未来迁移目标。
 
 ---
 

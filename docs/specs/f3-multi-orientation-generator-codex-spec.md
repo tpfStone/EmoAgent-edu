@@ -6,9 +6,22 @@
 
 ---
 
+## 0. 当前状态 / 已完成 / 待办 / 后续计划
+
+**当前状态**：F3 已接入运行时，但 `/chat` 首轮生产路径不再并发生成双候选并同步等待 F4。当前运行时是 F1/F2 放行后，按 F2 的 `support_mode` 选择一个方向生成单候选并流式返回；F4 只在后台生成 quality labels 和 session guidance。双取向 c1/c2 仍保留为模块接口、实验脚本和离线 pairwise/F9 验证路径。
+
+**已完成**：
+- `GeneratorService` 可注入 `F3SupportService`，在本地 `exp/data/psyqa_labelled.json` 存在时生成 PsyQA-derived strategy priors 和 support cards。
+- `F3SupportService` 对缺失或不可读数据返回空 rows；系统继续运行，support-card enrichment 为空或通用化。
+- `/chat` 首轮根据 F2 `support_mode` 走单候选生成；完整双候选 + critic 留在实验链路。
+
+**待办**：
+- 不把 `exp/data/psyqa_labelled.json` 作为公开仓库内容；复现者需本地补齐。
+- 双候选、pairwise、DPO 的进入条件由 `f4-pairwise-selection-codex-spec.md` 和 `exp-integration-map.md` 的 gate 控制。
+
 ## 1. 职责（一句话）
 
-接收用户倾诉 + 历史 + 情境信息（+ 可选 RAG 参考），用**两种不同辅导取向**的 system prompt 各生成一条候选回应，输出候选列表交给 F4 critic 择优。同一底座 LLM + 不同 prompt，不需多个模型。
+接收用户倾诉 + 历史 + 情境信息（+ 可选 support/RAG 参考），生成适龄、简短、低负担的支持性回应。生产 `/chat` 路径按 F2 路由生成**单候选**并流式返回；模块接口和离线实验仍可用两种不同辅导取向生成 c1/c2 候选，供 F4/F9/pairwise 研究使用。
 
 ---
 
@@ -43,7 +56,7 @@
 }
 ```
 
-> 输出直接接入 F4 critic 的 `candidates` 字段。两个取向并行生成（可并发调用降延迟）。
+> 模块接口输出可接入 F4 critic 的 `candidates` 字段。当前 `/chat` 首轮在线路径只消费一个由 F2 `support_mode` 路由出的候选，不同步等待双候选 critic 择优。
 
 ---
 
@@ -161,7 +174,7 @@
 - [ ] system prompt 用 §4，共同约束 + 取向追加正确拼接
 - [ ] temperature 配置正确（高温生成）
 - [ ] rag_examples 为空时不报错
-- [ ] 输出可直接接入 F4 的 candidates 字段
+- [ ] 模块/实验输出可接入 F4 的 candidates 字段
 - [ ] candidate_id 唯一，便于 critic 引用与产偏好对
 
 ---
@@ -169,5 +182,5 @@
 ## 8. 不在本模块范围
 
 - 不做安全判断（F1）、不分类（F2）、不打分择优（F4）。
-- 不检索 RAG（F6 的事；本模块只消费 rag_examples，不负责生成它）。
-- 本模块只负责：按取向生成候选，把多样性交给 critic 去择优。
+- 不检索长期记忆/RAG（F6 的事；本模块只消费 rag_examples 或 F3 support context，不负责生成长期记忆）。
+- 本模块只负责生成回应；生产路径由 F2 路由单候选，实验路径才把多样性候选交给 critic/pairwise。

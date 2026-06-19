@@ -22,7 +22,7 @@ This keeps the theoretical generator-critic and multi-agent foundation, but avoi
 - Backend: FastAPI, PostgreSQL, Redis history store, SSE streaming, and `/chat` orchestration.
 - F1 safety gate: a local classifier using `bert-base-chinese` embeddings, manually audited keyword features, soft rules, and conservative probability thresholds.
 - F2 scenario analysis: an LLM module that predicts scenario, CASEL dimensions, support mode, and secondary safety fallback.
-- F3 generator: uses PsyQA-derived strategy priors and support cards; the online first turn generates one routed candidate.
+- F3 generator: can use local PsyQA-derived strategy priors and support cards when `exp/data/psyqa_labelled.json` is present; missing data leaves support-card enrichment empty or generic, while the online first turn still generates one routed candidate.
 - F4 critic: runs in the background and writes `session guidance` for later turns; it does not block the student-facing response.
 - Experiments: `exp/` records PsyQA labeling, F1 training, F3 RAG/support probes, and F4 pairwise judge comparisons.
 - Default mode: `LLM_PROVIDER=mock`, so local tests can run without an API key. For real interaction, the recommended DeepSeek v4 setup uses `deepseek-v4-flash` online and `deepseek-v4-pro` for background critic work.
@@ -52,6 +52,20 @@ This keeps the theoretical generator-critic and multi-agent foundation, but avoi
 ```
 
 `anonymous_user_id` is designed for no-login continuity. A browser can keep a stable anonymous user ID, while multiple sessions remain separated by `session_id`.
+
+## Figures
+
+<p>
+  <img src="./docs/figures/figure-1-three-phase-lifecycle.svg" alt="EmoEdu MAS three-phase lifecycle" width="760">
+</p>
+
+<p>
+  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="Current chat fast path, background critic, and offline research path" width="760">
+</p>
+
+<p>
+  <img src="./docs/figures/figure-3-argument-loop.svg" alt="Evidence chain from educational frameworks to offline pairwise and DPO gates" width="760">
+</p>
 
 ## Quick Start
 
@@ -254,26 +268,44 @@ Recommended check order:
 python -m pytest tests -q
 pnpm --dir frontend test
 pnpm --dir frontend typecheck
+pnpm --dir frontend build
 python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
+
+## Data Policy
+
+The public repository does not include the full PsyQA-derived labelled data, and
+sample JSON exports should not be committed. To reproduce the full experiments,
+prepare the data locally at:
+
+```text
+exp/data/psyqa_labelled.json
+```
+
+When this file is missing, the application and default tests can still run. F3
+strategy priors and support cards will be empty or generic, but the default path,
+runtime code, and API design remain unchanged.
 
 ## Experiments
 
 Algorithm experiments are kept under `exp/`:
 
 - `exp/README.md`: experiment workflow, key results, issues, and reproduction commands.
-- `exp/data/psyqa_labelled.json`: labeled PsyQA-derived data.
+- `exp/data/README.md`: public data boundary. The full `psyqa_labelled.json` file must be provided locally by reproducibility users and is not committed.
 - `exp/models/f1_safety_gate/manual-A-pattern-v1/`: local F1 classifier artifacts downloaded from HuggingFace.
 - `exp/runs/`: F1/F3/F4 experiment outputs. Raw run artifacts are large and are ignored by default; key results are summarized in `exp/README.md`.
 
-The default test suite only checks `exp/*.py` syntax and entrypoint structure. Full experiment runs also need `requirements-exp.txt`, `.env`, model files, API keys, and local `exp/runs/` data.
+The default test suite only checks `exp/*.py` syntax and entrypoint structure. Full experiment runs also need `requirements-exp.txt`, `.env`, model files, API keys, local `exp/data/psyqa_labelled.json`, and local `exp/runs/` data.
 
 The core experimental conclusion is that full multi-agent reasoning should remain available for offline validation and background quality control, while the student-facing system should stay fast and readable.
 
 ## Documentation
 
 - `docs/README.md`: documentation overview and reading path.
-- `docs/specs/`: F1-F4, F4 pairwise, and F9 implementation specs.
+- `docs/README_EN.md`: English documentation map.
+- `docs/specs/`: F1-F4, F4 pairwise, F9 specs, and the current integration boundary in `README.md` / `exp-integration-map.md`.
+- `docs/specs/README_EN.md`: English specs summary.
+- `docs/plans/`: unfinished phase plans; currently Phase 2B gates.
 - `docs/overview/`: project plan and development roadmap.
 - `docs/frontend/`: frontend design and demo notes.
 - `docs/corpus/`: historical corpus, F9, and pairwise pilot records.

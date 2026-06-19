@@ -1,51 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="380" viewBox="0 0 700 380" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif">
 <style>
-.th{font-size:13px;font-weight:600;fill:#1f2937}
-.ts{font-size:11px;fill:#4b5563}
-.teal{fill:#ecfdf5;stroke:#5eead4}
-.purple{fill:#f5f3ff;stroke:#c4b5fd}
-.coral{fill:#fff1f2;stroke:#fda4af}
-.green{fill:#f0fdf4;stroke:#86efac}
-.box{fill:#f9fafb;stroke:#d1d5db}
-.arr{stroke:#9ca3af;stroke-width:1.5;fill:none}
+.title{font-size:16px;font-weight:700;fill:#111827}
+.h{font-size:13px;font-weight:700;fill:#111827}
+.t{font-size:11px;fill:#4b5563}
+.small{font-size:10px;fill:#6b7280}
+.box{fill:#f9fafb;stroke:#d1d5db;stroke-width:1}
+.setup{fill:#ecfeff;stroke:#67e8f9;stroke-width:1}
+.runtime{fill:#f0fdf4;stroke:#86efac;stroke-width:1.2}
+.future{fill:#fff7ed;stroke:#fdba74;stroke-width:1}
+.note{fill:#fef2f2;stroke:#fca5a5;stroke-width:1}
+.arr{stroke:#9ca3af;stroke-width:1.6;fill:none}
 </style>
 <defs>
-<marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
 </defs>
-<text class="th" x="20" y="28" font-size="15">情感教育多智能体系统 · 三阶段生命周期</text>
 
-<rect class="teal" x="40" y="60" width="180" height="110" rx="12" stroke-width="1"/>
-<text class="th" x="130" y="84" text-anchor="middle">阶段一：setup</text>
-<text class="ts" x="130" y="108" text-anchor="middle">专家定情感维度+量表</text>
-<text class="ts" x="130" y="128" text-anchor="middle">冷启动：构建对话语料</text>
-<text class="ts" x="130" y="148" text-anchor="middle">RAG 记忆库为规划项</text>
+<text class="title" x="24" y="30">EmoEdu MAS lifecycle: runtime boundary and offline gates</text>
 
-<rect class="purple" x="250" y="60" width="180" height="110" rx="12" stroke-width="1"/>
-<text class="th" x="340" y="84" text-anchor="middle">阶段二：生成+把关</text>
-<text class="ts" x="340" y="108" text-anchor="middle">多 agent 生成候选回应</text>
-<text class="ts" x="340" y="128" text-anchor="middle">critic 成对比较择优</text>
-<text class="ts" x="340" y="148" text-anchor="middle">安全门前置否决</text>
+<rect class="setup" x="32" y="62" width="205" height="132" rx="8"/>
+<text class="h" x="134" y="88" text-anchor="middle">Phase 1 · Prepare</text>
+<text class="t" x="54" y="116">PsyQA-derived labelled data</text>
+<text class="small" x="54" y="135">local only: exp/data/psyqa_labelled.json</text>
+<text class="t" x="54" y="158">F1 classifier artifacts</text>
+<text class="small" x="54" y="177">restored from HuggingFace</text>
 
-<rect class="coral" x="460" y="60" width="180" height="110" rx="12" stroke-width="1"/>
-<text class="th" x="550" y="84" text-anchor="middle">阶段三：离线优化</text>
-<text class="ts" x="550" y="108" text-anchor="middle">F9/pairwise gate</text>
-<text class="ts" x="550" y="128" text-anchor="middle">稳定偏好对 → DPO</text>
-<text class="ts" x="550" y="148" text-anchor="middle">异步，攒够才训</text>
+<rect class="runtime" x="278" y="62" width="205" height="132" rx="8"/>
+<text class="h" x="380" y="88" text-anchor="middle">Phase 2A · Runtime</text>
+<text class="t" x="300" y="116">F1 -> F2 -> F3 single candidate</text>
+<text class="small" x="300" y="135">stream first, do not wait for critic</text>
+<text class="t" x="300" y="158">background F4 guidance</text>
+<text class="small" x="300" y="177">inject only when ready on later turns</text>
 
-<line x1="220" y1="115" x2="248" y2="115" class="arr" marker-end="url(#a)"/>
-<line x1="430" y1="115" x2="458" y2="115" class="arr" marker-end="url(#a)"/>
+<rect class="future" x="524" y="62" width="205" height="132" rx="8"/>
+<text class="h" x="626" y="88" text-anchor="middle">Phase 2B · Gates</text>
+<text class="t" x="546" y="116">pairwise / F9 / human A/B</text>
+<text class="small" x="546" y="135">offline validation first</text>
+<text class="t" x="546" y="158">DPO and F6/RAG</text>
+<text class="small" x="546" y="177">future or default-off until gates pass</text>
 
-<text class="ts" x="130" y="188" text-anchor="middle">一次性</text>
-<text class="ts" x="340" y="188" text-anchor="middle">每次对话</text>
-<text class="ts" x="550" y="188" text-anchor="middle">周期性</text>
+<line class="arr" x1="237" y1="128" x2="276" y2="128" marker-end="url(#arrow)"/>
+<line class="arr" x1="483" y1="128" x2="522" y2="128" marker-end="url(#arrow)"/>
 
-<rect class="box" x="180" y="220" width="320" height="44" rx="8" stroke-width="1"/>
-<text class="th" x="340" y="242" text-anchor="middle">更新后的 teacher agent 回流到阶段二</text>
-<line x1="550" y1="170" x2="550" y2="242" class="arr"/>
-<line x1="550" y1="242" x2="502" y2="242" class="arr" marker-end="url(#a)"/>
-<line x1="180" y1="242" x2="130" y2="242" class="arr"/>
-<line x1="130" y1="242" x2="130" y2="172" class="arr" marker-end="url(#a)"/>
+<rect class="box" x="78" y="242" width="604" height="72" rx="8"/>
+<text class="h" x="380" y="268" text-anchor="middle">Current online product path</text>
+<text class="t" x="380" y="291" text-anchor="middle">student response is fast: safety, routing, one generated answer, streaming</text>
 
-<rect class="green" x="120" y="300" width="440" height="44" rx="8" stroke-width="1"/>
-<text class="ts" x="340" y="322" text-anchor="middle">关键改造：judge 从「打分终点」变成「成对偏好把关」</text>
+<path class="arr" d="M380 194 L380 240" marker-end="url(#arrow)"/>
+
+<rect class="note" x="146" y="346" width="468" height="48" rx="8"/>
+<text class="h" x="380" y="368" text-anchor="middle">Do not move all research agents into the blocking path</text>
+<text class="small" x="380" y="386" text-anchor="middle">Pairwise, DPO, and long-term RAG remain offline/future until explicit gates pass.</text>
 </svg>

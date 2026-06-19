@@ -22,7 +22,7 @@ F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺
 - 后端已集成 FastAPI、PostgreSQL、Redis 会话历史、SSE 流式返回和 `/chat` 编排入口。
 - F1 安全门在 `/chat` 中默认使用本地分类器：`bert-base-chinese` 文本特征 + 人工审查关键词特征 + soft rule + 阈值。
 - F2 使用 LLM 判断情境、支持模式和二次安全兜底；即使 F1 漏判，F2 仍可要求转介。
-- F3 使用 PsyQA 标注数据生成策略先验和 support card，首轮按 F2 的 `support_mode` 生成单候选。
+- F3 可在本地 `exp/data/psyqa_labelled.json` 存在时使用 PsyQA-derived 策略先验和 support card；数据缺失时 support-card enrichment 为空或退回通用策略，首轮仍按 F2 的 `support_mode` 生成单候选。
 - F4 critic 不再阻塞在线响应，而是在后台生成 `session guidance`，下一轮对话可使用。
 - `exp/` 保存 PsyQA 标注、F1 训练、F3 RAG 验证和 F4 pairwise 对照实验，详见 `exp/README.md`。
 - 默认 `LLM_PROVIDER=mock`，可无外网运行测试；真实交互推荐使用 DeepSeek v4：在线生成走 `deepseek-v4-flash`，后台 critic 走 `deepseek-v4-pro`。
@@ -62,7 +62,7 @@ F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺
 </p>
 
 <p>
-  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="当前 /chat 运行时与目标 pairwise 迁移点" width="760">
+  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="当前 /chat 快路径与后台/离线路径" width="760">
 </p>
 
 <p>
@@ -272,24 +272,38 @@ pnpm --dir frontend build:pages
 python -m pytest tests -q
 pnpm --dir frontend test
 pnpm --dir frontend typecheck
+pnpm --dir frontend build
 python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
+
+## Data Policy
+
+公开仓库不包含完整 PsyQA-derived labelled data，也不提交 sample JSON 导出。完整实验复现者需要自行准备并放置：
+
+```text
+exp/data/psyqa_labelled.json
+```
+
+这个文件是 F1/F3/F4 实验和 F3 support-card enrichment 的本地参考数据。文件缺失时，系统和默认测试仍可运行；影响是 F3 的 strategy priors/support cards 为空或退回通用策略，不改变默认数据路径、运行时代码或 API 设计。
 
 ## Experiment Entry
 
 算法实验统一放在 `exp/`：
 
 - `exp/README.md`：实验流程、关键结果、问题记录和复现命令。
-- `exp/data/psyqa_labelled.json`：PsyQA 标注后数据。
+- `exp/data/README.md`：公开数据边界；完整 `psyqa_labelled.json` 需复现者本地放置，不提交 GitHub。
 - `exp/models/f1_safety_gate/manual-A-pattern-v1/`：已迁入生产的 F1 分类器，本地从 HuggingFace 下载，不提交 GitHub。
 - `exp/runs/`：F1/F3/F4 各轮实验输出；原始 run 产物体积较大，默认不提交 GitHub，关键指标已整理在 `exp/README.md`。
 
-默认测试只保证 `exp/*.py` 的语法和入口结构。完整实验运行还需要 `requirements-exp.txt`、`.env`、模型文件、API key 和本地 `exp/runs/` 数据。
+默认测试只保证 `exp/*.py` 的语法和入口结构。完整实验运行还需要 `requirements-exp.txt`、`.env`、模型文件、API key、本地 `exp/data/psyqa_labelled.json` 和本地 `exp/runs/` 数据。
 
 ## Documentation
 
 - `docs/README.md`：文档结构总览和推荐阅读路径。
-- `docs/specs/`：F1-F4、F4 pairwise 与 F9 的实现规格。
+- `docs/README_EN.md`：英文文档地图和公开阅读入口。
+- `docs/specs/`：F1-F4、F4 pairwise、F9 的实现规格，以及 `README.md` / `exp-integration-map.md` 中的当前集成边界。
+- `docs/specs/README_EN.md`：英文规格摘要。
+- `docs/plans/`：未完成阶段计划；当前保留 Phase 2B gate。
 - `docs/overview/`：项目方案、工程拆分和阶段计划。
 - `docs/frontend/`：前端设计、部署和演示说明。
 - `docs/corpus/`：旧合成语料、F9 与 pairwise 试点记录。

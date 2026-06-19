@@ -77,7 +77,7 @@ P0 只保留为回归维护，不再作为当前阻塞项。
 
 - [ ] Pointwise 分数继续保留为历史兼容和诊断字段，不再作为新的 DPO 主判据。
 - [ ] 若继续跑 priority 10 的完整 v4-pro count=3 对照，应只回答“pointwise judge 是否仍偏宽”，不能直接解锁 DPO。
-- [ ] 新增或修改 F4 prompt 时，同步更新 `docs/specs/f4-critic-epitome-codex-spec.md` 和 `docs/corpus/f9/pointwise-diagnostics/`。
+- [ ] 新增或修改 F4 prompt 时，同步更新 `docs/specs/f4-critic-epitome-codex-spec.md` 和 `docs/corpus/f9/f4-fix-execution-summary.md`。
 
 ### P2.3 Pairwise 试点线
 

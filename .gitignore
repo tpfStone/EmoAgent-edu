@@ -33,6 +33,8 @@ docs/corpus/runs/
 .hf_test_download/
 exp/models/
 exp/runs/
+exp/data/*.json
+!exp/data/README.md
 exp/data/vector_store/
 
 # Build artifacts
