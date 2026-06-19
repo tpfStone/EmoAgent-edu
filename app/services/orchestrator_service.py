@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from app.config import Settings
@@ -10,6 +11,7 @@ from app.schemas.critic import (
     CandidateInput,
     CandidateScore,
     CriticEvaluateRequest,
+    CriticGuidanceStatusResponse,
     PreferencePair,
 )
 from app.schemas.generator import GeneratorCandidate, GeneratorGenerateRequest
@@ -809,10 +811,54 @@ class OrchestratorService:
             return ""
         return str(payload.get("guidance") or "").strip()
 
+    async def get_f4_guidance_status(
+        self, session_id: str
+    ) -> CriticGuidanceStatusResponse:
+        redis = getattr(self.history_store, "redis", None)
+        if redis is None:
+            return CriticGuidanceStatusResponse(
+                session_id=session_id,
+                status="missing",
+            )
+        raw = await redis.get(self._guidance_key(session_id))
+        if not raw:
+            return CriticGuidanceStatusResponse(
+                session_id=session_id,
+                status="missing",
+            )
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return CriticGuidanceStatusResponse(
+                session_id=session_id,
+                status="failed",
+                error="invalid guidance payload",
+            )
+
+        status = str(payload.get("status") or "missing").lower()
+        if status not in {"pending", "ready", "failed"}:
+            status = "missing"
+        guidance = (
+            str(payload.get("guidance") or "").strip()
+            if status == "ready"
+            else ""
+        )
+        error = str(payload.get("error") or "").strip() if status == "failed" else ""
+        updated_at = str(payload.get("updated_at") or "").strip() or None
+        return CriticGuidanceStatusResponse(
+            session_id=session_id,
+            status=status,
+            guidance=guidance,
+            error=error,
+            updated_at=updated_at,
+        )
+
     async def _save_f4_guidance(self, session_id: str, payload: dict[str, Any]) -> None:
         redis = getattr(self.history_store, "redis", None)
         if redis is None:
             return
+        payload = dict(payload)
+        payload.setdefault("updated_at", self._utc_now())
         await redis.set(
             self._guidance_key(session_id),
             json.dumps(payload, ensure_ascii=False),
@@ -822,6 +868,10 @@ class OrchestratorService:
     @staticmethod
     def _guidance_key(session_id: str) -> str:
         return f"emoedu:f4_guidance:{session_id}"
+
+    @staticmethod
+    def _utc_now() -> str:
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     @staticmethod
     def _first_turn_candidate_id(support_mode: str, emotion_intensity: str) -> str:

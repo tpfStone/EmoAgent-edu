@@ -297,6 +297,8 @@ exp/data/psyqa_labelled.json
 
 默认测试只保证 `exp/*.py` 的语法和入口结构。完整实验运行还需要 `requirements-exp.txt`、`.env`、模型文件、API key、本地 `exp/data/psyqa_labelled.json` 和本地 `exp/runs/` 数据。
 
+`exp/artifacts.manifest.json` 记录实验资产如何进入完整体系，并把每项资产标为 `runtime`、`runtime_reference`、`background`、`offline` 或 `archive`。维护口径见 `docs/specs/exp-integration-map.md`：`exp` 是完整体系的一部分，但实验脚本不进入 `/chat` 在线阻塞路径。
+
 ## Documentation
 
 - `docs/README.md`：文档结构总览和推荐阅读路径。
