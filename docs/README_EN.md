@@ -2,8 +2,10 @@
 
 [中文](README.md)
 
-The Chinese documentation is the full source of truth. English files are public
-entry points and key summaries for non-native Chinese readers.
+Start with the English documentation for review and evaluation. The Chinese
+documents keep the most detailed implementation notes, historical plans, and
+working records; English pages summarize the current runtime boundary, data
+policy, and recommended reading path.
 
 ## Current Runtime
 
