@@ -41,8 +41,14 @@
   line-height: 1;
   transition:
     background 160ms var(--ease),
+    box-shadow 160ms var(--ease),
     opacity 160ms var(--ease),
     transform 160ms var(--ease);
+}
+
+.sendButtonReady {
+  background: var(--sage);
+  box-shadow: var(--shadow-sage);
 }
 
 .sendButton:hover:not(:disabled) {
@@ -50,9 +56,24 @@
   transform: translateY(-1px);
 }
 
+.sendButtonReady:hover:not(:disabled),
+.sendButtonReady:focus-visible {
+  background: var(--sage-deep);
+}
+
+.sendButton:focus-visible {
+  outline: 3px solid rgba(111, 156, 128, 0.28);
+  outline-offset: 3px;
+}
+
 .sendButton:disabled,
 .input:disabled {
   opacity: 0.58;
+}
+
+.sendButton:disabled {
+  box-shadow: none;
+  transform: none;
 }
 
 .sendButton span {

@@ -13,6 +13,11 @@ export function Composer({
   onSend,
 }: ComposerProps) {
   const [value, setValue] = useState("");
+  const hasSendableText = value.trim().length > 0;
+  const canSend = hasSendableText && !disabled && !loading;
+  const sendButtonClassName = canSend
+    ? `${styles.sendButton} ${styles.sendButtonReady}`
+    : styles.sendButton;
 
   function submit() {
     const text = value.trim();
@@ -51,8 +56,9 @@ export function Composer({
       />
       <button
         aria-label={loading ? "正在回应" : "发送"}
-        className={styles.sendButton}
-        disabled={disabled || loading || value.trim().length === 0}
+        className={sendButtonClassName}
+        data-send-ready={String(canSend)}
+        disabled={!canSend}
         type="submit"
       >
         <span aria-hidden="true">{loading ? "..." : "↑"}</span>
