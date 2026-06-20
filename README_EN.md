@@ -2,164 +2,135 @@
 
 [中文](README.md) | English
 
-EmoEdu MAS is a Chinese emotional education multi-agent dialogue system for middle-school students aged 12-15. The goal is to provide age-appropriate, safe, concise, and socially meaningful support while keeping critic, pairwise evaluation, and human calibration as reproducible evidence for offline optimization.
+> A safety-first multi-agent emotional education system for Chinese middle-school students aged 12-15.
 
-The current product design uses a fast online path and an accurate background path:
+## Overview
 
-```text
-Online path: fast
-First turn: F1 local safety gate -> F2 scenario/support routing -> F3 one-candidate streaming response -> background F4
-Follow-up turns: F1 local safety gate -> lightweight CBT-compatible support -> recent context -> optional finished F4 guidance -> streaming response
+EmoEdu MAS supports emotional expression and social-emotional learning in common middle-school contexts such as academic pressure, peer relationships, and parent-child conflict. It combines a local safety gate, scenario-aware routing, streaming student responses, and a background critic so the student experience stays low-latency while research and quality-improvement evidence remains traceable.
 
-Background path: accurate
-F4 critic -> quality labels and session guidance -> aggregate reports -> prompt / strategy table / DPO candidate preparation
-```
+The project is an educational support system, not a diagnostic, psychotherapy, medical, or emergency service. High-risk inputs leave the ordinary generation path and receive fixed safety referral guidance that encourages the student to contact a trusted adult and appropriate public services.
 
-This keeps the theoretical generator-critic and multi-agent foundation, but avoids forcing students to wait for a full two-candidate generation and critic pipeline on every turn.
+## Why EmoEdu
 
-## Current Status
+- **Safety before generation:** every turn passes through the F1 safety gate; the first turn also receives an F2 secondary safety review.
+- **Scenario-aware support:** F2 uses scenario, support mode, and configured CASEL mapping to route the first response.
+- **Low-latency student experience:** F3 streams one routed candidate online instead of making the student wait for a full two-candidate critic pipeline.
+- **Background quality loop:** F4 writes quality labels and session guidance after the response; completed guidance may shape later turns without blocking the current one.
+- **Explicit research boundaries:** pairwise selection, F9 human calibration, DPO, and F6 memory/RAG prompt injection remain offline, gated, or disabled unless the code and validation status explicitly change.
 
-- Backend: FastAPI, PostgreSQL, Redis history store, SSE streaming, and `/chat` orchestration.
-- F1 safety gate: a local classifier using `bert-base-chinese` embeddings, manually audited keyword features, soft rules, and conservative probability thresholds.
-- Follow-up turns still run the F1 safety gate first; they do not rerun the full F2/F4 chain on every message.
-- F2 scenario analysis: an LLM module that predicts scenario, CASEL dimensions, support mode, and secondary safety fallback.
-- F3 generator: can use local PsyQA-derived strategy priors and support cards when `exp/data/psyqa_labelled.json` is present; missing data leaves support-card enrichment empty or generic, while the online first turn still generates one routed candidate.
-- F4 critic: runs in the background and writes `session guidance` for later turns; it does not block the student-facing response.
-- Experiments: `exp/` records PsyQA labeling, F1 training, F3 RAG/support probes, and F4 pairwise judge comparisons.
-- Default mode: `LLM_PROVIDER=mock`, so local tests can run without an API key. For real interaction, the recommended DeepSeek v4 setup uses `deepseek-v4-flash` online and `deepseek-v4-pro` for background critic work.
+## Current Runtime Boundary
 
-## Main APIs
-
-| Endpoint | Purpose | Current Use |
+| Layer | Current behavior | Student-facing latency |
 | --- | --- | --- |
-| `POST /chat` | Non-streaming orchestration | Returns a full `ChatResponse` |
-| `POST /chat/stream` | SSE streaming orchestration | Recommended for the student app |
-| `POST /api/safety/classifier/evaluate` | F1 local classifier safety gate | Production F1 endpoint |
-| `POST /api/safety/evaluate` | F1 LLM safety gate | Compatibility and comparison |
-| `POST /api/scenario/evaluate` | F2 scenario analysis | Outputs scenario, CASEL, support mode, and secondary safety |
-| `POST /api/generator/generate` | F3 two-orientation generator | Research/debug endpoint |
-| `POST /api/critic/evaluate` | F4 pointwise critic | Module endpoint; background in `/chat` |
-| `GET /api/memory/status` | F6 memory/RAG status | Reserved, disabled by default |
-| `DELETE /api/memory` | Clear memory/RAG records | By `anonymous_user_id` or `session_id` |
+| First turn | F1 local safety gate -> F2 scenario/support routing and secondary safety -> F3 one routed candidate -> SSE stream | Blocking fast path |
+| Follow-up turn | F1 safety gate -> recent Redis history -> optional completed F4 guidance -> lightweight streaming generation | Blocking fast path |
+| Background quality path | F4 pointwise critic -> quality labels -> Redis session guidance | Does not block the current response |
+| Offline research | F3 two-orientation candidates, F4 pairwise experiments, F9 human calibration, DPO preparation | Never part of the default `/chat` blocking path |
+| Default-off capability | F6 memory/RAG prompt injection | Must pass a separate privacy and quality gate before enablement |
 
-`/chat` and `/chat/stream` request body:
+## Product Surfaces
 
-```json
-{
-  "session_id": "browser-session-id",
-  "anonymous_user_id": "optional-stable-browser-user-id",
-  "current_message": "我最近考试压力很大，晚上睡不着"
-}
-```
+### Student app
 
-`anonymous_user_id` is designed for no-login continuity. A browser can keep a stable anonymous user ID, while multiple sessions remain separated by `session_id`.
+The student-facing interface provides streaming conversation, session continuity, safety referral presentation, and user-controlled record handling without exposing internal agent traces, critic labels, or research diagnostics.
 
-## Figures
+<p align="center">
+  <img src="./docs/screenshots/student-app-empty-state.png" alt="Student app empty state" width="900">
+</p>
 
-<p>
+<p align="center"><em>Student app empty state</em></p>
+
+### Research console
+
+The research console exposes diagnostic traces such as risk routing, scenario metadata, generated content, and the background F4 guidance state. It is for research, debugging, and demonstration, not for students.
+
+<p align="center">
+  <img src="./docs/screenshots/research-console-single-turn-trace.png" alt="Research console single-turn trace" width="900">
+</p>
+
+<p align="center"><em>Research console single-turn trace</em></p>
+
+## Architecture
+
+The three project figures explain the runtime boundary, the current fast/background pipeline, and the evidence chain from the theoretical framework to validation gates.
+
+### 1. Runtime boundary and validation gates
+
+<p align="center">
   <img src="./docs/figures/figure-1-runtime-boundary.svg" alt="EmoEdu MAS runtime boundary and validation gates" width="760">
 </p>
 
-<p>
-  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="Current chat fast path, background critic, and offline research path" width="760">
+### 2. Current `/chat` fast path and background/offline paths
+
+<p align="center">
+  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="Current EmoEdu MAS runtime, background, and offline paths" width="760">
 </p>
 
-<p>
-  <img src="./docs/figures/figure-3-argument-loop.svg" alt="Evidence chain from educational frameworks to offline pairwise and DPO gates" width="760">
+### 3. Evidence chain from theory to the pairwise gate
+
+<p align="center">
+  <img src="./docs/figures/figure-3-argument-loop.svg" alt="Evidence chain from the theoretical framework to the pairwise validation gate" width="760">
 </p>
 
-## Quick Start
+## Key Features
 
-### 1. Backend
+| Capability | Status | Notes |
+| --- | --- | --- |
+| F1 local safety classifier | Implemented | Local model can be preloaded; yellow/red results interrupt ordinary generation. |
+| F2 scenario and support routing | Implemented | Produces scenario, configured CASEL dimensions, support mode, and secondary safety. |
+| F3 streaming student response | Implemented | The runtime first turn generates one routed candidate; two orientations remain available for experiments and debugging. |
+| F4 background critic guidance | Implemented | Runs after the response and does not block the student. |
+| Anonymous session continuity | Implemented | Uses `anonymous_user_id` and `session_id` for no-login continuity. |
+| Research console | Implemented | Shows internal traces and background critic status. |
+| F4 pairwise selector | Offline / gated | Not the default runtime selector. |
+| DPO training loop | Future / gated | Only validated preference pairs may be used. |
+| F6 memory/RAG prompt injection | Default off | Requires separate privacy, deletion, isolation, and quality gates. |
+
+## Quick Start: Default Local Mode
+
+The public default configuration uses `mock` for local development, automated tests, and interface checks without external credentials. Formal demos or evidence collection should switch to a live provider and record the actual provider, model, and configuration. Screenshots or videos that use `mock` should be visibly labelled.
+
+### Install
 
 ```powershell
+# Backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
+
+# Frontend
+pnpm --dir frontend install
 ```
 
-To reproduce algorithm experiments and report scripts under `exp/`, install the extra experiment dependencies:
+### Run the interfaces
 
 ```powershell
-python -m pip install -r requirements-exp.txt
+# Terminal 1 - backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 - student app
+pnpm --dir frontend dev:student
+
+# Terminal 3 - research console
+pnpm --dir frontend dev:console
 ```
 
-If PowerShell blocks activation:
+Open:
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
+- Student app: <http://localhost:5173>
+- Research console: <http://localhost:5174>
+- Backend API: <http://127.0.0.1:8000>
+- API documentation: <http://127.0.0.1:8000/docs>
+- Health check: <http://127.0.0.1:8000/health>
 
-Run tests in mock mode:
+## Full Local Setup: Live Mode
 
-```powershell
-python -m pytest tests -q
-```
+### 1. Configure the backend
 
-### 2. F1 Safety Model
+Copy `.env.example` to `.env`, then configure the provider you actually use. Never commit `.env` or expose keys in a demo.
 
-The F1 local safety model is not stored in GitHub. Download it from HuggingFace:
-
-```text
-https://huggingface.co/Nacgisac/EmoEduF1-bert-base-chinese/tree/main/manual-A-pattern-v1
-```
-
-```powershell
-hf auth login
-
-hf download Nacgisac/EmoEduF1-bert-base-chinese `
-  --include "manual-A-pattern-v1/*" `
-  --local-dir exp/models/f1_safety_gate `
-  --revision main
-```
-
-Expected local path:
-
-```text
-exp/models/f1_safety_gate/manual-A-pattern-v1/
-```
-
-Expected files:
-
-```text
-hybrid_safety_classifier.pt
-feature_scalers.joblib
-manual_keywords.json
-manual_keywords_grouped.json
-model_config.json
-summary.json
-inference_benchmark.json
-manual_keyword_audit.csv
-hybrid_test_confusion_matrix.csv
-```
-
-`.env` settings:
-
-```env
-F1_SAFETY_MODEL_DIR=exp/models/f1_safety_gate/manual-A-pattern-v1
-F1_SAFETY_PRELOAD=true
-F1_SAFETY_REQUIRED=false
-F1_SAFETY_HF_REPO=Nacgisac/EmoEduF1-bert-base-chinese
-F1_SAFETY_HF_REVISION=main
-```
-
-When `F1_SAFETY_REQUIRED=false`, missing model artifacts will not crash the service; `/chat` falls back to the LLM/mock safety gate. For production or formal reproduction, set:
-
-```env
-F1_SAFETY_REQUIRED=true
-```
-
-Then startup fails fast with a clear HuggingFace download command if the model is missing.
-
-### 3. DeepSeek / DashScope API Key
-
-Recommended real LLM interaction uses the DeepSeek OpenAI-compatible API. The F1 safety gate uses the local classifier and does not depend on DeepSeek. DeepSeek is used for F2 scenario/support routing, F3 response generation, and background F4 critic work.
-
-1. Create a DeepSeek API key.
-2. Make sure the account has available quota.
-3. Add the following to `.env`:
+DeepSeek:
 
 ```env
 LLM_PROVIDER=deepseek
@@ -171,16 +142,7 @@ CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro
 CRITIC_DEEPSEEK_THINKING=enabled
 ```
 
-`deepseek-v4-flash` is used for low-latency online responses. `deepseek-v4-pro` is used for background F4 critic and quality evaluation. The old `deepseek-chat` alias is only suitable for temporary compatibility checks and is not recommended for formal reproduction.
-
-For real LLM interaction, use Alibaba Cloud Model Studio / DashScope in OpenAI-compatible mode:
-
-1. Open Alibaba Cloud Model Studio.
-2. Enable the target model service.
-3. Create an API key.
-4. Make sure the selected model has available quota, or disable "free tier only" if needed.
-
-`.env`:
+DashScope:
 
 ```env
 LLM_PROVIDER=dashscope
@@ -192,18 +154,53 @@ CRITIC_DASHSCOPE_MODEL=qwen3.7-plus
 CRITIC_DASHSCOPE_THINKING=disabled
 ```
 
-For local tests or mock frontend demos:
+### 2. Restore the F1 safety model
 
-```env
-LLM_PROVIDER=mock
+The F1 local safety model is not committed to GitHub. Download it from Hugging Face:
+
+```powershell
+hf auth login
+
+hf download Nacgisac/EmoEduF1-bert-base-chinese `
+  --include "manual-A-pattern-v1/*" `
+  --local-dir exp/models/f1_safety_gate `
+  --revision main
 ```
 
-### 4. PostgreSQL and Redis
+Expected directory:
 
-PostgreSQL:
+```text
+exp/models/f1_safety_gate/manual-A-pattern-v1/
+```
+
+Current defaults in `.env.example`:
+
+```env
+F1_SAFETY_MODEL_DIR=exp/models/f1_safety_gate/manual-A-pattern-v1
+F1_SAFETY_PRELOAD=true
+F1_SAFETY_REQUIRED=false
+F1_SAFETY_HF_REPO=Nacgisac/EmoEduF1-bert-base-chinese
+F1_SAFETY_HF_REVISION=main
+```
+
+For formal reproduction or production demos, set:
+
+```env
+F1_SAFETY_REQUIRED=true
+```
+
+### 3. Start database, Redis, and migrations
+
+The default database example uses PostgreSQL:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
+```
+
+For temporary local development, SQLite is also supported:
+
+```env
+DATABASE_URL=sqlite+aiosqlite:///./local-dev.sqlite
 ```
 
 Run migrations:
@@ -218,8 +215,6 @@ Redis stores chat history and background F4 guidance:
 REDIS_URL=redis://localhost:6379/0
 ```
 
-Local live acceptance should run Redis. If Redis is unavailable, the main chat path degrades to a single-turn response without history, but multi-turn history and background F4 guidance will not be persisted.
-
 If Redis is not installed locally, start one with Docker:
 
 ```powershell
@@ -230,60 +225,68 @@ Reuse the same container later:
 
 ```powershell
 docker start emoedu-redis
-```
-
-Check Redis:
-
-```powershell
 docker exec emoedu-redis redis-cli ping
 ```
 
-Expected: `PONG`.
+Expected output:
 
-Start backend:
-
-```powershell
-.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```text
+PONG
 ```
 
-Useful URLs:
-
-- API: http://127.0.0.1:8000
-- Docs: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/health
-
-### 5. Frontend
+### 4. Start live applications
 
 ```powershell
-pnpm --dir frontend install
-```
+# Terminal 1 - backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-Mock mode:
-
-```powershell
+# Terminal 2 - student app
+$env:VITE_API_MODE="live"
 pnpm --dir frontend dev:student
+
+# Terminal 3 - research console
+$env:VITE_API_MODE="live"
 pnpm --dir frontend dev:console
 ```
 
-Live backend mode:
+Check the backend:
 
 ```powershell
-$env:VITE_API_MODE="live"
-pnpm --dir frontend dev:student
+Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-On startup, the student app opens a fresh empty session by default. Previous browser-local sessions that contain messages remain available in the sidebar. To fully clear local records and anonymous memory, use the record-management view and click the forget action.
+## Configuration Modes
 
-Common checks:
+| Mode | Purpose | External credentials | Evidence use |
+| --- | --- | --- | --- |
+| `mock` | UI development, automated tests, offline walkthrough | No | Only when visibly labelled as mock |
+| `deepseek` | Live generation and critic via DeepSeek-compatible configuration | Yes | Yes, after recording exact model/config |
+| `dashscope` | Live generation and critic via DashScope OpenAI-compatible configuration | Yes | Yes, after recording exact model/config |
 
-```powershell
-pnpm --dir frontend typecheck
-pnpm --dir frontend build
-pnpm --dir frontend build:pages
+## API Summary
+
+| Endpoint | Purpose | Runtime role |
+| --- | --- | --- |
+| `POST /chat` | Non-streaming orchestrated response | Fast-path complete response |
+| `POST /chat/stream` | SSE orchestrated response | Recommended student path |
+| `POST /api/safety/classifier/evaluate` | F1 local classifier | Default safety gate |
+| `POST /api/safety/evaluate` | LLM safety compatibility endpoint | Comparison and compatibility |
+| `POST /api/scenario/evaluate` | F2 scenario analysis | First-turn routing and secondary safety |
+| `POST /api/generator/generate` | F3 candidate generation module | Experiments and debugging |
+| `POST /api/critic/evaluate` | F4 pointwise critic module | Synchronous module endpoint; background in `/chat` |
+| `GET /api/critic/guidance/{session_id}` | Background F4 status | Research and diagnostics |
+| `GET /api/memory/status` | F6 status | Default-off capability |
+| `DELETE /api/memory` | Delete memory/RAG data | User or session data control |
+
+### Chat request example
+
+```json
+{
+  "session_id": "browser-session-id",
+  "anonymous_user_id": "optional-stable-browser-user-id",
+  "current_message": "我最近考试压力很大，晚上睡不着"
+}
 ```
-
-- Student app: http://localhost:5173
-- Research console: http://localhost:5174
 
 ## Tests
 
@@ -294,49 +297,57 @@ python -m pytest tests -q
 pnpm --dir frontend test
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
+pnpm --dir frontend build:pages
 python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
 
-## Data Policy
+## Evaluation and Evidence
 
-The public repository does not include the full PsyQA-derived labelled data, and
-sample JSON exports should not be committed. To reproduce the full experiments,
-prepare the data locally at:
+The root README should avoid presenting historical experiment outputs as current runtime guarantees. Timestamped methods, metrics, limitations, and reproduction commands should live in:
+
+- [`exp/README.md`](exp/README.md): current algorithm experiments and evidence.
+- [`exp/artifacts.manifest.json`](exp/artifacts.manifest.json): runtime/background/offline/archive inventory for experiment assets.
+- [`docs/specs/README.md`](docs/specs/README.md): implementation contracts and runtime boundaries.
+- [`docs/specs/exp-integration-map.md`](docs/specs/exp-integration-map.md): runtime/background/offline/default-off asset map.
+- [`docs/overview/emoedu-post-mvp-guide.md`](docs/overview/emoedu-post-mvp-guide.md): next validation gates and research roadmap.
+
+### Claims boundary
+
+- The local F1 classifier is a first safety screen, not a complete clinical risk assessment.
+- F2 provides a second safety review on the first LLM-mediated turn.
+- F4 pointwise output is used for background diagnostics and session guidance.
+- Pairwise preference, F9 reliability, and DPO remain gated until human validation criteria are met.
+- Historical validation summaries should be labelled as historical evidence, not live measurements.
+
+## Safety, Privacy, and Data Policy
+
+- Do not submit or demonstrate real identifiable conversations from minors.
+- Do not expose API keys, database credentials, internal prompts, or sensitive logs.
+- Yellow/red safety results interrupt ordinary generation and use fixed referral guidance.
+- Anonymous continuity uses configured identifiers; storage, retention, deletion, and isolation behavior should be checked against the current commit.
+- The public repository does not contain the complete PsyQA-derived labelled dataset. Local absence may reduce support-card enrichment, but it should not silently change the documented API contract.
+- F6 memory/RAG prompt injection remains disabled by default until privacy and quality gates pass.
+
+## Repository Map
 
 ```text
-exp/data/psyqa_labelled.json
+app/                 FastAPI application and runtime services
+frontend/            Student app, research console, and shared frontend layer
+docs/overview/       Project rationale, roadmap, and planning notes
+docs/specs/          F1-F4/F9 implementation contracts and runtime boundaries
+docs/figures/        Architecture and evidence-chain figures
+exp/                 Offline experiments, reports, and local model/data entry points
+scripts/             Utility scripts used by local workflows
+tests/               Backend, orchestration, frontend, and experiment smoke tests
+alembic/             Database migration files
 ```
-
-When this file is missing, the application and default tests can still run. F3
-strategy priors and support cards will be empty or generic, but the default path,
-runtime code, and API design remain unchanged.
-
-## Experiments
-
-Algorithm experiments are kept under `exp/`:
-
-- `exp/README.md`: experiment workflow, key results, issues, and reproduction commands.
-- `exp/data/README.md`: public data boundary. The full `psyqa_labelled.json` file must be provided locally by reproducibility users and is not committed.
-- `exp/models/f1_safety_gate/manual-A-pattern-v1/`: local F1 classifier artifacts downloaded from HuggingFace.
-- `exp/runs/`: F1/F3/F4 experiment outputs. Raw run artifacts are large and are ignored by default; key results are summarized in `exp/README.md`.
-
-The default test suite only checks `exp/*.py` syntax and entrypoint structure. Full experiment runs also need `requirements-exp.txt`, `.env`, model files, API keys, local `exp/data/psyqa_labelled.json`, and local `exp/runs/` data.
-
-The core experimental conclusion is that full multi-agent reasoning should remain available for offline validation and background quality control, while the student-facing system should stay fast and readable.
 
 ## Documentation
 
-- `docs/README.md`: documentation overview and reading path.
-- `docs/README_EN.md`: English documentation map.
-- `docs/specs/`: F1-F4, F4 pairwise, F9 specs, and the current integration boundary in `README.md` / `exp-integration-map.md`.
-- `docs/specs/README_EN.md`: English specs summary.
-- `docs/plans/`: unfinished validation gates; current entry point is `validation-gates.md`.
-- `docs/overview/`: project plan and development roadmap.
-- `docs/frontend/`: frontend design and demo notes.
-- `docs/corpus/`: historical corpus, F9, and pairwise pilot records.
-- `docs/issues/`: development issue records.
-- `docs/figures/`: SVG figures.
+Recommended reading order:
 
-## Production Principle
-
-Do not put every research agent into the online blocking path. The online path should be fast, safe, and conversational. The background path should be accurate, auditable, and useful for future prompt updates, reports, pairwise calibration, and DPO.
+1. This README - product overview and reproduction entry point.
+2. [`exp/README.md`](exp/README.md) - current experiment conclusions and evidence.
+3. [`docs/specs/README.md`](docs/specs/README.md) - current implementation boundary.
+4. [`docs/specs/exp-integration-map.md`](docs/specs/exp-integration-map.md) - asset integration map.
+5. [`docs/overview/emoedu-post-mvp-guide.md`](docs/overview/emoedu-post-mvp-guide.md) - next validation gates.

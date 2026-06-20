@@ -2,170 +2,135 @@
 
 中文 | [English](README_EN.md)
 
-EmoEdu MAS 是一个面向中国初中生（12-15 岁）的中文情感教育多智能体对话系统。项目目标是在安全边界内生成更具体、更适龄、更有社会情感学习价值的回应，同时把 critic、pairwise 和人工校准结果沉淀为后续离线优化证据。
+> 面向中国 12-15 岁初中生的安全优先情感教育多智能体系统。
 
-当前项目已经从“每轮完整同步跑 F1-F4”调整为更适合产品交互的快慢双路径：
+## 项目概览
 
-```text
-在线路径：快
-首次对话：F1 本地安全门 -> F2 情境/支持模式/风险兜底 -> F3 单候选流式返回 -> 后台 F4
-后续对话：F1 本地安全门 -> 轻量 CBT 支持 -> 注入最近历史 -> 如 F4 guidance 已完成则注入 -> 流式返回
+EmoEdu MAS 支持学生在学业压力、同伴关系和亲子冲突等常见场景中表达情绪，并获得适龄、具体、有社会情感学习价值的回应。系统结合本地安全门、情境感知路由、流式学生回复和后台 critic，把在线交互保持在低延迟路径上，同时为后续研究和质量改进保留可追踪证据。
 
-后台路径：准
-F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺 prompt / 策略表 / DPO 候选数据准备
-```
+本项目是教育支持系统，不是诊断、心理治疗、医疗或紧急服务。高风险输入会离开普通生成路径，转向固定的安全转介提示，鼓励学生立即联系可信任成年人和适当公共服务。
 
-这样保留 generator-critic、多智能体和离线优化的理论依据，也避免让学生在真实交互中等待完整双候选和 critic 链路。
+## 设计动机
 
-## 当前状态
+- **安全先于生成：** 每轮对话都先经过 F1 安全门；首轮还经过 F2 二次安全兜底。
+- **情境感知支持：** F2 基于场景、支持模式和配置化 CASEL 映射，为首轮回复提供路由依据。
+- **学生端低延迟：** F3 在线首轮生成一个路由后的候选并流式返回，不让学生等待完整双候选 critic 链路。
+- **后台质量闭环：** F4 在回复后写入质量标签和会话指导；已完成的会话指导可影响后续轮次，但不阻塞当前回复。
+- **研究边界清晰：** pairwise selection、F9 人工校准、DPO 和 F6 memory/RAG prompt injection 保持离线、门控或默认关闭，除非代码和验证状态明确改变。
 
-- 后端已集成 FastAPI、PostgreSQL、Redis 会话历史、SSE 流式返回和 `/chat` 编排入口。
-- F1 安全门在 `/chat` 中默认使用本地分类器：`bert-base-chinese` 文本特征 + 人工审查关键词特征 + soft rule + 阈值。
-- 后续轮次仍先经过 F1 安全门；为降低延迟，不再每轮同步跑完整 F2 和 F4。
-- F2 使用 LLM 判断情境、支持模式和二次安全兜底；即使 F1 漏判，F2 仍可要求转介。
-- F3 可在本地 `exp/data/psyqa_labelled.json` 存在时使用 PsyQA-derived 策略先验和 support card；数据缺失时 support-card enrichment 为空或退回通用策略，首轮仍按 F2 的 `support_mode` 生成单候选。
-- F4 critic 不再阻塞在线响应，而是在后台生成 `session guidance`，下一轮对话可使用。
-- `exp/` 保存 PsyQA 标注、F1 训练、F3 RAG 验证和 F4 pairwise 对照实验，详见 `exp/README.md`。
-- 默认 `LLM_PROVIDER=mock`，可无外网运行测试；真实交互推荐使用 DeepSeek v4：在线生成走 `deepseek-v4-flash`，后台 critic 走 `deepseek-v4-pro`。
+## 当前运行边界
 
-## Architecture
-
-后端入口是 `app.main:app`，核心接口如下：
-
-| 接口 | 用途 | 当前口径 |
+| 层级 | 当前行为 | 对学生端延迟的影响 |
 | --- | --- | --- |
-| `POST /chat` | 非流式编排入口 | 按快路径返回完整 `ChatResponse` |
-| `POST /chat/stream` | SSE 流式编排入口 | 学生端推荐使用，事件包括 `stage`、`metadata`、`delta`、`done` |
-| `POST /api/safety/classifier/evaluate` | F1 本地分类器安全门 | 生产链路使用，启动时预加载模型 |
-| `POST /api/safety/evaluate` | F1 LLM 安全门 | 保留兼容和对照实验，不是 `/chat` 默认安全门 |
-| `POST /api/scenario/evaluate` | F2 情境分析 | 输出 `scenario`、`activated_casel`、`support_mode`、`secondary_safety` |
-| `POST /api/generator/generate` | F3 双取向生成模块接口 | 实验和调试可用；`/chat` 首轮在线只生成一个方向 |
-| `POST /api/critic/evaluate` | F4 pointwise critic | 模块接口可同步调用；`/chat` 中作为后台任务使用 |
-| `GET /api/memory/status` | F6 memory/RAG 状态 | 默认关闭，后续扩展长期记忆 |
-| `DELETE /api/memory` | 清理 memory/RAG 数据 | 支持按 `anonymous_user_id` 或 `session_id` 清理 |
+| 首轮对话 | F1 本地安全门 -> F2 情境/支持路由和二次安全 -> F3 单候选流式回复 | 在线阻塞快路径 |
+| 后续对话 | F1 安全门 -> 最近 Redis 历史 -> 可选已完成 F4 guidance -> 轻量流式生成 | 在线阻塞快路径 |
+| 后台质量路径 | F4 pointwise critic -> 质量标签 -> Redis 会话指导 | 不阻塞当前回复 |
+| 离线研究 | F3 双取向候选、F4 pairwise 实验、F9 人工校准、DPO 准备 | 不进入默认 `/chat` 阻塞路径 |
+| 默认关闭能力 | F6 memory/RAG prompt injection | 需通过独立隐私和质量 gate 后才能启用 |
 
-`/chat` 和 `/chat/stream` 的请求体：
+## 产品界面
 
-```json
-{
-  "session_id": "browser-session-id",
-  "anonymous_user_id": "optional-stable-browser-user-id",
-  "current_message": "我最近考试压力很大，晚上睡不着"
-}
-```
+### 学生端
 
-`anonymous_user_id` 用于无登录场景下的连续性设计；同一浏览器可长期保存一个匿名 ID，多个 session 可以归属于同一匿名用户。未登录时也可以只传 `session_id`。
+学生端提供流式对话、会话连续性、安全转介展示和用户可控的记录处理，不暴露内部智能体轨迹、critic 标签或研究诊断字段。
 
-## Figures
+<p align="center">
+  <img src="./docs/screenshots/student-app-empty-state.png" alt="学生端空状态界面" width="900">
+</p>
 
-<p>
+<p align="center"><em>学生端空状态界面</em></p>
+
+### 研究分析台
+
+研究分析台展示风险路由、情境元数据、生成内容和后台 F4 会话指导状态等诊断信息。它用于研究、调试和演示，不面向学生使用。
+
+<p align="center">
+  <img src="./docs/screenshots/research-console-single-turn-trace.png" alt="研究分析台单轮追踪界面" width="900">
+</p>
+
+<p align="center"><em>研究分析台单轮追踪界面</em></p>
+
+## 架构
+
+三张图分别说明运行边界、当前快慢路径和从理论框架到验证 gate 的证据链。
+
+### 1. 运行边界与验证 gate
+
+<p align="center">
   <img src="./docs/figures/figure-1-runtime-boundary.zh.svg" alt="EmoEdu MAS 运行边界与验证 gate" width="760">
 </p>
 
-<p>
-  <img src="./docs/figures/figure-2-runtime-pipeline.zh.svg" alt="当前 /chat 快路径与后台/离线路径" width="760">
+### 2. 当前 `/chat` 快路径与后台/离线路径
+
+<p align="center">
+  <img src="./docs/figures/figure-2-runtime-pipeline.zh.svg" alt="当前 EmoEdu MAS 运行、后台与离线路径" width="760">
 </p>
 
-<p>
-  <img src="./docs/figures/figure-3-argument-loop.zh.svg" alt="理论框架到 Pairwise Gate 的证据链" width="760">
+### 3. 理论框架到 pairwise 验证 gate 的证据链
+
+<p align="center">
+  <img src="./docs/figures/figure-3-argument-loop.zh.svg" alt="理论框架到 pairwise 验证 gate 的证据链" width="760">
 </p>
 
-## Quick Start
+## 核心能力
 
-### 1. Backend
+| 能力 | 状态 | 说明 |
+| --- | --- | --- |
+| F1 本地安全分类器 | 已实现 | 本地模型可预加载；`yellow`/`red` 会中断普通生成。 |
+| F2 情境和支持路由 | 已实现 | 输出 scenario、配置化 CASEL 维度、support mode 和 secondary safety。 |
+| F3 学生端流式回复 | 已实现 | 在线首轮生成一个路由后的候选；双取向候选保留给实验和调试。 |
+| F4 后台 critic 会话指导 | 已实现 | 回复后后台运行，不阻塞学生端。 |
+| 匿名会话连续性 | 已实现 | 使用 `anonymous_user_id` 和 `session_id` 组织无登录连续体验。 |
+| 研究分析台 | 已实现 | 展示内部轨迹和后台 critic 状态。 |
+| F4 pairwise selector | 离线 / 门控 | 不是默认在线选择器。 |
+| DPO 训练闭环 | 未来 / 门控 | 只能使用通过验证的偏好数据。 |
+| F6 memory/RAG prompt injection | 默认关闭 | 需要通过隐私、删除、隔离和质量 gate 后再启用。 |
+
+## 快速启动（默认本地模式）
+
+当前公开配置默认使用 `mock`，用于本地开发、自动化测试和无外部凭据的界面检查。正式演示或证据采集应切换到真实模型提供方，并记录实际模型提供方、模型和配置；如果截图或视频使用 `mock`，需要明确标注。
+
+### 安装
 
 ```powershell
+# 后端
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
+
+# 前端
+pnpm --dir frontend install
 ```
 
-复制后先确认 `.env` 中的 `LLM_PROVIDER`、`DATABASE_URL`、`REDIS_URL` 和 API key 配置。`LLM_PROVIDER=mock` 不需要外部 API key；真实 live demo 使用 DeepSeek 或 DashScope 时不要提交真实 key。
-
-如果要复现 `exp/` 下的算法实验和报告脚本，再安装实验依赖：
+### 启动界面
 
 ```powershell
-python -m pip install -r requirements-exp.txt
+# 终端 1 - 后端
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# 终端 2 - 学生端
+pnpm --dir frontend dev:student
+
+# 终端 3 - 研究分析台
+pnpm --dir frontend dev:console
 ```
 
-若 PowerShell 拦截 `Activate.ps1`：
+打开：
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
+- 学生端：<http://localhost:5173>
+- 研究分析台：<http://localhost:5174>
+- 后端 API：<http://127.0.0.1:8000>
+- API 文档：<http://127.0.0.1:8000/docs>
+- 健康检查：<http://127.0.0.1:8000/health>
 
-默认 mock 模式可直接跑测试：
+## 完整本地配置：真实模型模式
 
-```powershell
-python -m pytest tests -q
-```
+### 1. 配置后端
 
-### 2. F1 Safety Model
+复制 `.env.example` 到 `.env`，然后按实际提供方配置。不要提交 `.env` 或在演示中暴露 key。
 
-F1 本地安全门模型不提交到 GitHub。模型产物已经发布到 HuggingFace：
-
-```text
-https://huggingface.co/Nacgisac/EmoEduF1-bert-base-chinese/tree/main/manual-A-pattern-v1
-```
-
-真实后端交互建议先下载模型：
-
-```powershell
-hf auth login
-
-hf download Nacgisac/EmoEduF1-bert-base-chinese `
-  --include "manual-A-pattern-v1/*" `
-  --local-dir exp/models/f1_safety_gate `
-  --revision main
-```
-
-下载完成后，本地目录应为：
-
-```text
-exp/models/f1_safety_gate/manual-A-pattern-v1/
-```
-
-其中至少包含：
-
-```text
-hybrid_safety_classifier.pt
-feature_scalers.joblib
-manual_keywords.json
-manual_keywords_grouped.json
-model_config.json
-summary.json
-inference_benchmark.json
-manual_keyword_audit.csv
-hybrid_test_confusion_matrix.csv
-```
-
-对应 `.env`：
-
-```env
-F1_SAFETY_MODEL_DIR=exp/models/f1_safety_gate/manual-A-pattern-v1
-F1_SAFETY_PRELOAD=true
-F1_SAFETY_REQUIRED=false
-F1_SAFETY_HF_REPO=Nacgisac/EmoEduF1-bert-base-chinese
-F1_SAFETY_HF_REVISION=main
-```
-
-`F1_SAFETY_REQUIRED=false` 时，如果本地模型缺失，`/chat` 会安全退回 LLM/mock 安全门，便于研究人员先跑通系统。生产或正式实验复现建议设为：
-
-```env
-F1_SAFETY_REQUIRED=true
-```
-
-此时模型缺失会直接失败并提示下载命令，避免安全门能力和预期不一致。
-
-### 3. DeepSeek / DashScope API Key
-
-推荐的真实 LLM 交互配置使用 DeepSeek OpenAI 兼容接口。F1 安全门默认使用本地分类器，不依赖 DeepSeek；DeepSeek 主要用于 F2 情境/支持模式、F3 回复生成和后台 F4 critic。
-
-1. 创建 DeepSeek API Key。
-2. 确认账户有可用额度。
-3. 在 `.env` 中填入：
+DeepSeek:
 
 ```env
 LLM_PROVIDER=deepseek
@@ -177,14 +142,7 @@ CRITIC_DEEPSEEK_MODEL=deepseek-v4-pro
 CRITIC_DEEPSEEK_THINKING=enabled
 ```
 
-`deepseek-v4-flash` 用于在线低延迟回复；`deepseek-v4-pro` 用于后台 F4 critic 和质量评估。旧的 `deepseek-chat` 只适合临时兼容验证，不建议用于正式复现。
-
-真实 LLM 交互使用阿里云百炼 DashScope 兼容 OpenAI 接口：
-
-1. 登录阿里云百炼控制台并开通模型服务。
-2. 创建 API Key。
-3. 确认所选模型有额度，或关闭“仅使用免费额度”限制。
-4. 在 `.env` 中填入：
+DashScope:
 
 ```env
 LLM_PROVIDER=dashscope
@@ -196,43 +154,68 @@ CRITIC_DASHSCOPE_MODEL=qwen3.7-plus
 CRITIC_DASHSCOPE_THINKING=disabled
 ```
 
-如果只想本地跑测试或查看前端 mock，可以保持：
+### 2. 恢复 F1 安全模型
 
-```env
-LLM_PROVIDER=mock
+F1 本地安全模型不提交到 GitHub，需要从 Hugging Face 下载到本地：
+
+```powershell
+hf auth login
+
+hf download Nacgisac/EmoEduF1-bert-base-chinese `
+  --include "manual-A-pattern-v1/*" `
+  --local-dir exp/models/f1_safety_gate `
+  --revision main
 ```
 
-### 4. Database and Redis
+预期目录：
 
-当前默认数据库配置示例是 PostgreSQL，适合正式联调、验收和可持久化实验记录：
+```text
+exp/models/f1_safety_gate/manual-A-pattern-v1/
+```
+
+`.env.example` 中当前默认：
+
+```env
+F1_SAFETY_MODEL_DIR=exp/models/f1_safety_gate/manual-A-pattern-v1
+F1_SAFETY_PRELOAD=true
+F1_SAFETY_REQUIRED=false
+F1_SAFETY_HF_REPO=Nacgisac/EmoEduF1-bert-base-chinese
+F1_SAFETY_HF_REVISION=main
+```
+
+正式复现或生产演示建议设置：
+
+```env
+F1_SAFETY_REQUIRED=true
+```
+
+### 3. 启动数据库、Redis 和迁移
+
+默认数据库示例使用 PostgreSQL：
 
 ```env
 DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
 ```
 
-如果只是本机视频演示或临时开发，不想准备 PostgreSQL，也可以改用本地 SQLite：
+本地临时开发也可以使用 SQLite：
 
 ```env
 DATABASE_URL=sqlite+aiosqlite:///./local-dev.sqlite
 ```
 
-SQLite 适合单机演示和快速 smoke test；正式复现仍建议使用 PostgreSQL。
-
-迁移：
+运行迁移：
 
 ```powershell
 alembic upgrade head
 ```
 
-Redis 用于聊天历史和后台 F4 guidance：
+Redis 用于聊天历史和后台 F4 会话指导：
 
 ```env
 REDIS_URL=redis://localhost:6379/0
 ```
 
-本地 live 验收应确保 Redis 可连；如果 Redis 不可用，主聊天会降级为无历史单轮回复，但多轮历史和后台 F4 guidance 不会持久化。
-
-如果本机没有 Redis，可以用 Docker 启动一个本地实例：
+如果本机没有 Redis，可用 Docker 启动：
 
 ```powershell
 docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
@@ -242,73 +225,70 @@ docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
 
 ```powershell
 docker start emoedu-redis
-```
-
-确认 Redis：
-
-```powershell
 docker exec emoedu-redis redis-cli ping
 ```
 
-预期返回 `PONG`。
+预期输出：
 
-启动后端：
-
-```powershell
-.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```text
+PONG
 ```
 
-访问：
-
-- API: http://127.0.0.1:8000
-- Docs: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/health
-
-### 5. Frontend
-
-前端位于 `frontend/`，是 pnpm workspace，包含学生端、研究分析台和 shared API/type 层。
+### 4. 启动真实模型应用
 
 ```powershell
-pnpm --dir frontend install
-```
+# 终端 1 - 后端
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-mock 模式：
-
-```powershell
-pnpm --dir frontend dev:student
-pnpm --dir frontend dev:console
-```
-
-连接本地后端 live 模式：
-
-```powershell
+# 终端 2 - 学生端
 $env:VITE_API_MODE="live"
 pnpm --dir frontend dev:student
-```
 
-如果同时演示研究分析台，在另一个 PowerShell 终端运行：
-
-```powershell
+# 终端 3 - 研究分析台
 $env:VITE_API_MODE="live"
 pnpm --dir frontend dev:console
 ```
 
-Vite dev server 会把 `/chat` 和 `/api/*` 代理到 `http://localhost:8000`。如果不经过 Vite dev server，需要额外设置 `VITE_API_BASE=http://localhost:8000`。
-
-学生端每次启动默认进入新的空白对话；左侧仍保留本浏览器中已有消息的历史会话。若需要彻底清空本地记录和匿名记忆，请进入“整理记录”后点击“让我忘记”。
-
-常用检查：
+检查后端：
 
 ```powershell
-pnpm --dir frontend typecheck
-pnpm --dir frontend build
-pnpm --dir frontend build:pages
+Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-- Student app: http://localhost:5173
-- Research console: http://localhost:5174
+## 配置模式
 
-## Tests
+| 模式 | 用途 | 外部凭据 | 证据用途 |
+| --- | --- | --- | --- |
+| `mock` | UI 开发、自动化测试、离线流程检查 | 否 | 只能作为明确标注的 mock 证据 |
+| `deepseek` | 通过 DeepSeek 兼容配置进行真实模型生成和 critic | 是 | 记录精确模型和配置后可用于证据 |
+| `dashscope` | 通过 DashScope OpenAI 兼容配置进行真实模型生成和 critic | 是 | 记录精确模型和配置后可用于证据 |
+
+## API 摘要
+
+| 接口 | 用途 | 运行角色 |
+| --- | --- | --- |
+| `POST /chat` | 非流式编排回复 | 快路径完整回复 |
+| `POST /chat/stream` | SSE 编排回复 | 学生端推荐路径 |
+| `POST /api/safety/classifier/evaluate` | F1 本地分类器 | 默认安全门 |
+| `POST /api/safety/evaluate` | LLM 安全兼容端点 | 对照和兼容 |
+| `POST /api/scenario/evaluate` | F2 情境分析 | 首轮路由和二次安全 |
+| `POST /api/generator/generate` | F3 候选生成模块 | 实验和调试 |
+| `POST /api/critic/evaluate` | F4 pointwise critic 模块 | 模块同步端点；`/chat` 中作为后台任务使用 |
+| `GET /api/critic/guidance/{session_id}` | 后台 F4 状态 | 研究和诊断 |
+| `GET /api/memory/status` | F6 状态 | 默认关闭能力 |
+| `DELETE /api/memory` | 删除 memory/RAG 数据 | 用户或会话数据控制 |
+
+### 聊天请求示例
+
+```json
+{
+  "session_id": "browser-session-id",
+  "anonymous_user_id": "optional-stable-browser-user-id",
+  "current_message": "我最近考试压力很大，晚上睡不着"
+}
+```
+
+## 测试
 
 推荐检查顺序：
 
@@ -321,42 +301,53 @@ pnpm --dir frontend build:pages
 python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
 
-## Data Policy
+## 评估与证据
 
-公开仓库不包含完整 PsyQA-derived labelled data，也不提交 sample JSON 导出。完整实验复现者需要自行准备并放置：
+根 README 应避免把历史实验输出写成当前运行保证。带时间戳的方法、指标、限制和复现命令应放在：
+
+- [`exp/README.md`](exp/README.md)：当前算法实验和证据入口。
+- [`exp/artifacts.manifest.json`](exp/artifacts.manifest.json)：实验资产的 runtime/background/offline/archive 分级清单。
+- [`docs/specs/README.md`](docs/specs/README.md)：实现契约和运行边界。
+- [`docs/specs/exp-integration-map.md`](docs/specs/exp-integration-map.md)：运行时、后台、离线、默认关闭能力的资产地图。
+- [`docs/overview/emoedu-post-mvp-guide.md`](docs/overview/emoedu-post-mvp-guide.md)：后续验证 gate 和研究路线。
+
+### 声明边界
+
+- F1 本地分类器是第一层安全筛查，不是完整临床风险评估。
+- F2 在首轮 LLM 介入路径上提供二次安全检查。
+- F4 pointwise 输出用于后台诊断和会话指导。
+- Pairwise preference、F9 reliability 和 DPO 在达到人工验证标准前保持门控。
+- 历史验证摘要应标注为历史证据，而不是实时在线指标。
+
+## 安全、隐私与数据策略
+
+- 不提交或演示来自未成年人的真实可识别对话。
+- 不暴露 API key、数据库凭据、内部 prompt 或敏感日志。
+- `yellow`/`red` 安全结果会中断普通生成，并使用固定转介提示。
+- 匿名连续性使用配置化标识符；存储、保留、删除和隔离行为应以当前提交代码为准。
+- 公开仓库不包含完整 PsyQA-derived labelled data；本地缺失可能降低 support-card enrichment，但不应悄悄改变 API 约定。
+- F6 memory/RAG prompt injection 默认关闭，直到隐私和质量 gate 通过。
+
+## 仓库结构
 
 ```text
-exp/data/psyqa_labelled.json
+app/                 FastAPI 应用和运行时服务
+frontend/            学生端、研究分析台和共享前端层
+docs/overview/       项目缘起、路线图和规划记录
+docs/specs/          F1-F4/F9 实现契约和运行边界
+docs/figures/        架构图和证据链图
+exp/                 离线实验、报告和本地模型/数据入口
+scripts/             本地工作流使用的工具脚本
+tests/               后端、编排、前端和实验冒烟测试
+alembic/             数据库迁移文件
 ```
 
-这个文件是 F1/F3/F4 实验和 F3 support-card enrichment 的本地参考数据。文件缺失时，系统和默认测试仍可运行；影响是 F3 的 strategy priors/support cards 为空或退回通用策略，不改变默认数据路径、运行时代码或 API 设计。
+## 文档
 
-## Experiment Entry
+推荐阅读顺序：
 
-算法实验统一放在 `exp/`：
-
-- `exp/README.md`：实验流程、关键结果、问题记录和复现命令。
-- `exp/data/README.md`：公开数据边界；完整 `psyqa_labelled.json` 需复现者本地放置，不提交 GitHub。
-- `exp/models/f1_safety_gate/manual-A-pattern-v1/`：已迁入生产的 F1 分类器，本地从 HuggingFace 下载，不提交 GitHub。
-- `exp/runs/`：F1/F3/F4 各轮实验输出；原始 run 产物体积较大，默认不提交 GitHub，关键指标已整理在 `exp/README.md`。
-
-默认测试只保证 `exp/*.py` 的语法和入口结构。完整实验运行还需要 `requirements-exp.txt`、`.env`、模型文件、API key、本地 `exp/data/psyqa_labelled.json` 和本地 `exp/runs/` 数据。
-
-`exp/artifacts.manifest.json` 记录实验资产如何进入完整体系，并把每项资产标为 `runtime`、`runtime_reference`、`background`、`offline` 或 `archive`。维护口径见 `docs/specs/exp-integration-map.md`：`exp` 是完整体系的一部分，但实验脚本不进入 `/chat` 在线阻塞路径。
-
-## Documentation
-
-- `docs/README.md`：文档结构总览和推荐阅读路径。
-- `docs/README_EN.md`：英文文档地图和公开阅读入口。
-- `docs/specs/`：F1-F4、F4 pairwise、F9 的实现规格，以及 `README.md` / `exp-integration-map.md` 中的当前集成边界。
-- `docs/specs/README_EN.md`：英文规格摘要。
-- `docs/plans/`：未完成的后续验证 gate；当前入口为 `validation-gates.md`。
-- `docs/overview/`：项目方案、工程拆分和阶段计划。
-- `docs/frontend/`：前端设计、部署和演示说明。
-- `docs/corpus/`：旧合成语料、F9 与 pairwise 试点记录。
-- `docs/issues/`：开发过程问题记录。
-- `docs/figures/`：项目图示 SVG。
-
-## Current Production Principle
-
-不要把所有研究 agent 都放到在线阻塞路径里。在线路径负责“快、安全、能交流”，后台路径负责“准、可评估、可迭代”。F4、pairwise、DPO 和长期 RAG 都应以这个原则接入。
+1. 本 README - 产品概览和复现入口。
+2. [`exp/README.md`](exp/README.md) - 当前实验结论和证据。
+3. [`docs/specs/README.md`](docs/specs/README.md) - 当前实现边界。
+4. [`docs/specs/exp-integration-map.md`](docs/specs/exp-integration-map.md) - 资产集成地图。
+5. [`docs/overview/emoedu-post-mvp-guide.md`](docs/overview/emoedu-post-mvp-guide.md) - 后续验证 gate。
