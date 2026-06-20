@@ -81,6 +81,8 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+复制后先确认 `.env` 中的 `LLM_PROVIDER`、`DATABASE_URL`、`REDIS_URL` 和 API key 配置。`LLM_PROVIDER=mock` 不需要外部 API key；真实 live demo 使用 DeepSeek 或 DashScope 时不要提交真实 key。
+
 如果要复现 `exp/` 下的算法实验和报告脚本，再安装实验依赖：
 
 ```powershell
@@ -202,11 +204,19 @@ LLM_PROVIDER=mock
 
 ### 4. Database and Redis
 
-当前默认数据库是 PostgreSQL：
+当前默认数据库配置示例是 PostgreSQL，适合正式联调、验收和可持久化实验记录：
 
 ```env
 DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
 ```
+
+如果只是本机视频演示或临时开发，不想准备 PostgreSQL，也可以改用本地 SQLite：
+
+```env
+DATABASE_URL=sqlite+aiosqlite:///./local-dev.sqlite
+```
+
+SQLite 适合单机演示和快速 smoke test；正式复现仍建议使用 PostgreSQL。
 
 迁移：
 
@@ -276,6 +286,15 @@ $env:VITE_API_MODE="live"
 pnpm --dir frontend dev:student
 ```
 
+如果同时演示研究分析台，在另一个 PowerShell 终端运行：
+
+```powershell
+$env:VITE_API_MODE="live"
+pnpm --dir frontend dev:console
+```
+
+Vite dev server 会把 `/chat` 和 `/api/*` 代理到 `http://localhost:8000`。如果不经过 Vite dev server，需要额外设置 `VITE_API_BASE=http://localhost:8000`。
+
 学生端每次启动默认进入新的空白对话；左侧仍保留本浏览器中已有消息的历史会话。若需要彻底清空本地记录和匿名记忆，请进入“整理记录”后点击“让我忘记”。
 
 常用检查：
@@ -298,6 +317,7 @@ python -m pytest tests -q
 pnpm --dir frontend test
 pnpm --dir frontend typecheck
 pnpm --dir frontend build
+pnpm --dir frontend build:pages
 python -m pytest tests/test_exp/test_exp_smoke.py -q
 ```
 
