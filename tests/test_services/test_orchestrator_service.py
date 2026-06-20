@@ -805,6 +805,48 @@ async def test_non_green_safety_short_circuits_downstream_services():
 
 
 @pytest.mark.asyncio
+async def test_yellow_safety_that_allows_generation_reaches_generator():
+    safety = RecordingSafetyService(
+        SafetyGateResponse(
+            risk_level="yellow",
+            matched_signals=["不想存在"],
+            rationale="需关注但无具体计划。",
+            action=SafetyAction(
+                block_generation=False,
+                referral_message="yellow support",
+            ),
+        )
+    )
+    scenario = RecordingScenarioService()
+    generator = RecordingGeneratorService()
+    critic = RecordingCriticService()
+    history_store = InMemoryHistoryStore()
+    dao = RecordingChatTurnDAO()
+    service = _service(
+        safety=safety,
+        scenario=scenario,
+        generator=generator,
+        critic=critic,
+        history_store=history_store,
+        dao=dao,
+    )
+
+    response = await service.chat(
+        ChatRequest(session_id="s1", current_message="我不想存在了")
+    )
+
+    history = await history_store.get_history("s1", max_messages=12)
+
+    assert response.status == "answered"
+    assert response.risk_level == "yellow"
+    assert scenario.requests
+    assert generator.requests
+    assert history[-1].text == response.reply_text
+    assert dao.calls[0]["status"] == "answered"
+    assert dao.calls[0]["risk_level"] == "yellow"
+
+
+@pytest.mark.asyncio
 async def test_f2_secondary_safety_short_circuits_generator_and_critic():
     referral = "f2 referral"
     scenario = RecordingScenarioService(

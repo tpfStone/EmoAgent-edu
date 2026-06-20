@@ -199,7 +199,7 @@ help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 
             action = SafetyAction(block_generation=False, referral_message="")
         elif risk_level == "yellow":
             action = SafetyAction(
-                block_generation=True,
+                block_generation=False,
                 referral_message=YELLOW_REFERRAL_MESSAGE,
             )
         else:

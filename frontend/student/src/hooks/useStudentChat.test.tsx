@@ -10,12 +10,12 @@ vi.mock("@emoedu/shared", () => ({
 const fetchStudentChatStreamMock = vi.mocked(fetchStudentChatStream);
 
 function Harness() {
-  const { referralLocked, riskLevel, send } = useStudentChat("session-a", "anon-a");
+  const { isSafetyLocked, riskLevel, send } = useStudentChat("session-a", "anon-a");
 
   return (
     <div>
       <p>risk:{riskLevel}</p>
-      <p>locked:{String(referralLocked)}</p>
+      <p>locked:{String(isSafetyLocked)}</p>
       <button type="button" onClick={() => void send("message")}>
         send
       </button>
@@ -43,12 +43,12 @@ describe("useStudentChat conservative fallback", () => {
     fireEvent.click(screen.getByRole("button", { name: "send" }));
 
     expect(await screen.findByText("risk:yellow")).toBeTruthy();
-    expect(screen.getByText("locked:true")).toBeTruthy();
+    expect(screen.getByText("locked:false")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "send" }));
 
     await waitFor(() => expect(fetchStudentChatStreamMock).toHaveBeenCalledTimes(2));
     expect(screen.getByText("risk:yellow")).toBeTruthy();
-    expect(screen.getByText("locked:true")).toBeTruthy();
+    expect(screen.getByText("locked:false")).toBeTruthy();
   });
 });

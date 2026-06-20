@@ -115,5 +115,5 @@ async def test_invalid_or_failed_scenario_defaults_to_other(
     assert response.scenario_confidence == 0.0
     assert response.activated_casel == ["自我觉察引导"]
     assert response.secondary_safety.risk_level == "yellow"
-    assert response.secondary_safety.action.block_generation is True
+    assert response.secondary_safety.action.block_generation is False
     assert response.rationale

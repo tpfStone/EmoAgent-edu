@@ -2,15 +2,33 @@ import styles from "./ReferralPanel.module.css";
 
 interface ReferralPanelProps {
   riskLevel: string;
+  onDismiss?: () => void;
 }
 
-export function ReferralPanel({ riskLevel }: ReferralPanelProps) {
+interface SupportResourceHintProps {
+  onExpand: () => void;
+}
+
+export function ReferralPanel({ riskLevel, onDismiss }: ReferralPanelProps) {
   const showEmergency = riskLevel === "red";
+  const showDismiss = riskLevel === "yellow" && onDismiss;
 
   return (
     <section className={styles.panel} aria-label="支持资源">
       <div className={styles.copy}>
-        <h2>我注意到你可能需要更多支持</h2>
+        <div className={styles.header}>
+          <h2>我注意到你可能需要更多支持</h2>
+          {showDismiss ? (
+            <button
+              aria-label="关闭支持提示"
+              className={styles.dismissButton}
+              type="button"
+              onClick={onDismiss}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
+        </div>
         <p>你愿意说出来，很勇敢。</p>
         <p>现在，请联系一位你信任的大人，让他或她陪你一起处理。</p>
       </div>
@@ -37,6 +55,17 @@ export function ReferralPanel({ riskLevel }: ReferralPanelProps) {
           </>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+export function SupportResourceHint({ onExpand }: SupportResourceHintProps) {
+  return (
+    <section className={styles.hint} aria-label="支持资源入口">
+      <span>需要支持时，可以查看资源</span>
+      <button type="button" onClick={onExpand}>
+        查看资源
+      </button>
     </section>
   );
 }

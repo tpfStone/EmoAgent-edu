@@ -3,6 +3,9 @@ import { fetchStudentChatStream } from "@emoedu/shared";
 import type { ChatRequest, RiskLevel, StudentChatView } from "@emoedu/shared";
 
 const FALLBACK_TEXT = "我现在有点没反应过来，要不你再说一次？";
+const DEFAULT_RISK_LEVEL: RiskLevel = "green";
+
+type RiskLevelsBySession = Record<string, RiskLevel>;
 
 interface SendOptions {
   isCurrent?: () => boolean;
@@ -13,11 +16,27 @@ export function useStudentChat(sessionId: string, anonymousUserId: string) {
   const [pendingSessionIds, setPendingSessionIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>("green");
-  const [referralLocked, setReferralLocked] = useState(false);
+  const [riskLevelsBySession, setRiskLevelsBySession] =
+    useState<RiskLevelsBySession>(() => ({}));
   // Conservative fallback: transport/parser failures must not silently downgrade risk.
-  const lastKnownRisk = useRef<RiskLevel>("green");
+  const lastKnownRisk = useRef<RiskLevelsBySession>({});
   const loading = pendingSessionIds.has(sessionId);
+  const riskLevel = riskLevelsBySession[sessionId] ?? DEFAULT_RISK_LEVEL;
+  const isSafetyLocked = riskLevel === "red";
+
+  function setSessionRisk(targetSessionId: string, nextRiskLevel: RiskLevel): void {
+    lastKnownRisk.current[targetSessionId] = nextRiskLevel;
+    setRiskLevelsBySession((current) => {
+      if (current[targetSessionId] === nextRiskLevel) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [targetSessionId]: nextRiskLevel,
+      };
+    });
+  }
 
   async function send(
     text: string,
@@ -45,9 +64,7 @@ export function useStudentChat(sessionId: string, anonymousUserId: string) {
       });
 
       if (options.isCurrent?.() ?? true) {
-        lastKnownRisk.current = view.risk_level;
-        setRiskLevel(view.risk_level);
-        setReferralLocked(view.risk_level !== "green");
+        setSessionRisk(requestSessionId, view.risk_level);
       }
 
       return view;
@@ -55,12 +72,11 @@ export function useStudentChat(sessionId: string, anonymousUserId: string) {
       const fallback: StudentChatView = {
         session_id: requestSessionId,
         reply_text: FALLBACK_TEXT,
-        risk_level: lastKnownRisk.current,
+        risk_level: lastKnownRisk.current[requestSessionId] ?? DEFAULT_RISK_LEVEL,
       };
 
       if (options.isCurrent?.() ?? true) {
-        setRiskLevel(fallback.risk_level);
-        setReferralLocked(fallback.risk_level !== "green");
+        setSessionRisk(requestSessionId, fallback.risk_level);
       }
 
       return fallback;
@@ -73,16 +89,14 @@ export function useStudentChat(sessionId: string, anonymousUserId: string) {
     }
   }
 
-  function resetReferral(): void {
-    lastKnownRisk.current = "green";
-    setRiskLevel("green");
-    setReferralLocked(false);
+  function resetReferral(targetSessionId = sessionId): void {
+    setSessionRisk(targetSessionId, DEFAULT_RISK_LEVEL);
   }
 
   return {
     loading,
     riskLevel,
-    referralLocked,
+    isSafetyLocked,
     send,
     resetReferral,
   };

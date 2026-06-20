@@ -54,7 +54,7 @@ async def test_classifier_green_result_allows_generation(safety_log_dao):
 
 
 @pytest.mark.asyncio
-async def test_classifier_yellow_result_uses_fixed_referral():
+async def test_classifier_yellow_result_keeps_label_and_support_without_blocking():
     classifier = FakeSafetyClassifier(
         _prediction(
             "yellow",
@@ -68,7 +68,7 @@ async def test_classifier_yellow_result_uses_fixed_referral():
 
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["活着"]
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False
     assert "12356" not in response.action.referral_message
     assert "下面的支持资源" in response.action.referral_message
 
@@ -89,7 +89,7 @@ async def test_classifier_result_uses_rule_signals_when_keywords_are_empty():
 
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["passive_death_ideation"]
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False
 
 
 @pytest.mark.asyncio
@@ -135,4 +135,4 @@ async def test_classifier_exception_defaults_to_yellow():
 
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["classifier_failure"]
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False

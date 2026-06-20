@@ -40,7 +40,9 @@ async def test_green_result_allows_generation(fake_llm_client, safety_log_dao):
 
 
 @pytest.mark.asyncio
-async def test_yellow_result_uses_fixed_referral(fake_llm_client, safety_log_dao):
+async def test_yellow_result_keeps_label_and_support_without_blocking(
+    fake_llm_client, safety_log_dao
+):
     llm = fake_llm_client(
         [
             json.dumps(
@@ -58,7 +60,7 @@ async def test_yellow_result_uses_fixed_referral(fake_llm_client, safety_log_dao
     response = await service.evaluate(_request("最近总觉得活着没什么意思，挺没劲的"))
 
     assert response.risk_level == "yellow"
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False
     assert "12356" not in response.action.referral_message
     assert "12355" not in response.action.referral_message
     assert "爸爸妈妈、老师" in response.action.referral_message
@@ -137,7 +139,7 @@ async def test_invalid_llm_json_defaults_to_yellow(fake_llm_client):
 
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["llm_parse_failure"]
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False
     assert "下面的支持资源" in response.action.referral_message
 
 
@@ -150,4 +152,4 @@ async def test_llm_exception_defaults_to_yellow(fake_llm_client):
 
     assert response.risk_level == "yellow"
     assert response.matched_signals == ["llm_failure"]
-    assert response.action.block_generation is True
+    assert response.action.block_generation is False

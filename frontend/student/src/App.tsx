@@ -4,7 +4,7 @@ import { BreathingPanel } from "./components/BreathingPanel";
 import { Composer } from "./components/Composer";
 import { MessageList } from "./components/MessageList";
 import { RecordManagementPanel } from "./components/RecordManagementPanel";
-import { ReferralPanel } from "./components/ReferralPanel";
+import { ReferralPanel, SupportResourceHint } from "./components/ReferralPanel";
 import { StarterPrompts } from "./components/StarterPrompts";
 import {
   StudentSidebar,
@@ -15,9 +15,55 @@ import { clearAnonymousMemory } from "@emoedu/shared";
 import { useStudentChat } from "./hooks/useStudentChat";
 import { useStudentSessions } from "./hooks/useStudentSessions";
 
+const YELLOW_SUPPORT_DISMISSED_KEY =
+  "emoagent.student.yellowSupportDismissed.v1";
+
+type YellowSupportDismissedState = Record<string, boolean>;
+
+function readYellowSupportDismissedState(): YellowSupportDismissedState {
+  if (typeof localStorage === "undefined") {
+    return {};
+  }
+
+  try {
+    const raw = localStorage.getItem(YELLOW_SUPPORT_DISMISSED_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter(
+          (entry): entry is [string, boolean] =>
+            typeof entry[0] === "string" && typeof entry[1] === "boolean",
+        )
+        .map(([sessionId, dismissed]) => [sessionId, dismissed]),
+    );
+  } catch {
+    localStorage.removeItem(YELLOW_SUPPORT_DISMISSED_KEY);
+    return {};
+  }
+}
+
+function persistYellowSupportDismissedState(
+  state: YellowSupportDismissedState,
+): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(YELLOW_SUPPORT_DISMISSED_KEY, JSON.stringify(state));
+}
+
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState<StudentMainView>("chat");
+  const [yellowSupportDismissedBySession, setYellowSupportDismissedBySession] =
+    useState<YellowSupportDismissedState>(() =>
+      readYellowSupportDismissedState(),
+    );
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const {
     sessions,
@@ -32,14 +78,20 @@ export default function App() {
     clearSessions,
     resetAnonymousUserId,
   } = useStudentSessions();
-  const { loading, riskLevel, referralLocked, send, resetReferral } =
+  const { loading, riskLevel, isSafetyLocked, send, resetReferral } =
     useStudentChat(currentId, anonymousUserId);
   const activeSessionIdRef = useRef(currentId);
 
   const messages = currentSession?.messages ?? [];
   const lastMessageText = messages[messages.length - 1]?.text ?? "";
   const hasMessages = messages.length > 0;
-  const chatScrollClassName = referralLocked
+  const yellowSupportDismissed =
+    yellowSupportDismissedBySession[currentId] === true;
+  const showFullYellowSupport =
+    riskLevel === "yellow" && !yellowSupportDismissed;
+  const showCollapsedYellowSupport =
+    riskLevel === "yellow" && yellowSupportDismissed;
+  const chatScrollClassName = isSafetyLocked
     ? `${styles.chatScroll} ${styles.chatScrollReferralLocked}`
     : styles.chatScroll;
 
@@ -55,7 +107,7 @@ export default function App() {
   async function handleSend(text: string) {
     const trimmed = text.trim();
 
-    if (!trimmed || loading || referralLocked) {
+    if (!trimmed || loading || isSafetyLocked) {
       return;
     }
 
@@ -87,7 +139,7 @@ export default function App() {
     activeSessionIdRef.current = "";
     const session = newSession();
     activeSessionIdRef.current = session.id;
-    resetReferral();
+    resetReferral(session.id);
     setActiveView("chat");
     setSidebarOpen(false);
   }
@@ -97,6 +149,8 @@ export default function App() {
     await clearAnonymousMemory(anonymousUserId).catch(() => undefined);
     clearSessions();
     resetAnonymousUserId();
+    setYellowSupportDismissedBySession({});
+    persistYellowSupportDismissedState({});
     resetReferral();
     setSidebarOpen(false);
   }
@@ -120,6 +174,28 @@ export default function App() {
     switchSession(sessionId);
     setActiveView("chat");
     setSidebarOpen(false);
+  }
+
+  function setYellowSupportDismissed(
+    sessionId: string,
+    dismissed: boolean,
+  ): void {
+    setYellowSupportDismissedBySession((current) => {
+      const next = {
+        ...current,
+        [sessionId]: dismissed,
+      };
+      persistYellowSupportDismissedState(next);
+      return next;
+    });
+  }
+
+  function handleDismissYellowSupport() {
+    setYellowSupportDismissed(currentId, true);
+  }
+
+  function handleExpandYellowSupport() {
+    setYellowSupportDismissed(currentId, false);
   }
 
   const sidebar = (
@@ -179,7 +255,7 @@ export default function App() {
               <>
               <div
                 className={chatScrollClassName}
-                data-referral-locked={String(referralLocked)}
+                data-referral-locked={String(isSafetyLocked)}
                 data-testid="student-chat-scroll"
                 ref={scrollRef}
               >
@@ -199,10 +275,19 @@ export default function App() {
               </div>
 
               <div className={styles.composerArea}>
-                {!hasMessages && !referralLocked ? (
+                {!hasMessages && !isSafetyLocked ? (
                   <StarterPrompts disabled={loading} onPick={handlePrompt} />
                 ) : null}
-                {referralLocked ? (
+                {showFullYellowSupport ? (
+                  <ReferralPanel
+                    riskLevel={riskLevel}
+                    onDismiss={handleDismissYellowSupport}
+                  />
+                ) : null}
+                {showCollapsedYellowSupport ? (
+                  <SupportResourceHint onExpand={handleExpandYellowSupport} />
+                ) : null}
+                {isSafetyLocked ? (
                   <ReferralPanel riskLevel={riskLevel} />
                 ) : (
                   <Composer disabled={loading} loading={loading} onSend={handleSend} />

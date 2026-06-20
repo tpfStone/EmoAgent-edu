@@ -83,7 +83,7 @@ class ClassifierSafetyGateService:
             action = SafetyAction(block_generation=False, referral_message="")
         elif risk_level == "yellow":
             action = SafetyAction(
-                block_generation=True,
+                block_generation=False,
                 referral_message=YELLOW_REFERRAL_MESSAGE,
             )
         else:
