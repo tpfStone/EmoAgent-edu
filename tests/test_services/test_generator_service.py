@@ -2,7 +2,11 @@ import pytest
 
 from app.config import Settings
 from app.schemas.generator import GeneratorGenerateRequest
-from app.services.generator_service import GENERATOR_FALLBACK_TEXT, GeneratorService
+from app.services.generator_service import (
+    GENERATOR_FALLBACK_TEXT,
+    GeneratorService,
+    clean_generator_output,
+)
 
 
 def _request(rag_examples=None):
@@ -45,6 +49,7 @@ async def test_generator_uses_orientation_prompts_rag_and_temperature(fake_llm_c
     assert "最终回复只包含直接对学生说的话" in llm.prompts[0]["prompt"]
     assert "禁止内部提示外泄" in llm.prompts[0]["prompt"]
     assert "不得编造用户未说的事实" in llm.prompts[0]["prompt"]
+    assert "不要数孩子刚说的话有几个字" in llm.prompts[0]["prompt"]
     assert "少评价、少说教、少替第三方解释，多承接孩子感受" in llm.prompts[0]["prompt"]
     assert "【你的取向：引导反思 —— 重心向外】" in llm.prompts[1]["prompt"]
     assert "不要固定使用任何引导套话" in llm.prompts[1]["prompt"]
@@ -142,6 +147,13 @@ async def test_generator_cleans_wrapped_quotes_and_abnormal_newlines(fake_llm_cl
 
     assert response.candidates[0].text == "第一句。\n第二句。"
     assert response.candidates[1].text == "他说“那一刻很难受”。"
+
+
+def test_generator_output_removes_specific_word_count_claims():
+    assert (
+        clean_generator_output("嗯，就这三个字，我都能感觉到你心里堵得慌。")
+        == "嗯，就这句话，我都能感觉到你心里堵得慌。"
+    )
 
 
 @pytest.mark.asyncio

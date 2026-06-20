@@ -218,6 +218,14 @@ SAFE_SHORT_UTTERANCES = {
     "没",
     "没了",
 }
+BENIGN_DISTRESS_UTTERANCE_RE = re.compile(
+    r"^(?:我)?(?:最近|现在)?(?:真的|真|有点|有些|很|好|非常|特别|太|挺|蛮|超)*"
+    r"(?:难过|难受|伤心|悲伤|低落|沮丧|委屈|不开心)了?$"
+)
+BENIGN_MOOD_UTTERANCE_RE = re.compile(
+    r"^(?:我)?(?:最近|现在)?心情(?:真的|真|有点|有些|很|非常|特别|太|挺|蛮|超)?"
+    r"(?:差|不好|低落)了?$"
+)
 TECHNICAL_COMMAND_PATTERNS = [
     r"(?m)^\s*(cd|set|python|pnpm|npm|docker|git|uvicorn)\b",
     r"\$env:[a-z0-9_]+\s*=",
@@ -339,6 +347,14 @@ def is_safe_short_utterance(text: Any) -> bool:
     return compact_for_char(text) in SAFE_SHORT_UTTERANCES
 
 
+def is_standalone_benign_distress_utterance(text: Any) -> bool:
+    compact = compact_for_char(text)
+    return bool(
+        BENIGN_DISTRESS_UTTERANCE_RE.fullmatch(compact)
+        or BENIGN_MOOD_UTTERANCE_RE.fullmatch(compact)
+    )
+
+
 def is_technical_command_text(text: Any) -> bool:
     value = str(text or "")
     if not value.strip():
@@ -424,6 +440,8 @@ def apply_soft_rule_postprocess(
     has_risk_intent = any(signal in signals.signals for signal in risk_intent_signals)
 
     if is_safe_short_utterance(text) and not signals.signals:
+        return "green", signals
+    if is_standalone_benign_distress_utterance(text) and not signals.signals:
         return "green", signals
     if signals.red_necessary:
         return "red", signals

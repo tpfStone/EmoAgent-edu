@@ -21,6 +21,17 @@ def test_low_confidence_yellow_without_risk_signal_allows_generation():
     assert signals.signals == []
 
 
+def test_standalone_distress_sentence_overrides_spurious_yellow_model_score():
+    level, signals = _postprocess(
+        "yellow",
+        {"green": 0.176, "yellow": 0.824, "red": 0.0},
+        "我很难过",
+    )
+
+    assert level == "green"
+    assert signals.signals == []
+
+
 def test_disappearing_ideation_is_yellow_even_when_model_scores_green():
     level, signals = _postprocess(
         "green",
