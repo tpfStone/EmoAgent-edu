@@ -29,6 +29,15 @@ function getBaseUrl(): string {
   return env.VITE_API_BASE ?? env.VITE_API_BASE_URL ?? env.VITE_EMOEDU_API_BASE_URL ?? "";
 }
 
+const MOCK_STREAM_START_DELAY_MS = 520;
+const MOCK_STREAM_CHUNK_DELAY_MS = 28;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 // Mock-only demo routing. Real crisis classification stays in backend F1.
 const CRISIS_KEYWORDS = [
   "不想活",
@@ -149,11 +158,12 @@ export async function fetchStudentChatStream(
     const view = toStudentView(response, request.anonymous_user_id ?? null);
     const { reply_text: _replyText, ...metadata } = response;
     options.onEvent?.({ event: "metadata", data: metadata });
+    await delay(MOCK_STREAM_START_DELAY_MS);
     for (let index = 0; index < response.reply_text.length; index += 2) {
       const text = response.reply_text.slice(index, index + 2);
       options.onDelta?.(text);
       options.onEvent?.({ event: "delta", data: { text } });
-      await Promise.resolve();
+      await delay(MOCK_STREAM_CHUNK_DELAY_MS);
     }
     options.onEvent?.({ event: "done", data: { ...response, anonymous_user_id: view.anonymous_user_id ?? null } });
     return view;

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchStudentChat } from "./api";
+import { fetchStudentChat, fetchStudentChatStream } from "./api";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -46,6 +46,38 @@ describe("fetchStudentChat", () => {
     });
 
     expect(view.risk_level).toBe("red");
+  });
+});
+
+describe("fetchStudentChatStream", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("paces mock stream deltas so the pending UI can render first", async () => {
+    vi.useFakeTimers();
+    const deltas: string[] = [];
+
+    const promise = fetchStudentChatStream(
+      {
+        session_id: "student-session",
+        current_message: "hello",
+      },
+      {
+        onDelta: (text) => {
+          deltas.push(text);
+        },
+      },
+    );
+
+    await Promise.resolve();
+
+    expect(deltas).toEqual([]);
+
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(deltas.length).toBeGreaterThan(0);
   });
 });
 
