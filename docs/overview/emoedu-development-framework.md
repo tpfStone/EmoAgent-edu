@@ -3,13 +3,13 @@
 > **用途**：开发总纲。明确「需求功能 + 逻辑链 + 各模块问题与注意点」，技术栈已定（复用 emoagent），具体实现细节标注为「🚧 后续盘」。
 > **配套**：F4 成对偏好主线见 `../specs/f4-pairwise-selection-codex-spec.md`；历史评分依据见 `emoedu-mas-plan.md`；语料合成见 `../corpus/emoedu-corpus-synthesis.md`。
 > **定位**：面向初中生（12–15 岁）中文情感教育对话系统；国际比赛投稿。
-> **当前状态**：本文描述目标架构。现有 `/chat` 运行时仍使用 pointwise 分数择优；F4 目标主线已改为 pairwise，但 runtime/API/数据库/前端尚未完成迁移。
+> **当前状态**：本文描述目标架构和历史设计取舍。当前 `/chat` 已实现快慢双路径：首轮 `F1 -> F2 -> F3` 单候选流式返回，F4 后台写 session guidance；后续轮次仍保留 F1 安全门，但不每轮跑完整 F2/F4。Pointwise `weighted_total` 仅作为模块接口、后台诊断和历史兼容字段；pairwise 仍是后置 gate，不能直接解锁 runtime 或 DPO。
 
 ---
 
 ## 0. 系统一句话
 
-用户（初中生）倾诉 → 安全门分级把关 → 多取向生成候选回应 → critic 做成对偏好比较（pairwise）择优 → 回复 → 经验证的偏好对回流，离线 DPO 自进化。核心是 **generator–critic 闭环**。
+目标完整体系：用户（初中生）倾诉 → 安全门分级把关 → 多取向生成候选回应 → critic 做成对偏好比较（pairwise）择优 → 回复 → 经验证的偏好对回流，离线 DPO 自进化。当前在线 `/chat` 为快路径单候选返回，pairwise/DPO 仍在离线 gate 中。核心是 **generator–critic 闭环**。
 
 ---
 
@@ -30,7 +30,9 @@
 
 ---
 
-## 2. 整体逻辑链（运行时数据流）
+## 2. 整体逻辑链（目标/离线数据流）
+
+> 当前 `/chat` 在线路径不是下图的完整同步链路：首轮只阻塞执行 F1/F2/F3，F4 后台运行；后续轮次仍先过 F1，再走轻量生成和可选 F4 guidance。
 
 ```
 用户消息 + 对话历史
@@ -100,7 +102,7 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 ### F4 Critic
 - **⚠️ EPITOME 评分是 0/1/2 三档**（0=无沟通,1=弱,2=强），**不是 1–5**。这是忠于原框架、可引用验证结论的前提。
 - **⚠️ EPITOME 可靠性局限（诚实标注）**：原论文指出 EPITOME 三维中 ER、IP 两维因操作定义不够清晰，专家可靠性偏低，仅 EX（探索）可靠性高。本系统应对：对 ER/IP 补充更明确的中文操作定义（见方案 md §六），并在论文 limitation 注明。这不是回避，是方法严谨性的体现。
-- **⚠️ 分数是历史路径**：现有代码仍用 `weighted_total` 排序择优，但目标主线已改为 pairwise；具体分数不再公开或使用为主判据。
+- **⚠️ 分数是历史路径**：`CriticService` 模块接口仍保留 `weighted_total` 和兼容 `best_candidate_id`，用于后台诊断、实验对照和旧记录解释；当前 `/chat` 在线路径不等待 pointwise 分数择优，目标主线也不把具体分数作为主判据。
 - **⚠️ 择优非投票**：pairwise 直接比较哪条回应更适合当前孩子，非 CogMAS 众数，也不再以加权总分作为未来主线。
 - **⚠️ 同源偏见**：critic 与生成器若同模型同 prompt，judge 会偏袒自己风格的输出。建议 critic 用不同模型或显著不同 prompt。
 - **⚠️ 已知 LLM-judge 偏差（来自原论文）**：verbosity bias（偏好长回答）、跨运行不稳定、过度自信。critic prompt 要显式约束「不因长度加分」，并可多次采样取中位。
@@ -141,8 +143,8 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 
 - 目标主线：抽取小批量候选对，由人工做 A/B 偏好标注，计算人工 pairwise 与 critic pairwise 的一致性。
 - 历史/诊断线：EPITOME 0/1/2 分数可继续用于解释旧实现和分析维度可靠性，但不再作为 DPO 主判据。
-- 达到可接受一致性后，才正式用 critic 自动产 DPO 偏好对。
-- Phase A rerun 曾得到 `inconclusive`，因此旧试点不能直接解锁 runtime 或 DPO。
+- 只有 pairwise/human A/B gate 达到可接受一致性后，才允许把稳定 winner/loser 作为正式 DPO 候选来源。
+- 最近一次 pairwise rerun 曾得到 `inconclusive`，因此旧试点不能直接解锁 runtime 或 DPO。
 
 ---
 
@@ -161,25 +163,22 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 
 | 模块 | 信息是否齐 | 可否交 Codex |
 |---|---|---|
-| F1 安全门 | ✅ 齐（C-SSRS 分级 + 12356/12355 + 历史窗口要求） | ✅ 可写完整规格后全权 |
-| F2 情境分析 | 🟡 基本齐（三类情境定义有，分类实现方式待定） | 🟡 规格补全后可 |
-| F3 生成器 | 🟡 取向定了，system prompt 未写 | 🟡 补 prompt 后可 |
-| F4 Critic | 🟡 pairwise 目标规格已定；runtime/API/数据层/前端尚未迁移 | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |
+| F1 安全门 | ✅ 齐（本地 classifier + yellow/red 转介 + 历史窗口要求） | ✅ 已接入 `/chat`，后续按回归维护 |
+| F2 情境分析 | ✅ 齐（scenario、CASEL、support_mode、secondary_safety） | ✅ 已接入 `/chat`，后续按规格维护 |
+| F3 生成器 | ✅ 齐（首轮单候选流式返回；双取向保留给离线实验） | ✅ 已接入 `/chat`，后续重点是体验和回归 |
+| F4 Critic | 🟡 后台 pointwise guidance 已进 `/chat`；pairwise 仍是离线目标规格，需 gate 后再考虑 runtime/DPO | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |
 | F5 日志 | ✅ 齐 | ✅ |
 | F6 RAG | ❌ 依赖语料 + 向量库选型 | ❌ 暂不 |
 | F7 DPO | ❌ 依赖 F9 + 训练栈 | ❌ 暂不 |
 
-**结论**：整体不能一次性全权。当前后端已跑通 F1-F4 与 `/chat`，下一阶段优先级应转为：先完成 F4 pairwise runtime adapter 与 trace，再同步 API、数据库和前端控制台，最后重新跑 F9/pairwise gate。
+**结论**：整体不能一次性全权。当前后端已跑通快慢双路径与后台 F4 guidance，下一阶段优先级应转为：先收敛 pairwise/human A/B gate、位置偏置诊断和 trace 证据，再决定是否做 runtime adapter；未过 gate 前不把 pairwise 或 DPO 写成上线事实。
 
 ---
 
 ## 9. 下一步待办
 
-- [ ] 写 F1 安全门完整 Codex 规格（prompt 全文 + 含历史窗口的 IO schema + 三级转介 + 测试用例）
-- [ ] 将 F4 从 pointwise runtime 迁移到 pairwise runtime adapter
-- [ ] 更新 API schema、数据库记录和前端控制台 trace，停止把分数作为主证据
-- [ ] 定 F2 分类实现（prompt vs 复用 BERT）
-- [ ] 写 F3 两取向 system prompt
-- [ ] 语料：验收合成 prompt 模板方向 → 小批量试跑 → 批量
-- [ ] F9/pairwise 校验流程落地
-- [ ] 🚧 F6 向量库选型、F7 DPO 训练栈选型
+- [ ] 收敛 F4 pairwise/human A/B gate，确认有效交集、人工一致性和位置偏置控制。
+- [ ] 继续维护研究控制台 trace，清楚区分后台 pointwise 诊断、离线 pairwise 和未来 runtime adapter。
+- [ ] 语料：验收合成 prompt 模板方向 → 小批量试跑 → 批量，并明确不能绕过 F9/pairwise gate 直接产 DPO。
+- [ ] F9/pairwise 校验流程落地，形成可复验的 go/no-go 口径。
+- [ ] 🚧 F6 隐私/删除/质量 gate、F7 DPO 训练栈选型。

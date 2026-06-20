@@ -14,7 +14,7 @@
 | `offline` | 训练、probe、复现、评估和报告脚本 | 不进入 runtime |
 | `archive` | 历史证据与追溯材料 | 不覆盖当前 `exp` 结论 |
 
-## Phase 2A 已完成事实
+## 当前已实现的 runtime 事实
 
 | 资产/能力 | 当前位置 | 集成状态 | 说明 |
 | --- | --- | --- | --- |
@@ -23,7 +23,8 @@
 | F3 single routed generation | `app/services/generator_service.py` | runtime | 首轮按 F2 `support_mode` 生成一个候选并流式返回。 |
 | F3 support-card enrichment | `app/services/f3_support_service.py`、`exp/data/psyqa_labelled.json` | runtime_reference | 完整数据不随仓库发布；缺失时 enrichment 为空或通用化，系统仍可运行。 |
 | F4 pointwise critic | `app/services/critic_service.py` | background diagnostics | 首轮回复后异步运行，写 Redis guidance；不阻塞学生回复。 |
-| F4 guidance status | `GET /api/critic/guidance/{session_id}` | diagnostics | 研究/诊断侧只读查看 `missing`、`pending`、`ready`、`failed`；不改变 `/chat` 行为。 |
+| F4 guidance status | `GET /api/critic/guidance/{session_id}` | diagnostics | 研究/诊断侧只读查看 `missing`、`pending`、`ready`、`failed`，并在 `ready` 时读取后台 `scores`；不改变 `/chat` 行为。 |
+| Follow-up F1 safety gate | `app/services/orchestrator_service.py` | runtime | 后续轮次仍先过 F1；不再每轮同步跑完整 F2/F4。 |
 
 ## Asset Matrix
 
@@ -42,7 +43,7 @@
 
 | 资产/能力 | 当前状态 | 不进入 runtime 的原因 |
 | --- | --- | --- |
-| F4 pairwise selector | offline/future | Phase A rerun 仍为 `inconclusive`；需要新的有效样本、人工 A/B 和稳定性 gate。 |
+| F4 pairwise selector | offline/future | 最近一次 pairwise rerun 仍为 `inconclusive`，有效交集不足且 stable winner 出现 `c1` 偏斜；需要新的有效样本、人工 A/B 和稳定性 gate。 |
 | DPO export | future | 不能从 pointwise tiebreak、orientation default 或 unverified pairwise 直接导出训练样本。 |
 | F9 reliability | offline evidence | 用于评估 critic/human 一致性，不直接改变 `/chat`。 |
 | F6 memory/RAG prompt injection | default-off/future | 需要隐私隔离、敏感内容过滤、清除链路和质量 smoke gate。 |
@@ -59,11 +60,19 @@
 ### Online Fast Path
 
 ```text
+First turn:
 F1 local classifier
 -> F2 scenario/support routing and secondary safety
 -> F3 one routed candidate with optional PsyQA support reference
 -> stream student-facing response
 -> schedule background F4
+
+Follow-up turns:
+F1 local classifier
+-> recent Redis history
+-> optional completed F4 guidance
+-> lightweight follow-up generation
+-> stream student-facing response
 ```
 
 Allowed `exp` inputs:
@@ -96,7 +105,7 @@ Research and diagnostics can inspect background F4 state through:
 GET /api/critic/guidance/{session_id}
 ```
 
-This endpoint reports `missing`, `pending`, `ready`, or `failed`. It is not part of the student-facing blocking path: `ready` may be used by the next follow-up prompt, while `pending` and `failed` never block the student response.
+This endpoint reports `missing`, `pending`, `ready`, or `failed`; `ready` responses also include background F4 `scores` for the research console. It is not part of the student-facing blocking path: `ready` may be used by the next follow-up prompt, while `pending` and `failed` never block the student response.
 
 Future background-only extensions can include batch critic, review queues, pairwise human A/B exports, and DPO candidate packaging. Those jobs should be triggered by scripts or workers, not by the blocking `/chat` request.
 

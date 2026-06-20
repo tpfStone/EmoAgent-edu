@@ -28,6 +28,42 @@ describe("student screenshot-style information architecture", () => {
     expect(screen.getByRole("textbox", { name: "输入消息" })).toBeTruthy();
   });
 
+  it("starts on a fresh empty session while keeping older local sessions in the sidebar", () => {
+    localStorage.setItem(
+      "emoagent.student.sessions.v1",
+      JSON.stringify([
+        {
+          id: "old-session",
+          title: "old session",
+          createdAt: 1710000000000,
+          updatedAt: 1710000001000,
+          messages: [
+            {
+              id: "old-user-message",
+              role: "student",
+              text: "old failed user text",
+              createdAt: 1710000000000,
+            },
+            {
+              id: "old-agent-message",
+              role: "agent",
+              text: "old fallback text",
+              createdAt: 1710000001000,
+            },
+          ],
+        },
+      ]),
+    );
+    localStorage.setItem("emoagent.student.currentSessionId.v1", "old-session");
+
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: /old session/ })).toBeTruthy();
+    expect(screen.queryByText("old failed user text")).toBeNull();
+    expect(screen.queryByText("old fallback text")).toBeNull();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
   it("uses record management as the only destructive memory action", () => {
     render(<App />);
 

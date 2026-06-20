@@ -37,6 +37,17 @@ class FakeOrchestratorService:
             session_id=session_id,
             status="ready",
             guidance="Use a more concrete emotional acknowledgment.",
+            scores=[
+                CandidateScore(
+                    candidate_id="c1",
+                    epitome=EpitomeScore(ER=2, IP=1, EX=1),
+                    casel={},
+                    boundary_flag=False,
+                    boundary_reason="",
+                    weighted_total=4,
+                    rationale="background label",
+                )
+            ],
             updated_at="2026-06-16T00:00:00Z",
         )
 
@@ -84,6 +95,17 @@ async def test_critic_guidance_endpoint_returns_background_status():
             "session_id": "session-1",
             "status": "ready",
             "guidance": "Use a more concrete emotional acknowledgment.",
+            "scores": [
+                {
+                    "candidate_id": "c1",
+                    "epitome": {"ER": 2, "IP": 1, "EX": 1},
+                    "casel": {},
+                    "boundary_flag": False,
+                    "boundary_reason": "",
+                    "weighted_total": 4.0,
+                    "rationale": "background label",
+                }
+            ],
             "error": "",
             "updated_at": "2026-06-16T00:00:00Z",
         }

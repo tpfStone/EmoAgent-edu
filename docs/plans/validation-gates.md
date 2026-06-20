@@ -1,12 +1,12 @@
-# Phase 2B Gate Plan
+# Validation Gate Plan
 
-> Phase 2A runtime boundary is complete: `/chat` uses F1 local safety, F2 support routing, F3 one routed streaming response, and background F4 guidance. This document tracks only unfinished 2B gates. It does not change runtime code, APIs, or default paths.
+> Current runtime boundary: `/chat` uses F1 local safety, F2 support routing, F3 one routed streaming response, and background F4 guidance. This document tracks only unfinished validation gates. It does not change runtime code, APIs, or default paths.
 
 ## Scope
 
-Phase 2B decides which experimental assets can later replace or extend the main chain. Until gates pass, the default runtime remains unchanged.
+These gates decide which experimental assets can later replace or extend the main chain. Until gates pass, the default runtime remains unchanged.
 
-2B can do:
+This work can do:
 
 - Repair pairwise input packaging and c1/c2 bias controls.
 - Rerun a cleaner pairwise Phase A.3.
@@ -14,7 +14,7 @@ Phase 2B decides which experimental assets can later replace or extend the main 
 - Define hard gates for DPO export.
 - Run F6/RAG in observe-only or safety-pilot mode.
 
-2B cannot do before gates pass:
+This work cannot do before gates pass:
 
 - Connect pairwise selector to `/chat`.
 - Treat pointwise tiebreak, orientation default, or unresolved pairwise output as DPO-positive data.
@@ -30,19 +30,19 @@ Phase 2B decides which experimental assets can later replace or extend the main 
 | DPO export | only stable pairwise or human-validated preferences with source case, trace, and version | exportable training data |
 | F6/RAG safety | user isolation, sensitive-content filtering, clear/delete path, prompt-injection smoke | future prompt-injection decision |
 
-## Task 2B-1: Repair pairwise input package and c1 bias
+## Task 1: Repair pairwise input package and c1 bias
 
 - Add input-package tests for A/B balance, hidden orientation labels, hidden pointwise scores, tie/invalid retention, and candidate provenance.
 - Fix only offline packaging scripts under `scripts/corpus/f9_pairwise_*.py`.
 - Verify with existing pairwise service tests before producing a new package.
 
-## Task 2B-2: Rerun Pairwise Phase A.3
+## Task 2: Rerun Pairwise Phase A.3
 
 - Freeze the gate before running.
 - Write outputs only under `docs/corpus/f9/pairwise-selection-pilot/`.
 - Conclusion must be one of `pass`, `inconclusive`, or `fail`; do not imply runtime migration from an inconclusive result.
 
-## Task 2B-3: Build human A/B blind queue
+## Task 3: Build human A/B blind queue
 
 Minimum row shape:
 
@@ -61,7 +61,7 @@ Minimum row shape:
 
 The queue must not expose F3 orientation labels, pointwise scores, critic choices, or source candidate IDs.
 
-## Task 2B-4: Harden DPO export
+## Task 4: Harden DPO export
 
 Reject by default:
 
@@ -74,7 +74,7 @@ Reject by default:
 
 Allow only stable pairwise or human-validated preferences with explicit source case, judge/human trace, version, winner, and rejected candidate.
 
-## Task 2B-5: F6/RAG safety pilot
+## Task 5: F6/RAG safety pilot
 
 - Keep default prompt injection off.
 - Add observe-only metrics first.

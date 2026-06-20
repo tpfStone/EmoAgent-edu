@@ -19,21 +19,21 @@
 <text class="title" x="24" y="30">EmoEdu MAS lifecycle: runtime boundary and offline gates</text>
 
 <rect class="setup" x="32" y="62" width="205" height="132" rx="8"/>
-<text class="h" x="134" y="88" text-anchor="middle">Phase 1 · Prepare</text>
+<text class="h" x="134" y="88" text-anchor="middle">Data &amp; Artifacts</text>
 <text class="t" x="54" y="116">PsyQA-derived labelled data</text>
 <text class="small" x="54" y="135">local only: exp/data/psyqa_labelled.json</text>
 <text class="t" x="54" y="158">F1 classifier artifacts</text>
 <text class="small" x="54" y="177">restored from HuggingFace</text>
 
 <rect class="runtime" x="278" y="62" width="205" height="132" rx="8"/>
-<text class="h" x="380" y="88" text-anchor="middle">Phase 2A · Runtime</text>
+<text class="h" x="380" y="88" text-anchor="middle">Current Runtime</text>
 <text class="t" x="300" y="116">F1 -> F2 -> F3 single candidate</text>
 <text class="small" x="300" y="135">stream first, do not wait for critic</text>
 <text class="t" x="300" y="158">background F4 guidance</text>
 <text class="small" x="300" y="177">inject only when ready on later turns</text>
 
 <rect class="future" x="524" y="62" width="205" height="132" rx="8"/>
-<text class="h" x="626" y="88" text-anchor="middle">Phase 2B · Gates</text>
+<text class="h" x="626" y="88" text-anchor="middle">Validation Gates</text>
 <text class="t" x="546" y="116">pairwise / F9 / human A/B</text>
 <text class="small" x="546" y="135">offline validation first</text>
 <text class="t" x="546" y="158">DPO and F6/RAG</text>

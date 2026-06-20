@@ -241,6 +241,8 @@ async def test_critic_uses_critic_specific_token_budget_and_json_response_format
         None,
         Settings(
             CRITIC_SAMPLE_COUNT=1,
+            LLM_TIMEOUT=10,
+            CRITIC_LLM_TIMEOUT=30,
             LLM_MAX_TOKENS=1000,
             CRITIC_LLM_MAX_TOKENS=4096,
             CRITIC_LLM_RESPONSE_FORMAT_JSON=True,
@@ -250,6 +252,7 @@ async def test_critic_uses_critic_specific_token_budget_and_json_response_format
     await service.evaluate(_request([_candidate("c1", "我听见你很难受。")]))
 
     assert llm.prompts[0]["max_tokens"] == 4096
+    assert llm.prompts[0]["timeout"] == 30
     assert llm.prompts[0]["response_format"] == {"type": "json_object"}
 
 

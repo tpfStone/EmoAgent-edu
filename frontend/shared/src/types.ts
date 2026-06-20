@@ -63,6 +63,15 @@ export interface FullChatResponse {
   failure_reason: string;
 }
 
+export interface CriticGuidanceStatusResponse {
+  session_id: string;
+  status: "missing" | "pending" | "ready" | "failed";
+  guidance: string;
+  scores: CandidateScore[];
+  error: string;
+  updated_at?: string | null;
+}
+
 export interface StudentChatView {
   session_id: string;
   anonymous_user_id?: string | null;

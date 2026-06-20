@@ -34,6 +34,7 @@ export function CandidatePanel({
     <div className={styles.grid}>
       {candidates.map((candidate) => {
         const score = getScoreForCandidate(scores, candidate.candidate_id);
+        const winnerLabel = candidates.length > 1 ? "胜出" : "选中";
         const isBoundary = score?.boundary_flag === true;
         const isWinner =
           !isBoundary &&
@@ -51,7 +52,7 @@ export function CandidatePanel({
                 <h3>{candidate.orientation}</h3>
               </div>
               <div className={styles.markers}>
-                {isWinner ? <span className={styles.winner}>胜出</span> : null}
+                {isWinner ? <span className={styles.winner}>{winnerLabel}</span> : null}
                 {isBoundary ? <span className={styles.boundary}>出局</span> : null}
               </div>
             </header>

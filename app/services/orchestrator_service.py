@@ -67,20 +67,28 @@ class OrchestratorService:
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         max_messages = self.settings.HISTORY_WINDOW_N * 2
-        history = await self.history_store.get_history(request.session_id, max_messages)
+        history = await self._safe_get_history(request.session_id, max_messages)
         if history:
             return await self._chat_follow_up(request, history, max_messages)
         return await self._chat_first_turn(request, history, max_messages)
 
     async def stream_chat(self, request: ChatRequest):
         max_messages = self.settings.HISTORY_WINDOW_N * 2
-        history = await self.history_store.get_history(request.session_id, max_messages)
+        history = await self._safe_get_history(request.session_id, max_messages)
         if history:
             async for event in self._stream_follow_up(request, history, max_messages):
                 yield event
             return
         async for event in self._stream_first_turn(request, history, max_messages):
             yield event
+
+    async def _safe_get_history(
+        self, session_id: str, max_messages: int
+    ) -> list[ConversationMessage]:
+        try:
+            return await self.history_store.get_history(session_id, max_messages)
+        except Exception:
+            return []
 
     async def _stream_first_turn(
         self,
@@ -692,14 +700,17 @@ class OrchestratorService:
             failure_reason=failure_reason,
             fallback_message=fallback_message,
         )
-        await self.history_store.append_messages(
-            request.session_id,
-            [
-                ConversationMessage(role="student", text=request.current_message),
-                ConversationMessage(role="assistant", text=reply_text),
-            ],
-            history_window,
-        )
+        try:
+            await self.history_store.append_messages(
+                request.session_id,
+                [
+                    ConversationMessage(role="student", text=request.current_message),
+                    ConversationMessage(role="assistant", text=reply_text),
+                ],
+                history_window,
+            )
+        except Exception:
+            pass
         return ChatResponse(
             session_id=request.session_id,
             anonymous_user_id=request.anonymous_user_id,
@@ -800,7 +811,10 @@ class OrchestratorService:
         redis = getattr(self.history_store, "redis", None)
         if redis is None:
             return ""
-        raw = await redis.get(self._guidance_key(session_id))
+        try:
+            raw = await redis.get(self._guidance_key(session_id))
+        except Exception:
+            return ""
         if not raw:
             return ""
         try:
@@ -820,7 +834,14 @@ class OrchestratorService:
                 session_id=session_id,
                 status="missing",
             )
-        raw = await redis.get(self._guidance_key(session_id))
+        try:
+            raw = await redis.get(self._guidance_key(session_id))
+        except Exception:
+            return CriticGuidanceStatusResponse(
+                session_id=session_id,
+                status="failed",
+                error="guidance store unavailable",
+            )
         if not raw:
             return CriticGuidanceStatusResponse(
                 session_id=session_id,
@@ -843,12 +864,24 @@ class OrchestratorService:
             if status == "ready"
             else ""
         )
+        scores: list[CandidateScore] = []
+        if status == "ready":
+            raw_scores = payload.get("scores") or []
+            if isinstance(raw_scores, list):
+                for raw_score in raw_scores:
+                    if not isinstance(raw_score, dict):
+                        continue
+                    try:
+                        scores.append(CandidateScore.model_validate(raw_score))
+                    except ValueError:
+                        continue
         error = str(payload.get("error") or "").strip() if status == "failed" else ""
         updated_at = str(payload.get("updated_at") or "").strip() or None
         return CriticGuidanceStatusResponse(
             session_id=session_id,
             status=status,
             guidance=guidance,
+            scores=scores,
             error=error,
             updated_at=updated_at,
         )
@@ -859,11 +892,14 @@ class OrchestratorService:
             return
         payload = dict(payload)
         payload.setdefault("updated_at", self._utc_now())
-        await redis.set(
-            self._guidance_key(session_id),
-            json.dumps(payload, ensure_ascii=False),
-            ex=self.settings.CHAT_HISTORY_TTL_SECONDS,
-        )
+        try:
+            await redis.set(
+                self._guidance_key(session_id),
+                json.dumps(payload, ensure_ascii=False),
+                ex=self.settings.CHAT_HISTORY_TTL_SECONDS,
+            )
+        except Exception:
+            return
 
     @staticmethod
     def _guidance_key(session_id: str) -> str:

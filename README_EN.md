@@ -9,10 +9,10 @@ The current product design uses a fast online path and an accurate background pa
 ```text
 Online path: fast
 First turn: F1 local safety gate -> F2 scenario/support routing -> F3 one-candidate streaming response -> background F4
-Follow-up turns: lightweight CBT-compatible support -> recent context -> optional finished F4 guidance -> streaming response
+Follow-up turns: F1 local safety gate -> lightweight CBT-compatible support -> recent context -> optional finished F4 guidance -> streaming response
 
 Background path: accurate
-F4 critic -> quality labels and session guidance -> aggregate reports -> prompt / strategy table / DPO data preparation
+F4 critic -> quality labels and session guidance -> aggregate reports -> prompt / strategy table / DPO candidate preparation
 ```
 
 This keeps the theoretical generator-critic and multi-agent foundation, but avoids forcing students to wait for a full two-candidate generation and critic pipeline on every turn.
@@ -21,6 +21,7 @@ This keeps the theoretical generator-critic and multi-agent foundation, but avoi
 
 - Backend: FastAPI, PostgreSQL, Redis history store, SSE streaming, and `/chat` orchestration.
 - F1 safety gate: a local classifier using `bert-base-chinese` embeddings, manually audited keyword features, soft rules, and conservative probability thresholds.
+- Follow-up turns still run the F1 safety gate first; they do not rerun the full F2/F4 chain on every message.
 - F2 scenario analysis: an LLM module that predicts scenario, CASEL dimensions, support mode, and secondary safety fallback.
 - F3 generator: can use local PsyQA-derived strategy priors and support cards when `exp/data/psyqa_labelled.json` is present; missing data leaves support-card enrichment empty or generic, while the online first turn still generates one routed candidate.
 - F4 critic: runs in the background and writes `session guidance` for later turns; it does not block the student-facing response.
@@ -56,7 +57,7 @@ This keeps the theoretical generator-critic and multi-agent foundation, but avoi
 ## Figures
 
 <p>
-  <img src="./docs/figures/figure-1-three-phase-lifecycle.svg" alt="EmoEdu MAS three-phase lifecycle" width="760">
+  <img src="./docs/figures/figure-1-runtime-boundary.svg" alt="EmoEdu MAS runtime boundary and validation gates" width="760">
 </p>
 
 <p>
@@ -217,10 +218,32 @@ Redis stores chat history and background F4 guidance:
 REDIS_URL=redis://localhost:6379/0
 ```
 
+Local live acceptance should run Redis. If Redis is unavailable, the main chat path degrades to a single-turn response without history, but multi-turn history and background F4 guidance will not be persisted.
+
+If Redis is not installed locally, start one with Docker:
+
+```powershell
+docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
+```
+
+Reuse the same container later:
+
+```powershell
+docker start emoedu-redis
+```
+
+Check Redis:
+
+```powershell
+docker exec emoedu-redis redis-cli ping
+```
+
+Expected: `PONG`.
+
 Start backend:
 
 ```powershell
-uvicorn app.main:app --reload
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Useful URLs:
@@ -248,6 +271,8 @@ Live backend mode:
 $env:VITE_API_MODE="live"
 pnpm --dir frontend dev:student
 ```
+
+On startup, the student app opens a fresh empty session by default. Previous browser-local sessions that contain messages remain available in the sidebar. To fully clear local records and anonymous memory, use the record-management view and click the forget action.
 
 Common checks:
 
@@ -305,7 +330,7 @@ The core experimental conclusion is that full multi-agent reasoning should remai
 - `docs/README_EN.md`: English documentation map.
 - `docs/specs/`: F1-F4, F4 pairwise, F9 specs, and the current integration boundary in `README.md` / `exp-integration-map.md`.
 - `docs/specs/README_EN.md`: English specs summary.
-- `docs/plans/`: unfinished phase plans; currently Phase 2B gates.
+- `docs/plans/`: unfinished validation gates; current entry point is `validation-gates.md`.
 - `docs/overview/`: project plan and development roadmap.
 - `docs/frontend/`: frontend design and demo notes.
 - `docs/corpus/`: historical corpus, F9, and pairwise pilot records.

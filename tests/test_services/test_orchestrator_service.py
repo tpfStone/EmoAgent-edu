@@ -191,6 +191,27 @@ class RecordingChatTurnDAO:
         return kwargs
 
 
+class UnavailableRedis:
+    async def get(self, key):
+        raise ConnectionError("redis unavailable")
+
+
+class HistoryStoreWithUnavailableRedis(InMemoryHistoryStore):
+    def __init__(self):
+        super().__init__()
+        self.redis = UnavailableRedis()
+
+
+class UnavailableHistoryStore:
+    redis = UnavailableRedis()
+
+    async def get_history(self, session_id, max_messages):
+        raise ConnectionError("history unavailable")
+
+    async def append_messages(self, session_id, messages, max_messages):
+        raise ConnectionError("history unavailable")
+
+
 class FakeRedis:
     def __init__(self):
         self.values = {}
@@ -316,6 +337,17 @@ async def test_f4_guidance_status_reports_missing_pending_ready_and_failed():
             {
                 "status": "ready",
                 "guidance": "  Use concrete emotional acknowledgment.  ",
+                "scores": [
+                    {
+                        "candidate_id": "c2",
+                        "epitome": {"ER": 2, "IP": 2, "EX": 1},
+                        "casel": {"自我觉察引导": 2},
+                        "boundary_flag": False,
+                        "boundary_reason": "",
+                        "weighted_total": 6.0,
+                        "rationale": "stronger emotional grounding",
+                    }
+                ],
                 "updated_at": "2026-06-16T00:01:00Z",
             }
         ),
@@ -323,6 +355,9 @@ async def test_f4_guidance_status_reports_missing_pending_ready_and_failed():
     ready = await service.get_f4_guidance_status("ready-session")
     assert ready.status == "ready"
     assert ready.guidance == "Use concrete emotional acknowledgment."
+    assert len(ready.scores) == 1
+    assert ready.scores[0].candidate_id == "c2"
+    assert ready.scores[0].weighted_total == 6.0
     assert ready.updated_at == "2026-06-16T00:01:00Z"
 
     await history_store.redis.set(
@@ -341,6 +376,19 @@ async def test_f4_guidance_status_reports_missing_pending_ready_and_failed():
     assert failed.guidance == ""
     assert failed.error == "critic timeout"
     assert failed.updated_at == "2026-06-16T00:02:00Z"
+
+
+@pytest.mark.asyncio
+async def test_f4_guidance_status_degrades_when_redis_is_unavailable():
+    service = _service(history_store=HistoryStoreWithUnavailableRedis())
+
+    status = await service.get_f4_guidance_status("s1")
+
+    assert status.session_id == "s1"
+    assert status.status == "failed"
+    assert status.guidance == ""
+    assert status.scores == []
+    assert status.error == "guidance store unavailable"
 
 
 @pytest.mark.asyncio
@@ -672,6 +720,46 @@ async def test_stream_follow_up_safety_short_circuits_before_generator():
     assert safety.requests[0].current_message == "stream crisis"
     assert generator.followup_requests == []
     assert dao.calls[0]["status"] == "blocked_by_safety"
+
+
+@pytest.mark.asyncio
+async def test_stream_first_turn_continues_when_history_store_is_unavailable():
+    dao = RecordingChatTurnDAO()
+    service = _service(
+        history_store=UnavailableHistoryStore(),
+        dao=dao,
+        settings=Settings(CHAT_STREAM_CHUNK_SIZE=12, CHAT_FALLBACK_MESSAGE="fallback"),
+    )
+
+    events = [
+        event
+        async for event in service.stream_chat(
+            ChatRequest(session_id="s1", current_message="你好")
+        )
+    ]
+
+    event_names = [name for name, _payload in events]
+    done_payload = events[-1][1]
+
+    assert "error" not in event_names
+    assert event_names[0] == "metadata"
+    assert "delta" in event_names
+    assert event_names[-1] == "done"
+    assert done_payload["status"] == "answered"
+    assert done_payload["reply_text"]
+    assert dao.calls[0]["status"] == "answered"
+
+
+@pytest.mark.asyncio
+async def test_chat_first_turn_continues_when_history_store_is_unavailable():
+    dao = RecordingChatTurnDAO()
+    service = _service(history_store=UnavailableHistoryStore(), dao=dao)
+
+    response = await service.chat(ChatRequest(session_id="s1", current_message="你好"))
+
+    assert response.status == "answered"
+    assert response.reply_text
+    assert dao.calls[0]["status"] == "answered"
 
 
 @pytest.mark.asyncio

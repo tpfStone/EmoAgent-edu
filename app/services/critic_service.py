@@ -210,7 +210,7 @@ class CriticService:
         try:
             raw_response = await self.llm_client.generate(
                 prompt=self._build_prompt(request, candidate),
-                timeout=self.settings.LLM_TIMEOUT,
+                timeout=self.settings.CRITIC_LLM_TIMEOUT,
                 temperature=self.settings.CRITIC_LLM_TEMPERATURE,
                 max_tokens=self.settings.CRITIC_LLM_MAX_TOKENS,
                 response_format=(

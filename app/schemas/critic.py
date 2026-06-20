@@ -51,5 +51,6 @@ class CriticGuidanceStatusResponse(BaseModel):
     session_id: str
     status: Literal["missing", "pending", "ready", "failed"]
     guidance: str = ""
+    scores: list[CandidateScore] = Field(default_factory=list)
     error: str = ""
     updated_at: str | None = None

@@ -2,6 +2,7 @@ import type { CandidateScore, PreferencePair } from "@emoedu/shared/console";
 import styles from "./ScoreMatrix.module.css";
 
 interface ScoreMatrixProps {
+  emptyReason?: string;
   preferencePair: PreferencePair | null;
   scores: CandidateScore[];
 }
@@ -32,11 +33,15 @@ function preferenceMarker(candidateId: string, preferencePair: PreferencePair | 
   return "—";
 }
 
-export function ScoreMatrix({ preferencePair, scores }: ScoreMatrixProps) {
+export function ScoreMatrix({
+  emptyReason = "安全门拦截后没有进入候选评分。",
+  preferencePair,
+  scores,
+}: ScoreMatrixProps) {
   if (scores.length === 0) {
     return (
       <div className={styles.empty}>
-        安全门拦截后没有进入候选评分。
+        {emptyReason}
       </div>
     );
   }

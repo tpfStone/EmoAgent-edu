@@ -2,17 +2,32 @@ import { MOCK_SAMPLES, getSampleById } from "./samples";
 import type {
   ChatRequest,
   ChatStreamEvent,
+  CriticGuidanceStatusResponse,
   FullChatResponse,
   StudentChatView,
 } from "./types";
 
-const env =
-  ((import.meta as unknown as { env?: Record<string, string | undefined> }).env ??
-    {});
+function getEnv(): Record<string, string | undefined> {
+  const viteEnv =
+    (import.meta as unknown as { env?: Record<string, string | undefined> }).env ??
+    {};
+  const processEnv =
+    (
+      globalThis as typeof globalThis & {
+        process?: { env?: Record<string, string | undefined> };
+      }
+    ).process?.env ?? {};
+  return { ...processEnv, ...viteEnv };
+}
 
-const mode = env.VITE_API_MODE ?? "mock";
-const baseUrl =
-  env.VITE_API_BASE ?? env.VITE_API_BASE_URL ?? env.VITE_EMOEDU_API_BASE_URL ?? "";
+function getMode(): string {
+  return getEnv().VITE_API_MODE ?? "mock";
+}
+
+function getBaseUrl(): string {
+  const env = getEnv();
+  return env.VITE_API_BASE ?? env.VITE_API_BASE_URL ?? env.VITE_EMOEDU_API_BASE_URL ?? "";
+}
 
 // Mock-only demo routing. Real crisis classification stays in backend F1.
 const CRISIS_KEYWORDS = [
@@ -55,14 +70,15 @@ function getMockResponse(request: ChatRequest): FullChatResponse | undefined {
 }
 
 function buildChatUrl(): string {
-  return `${baseUrl.replace(/\/$/, "")}/chat`;
+  return `${getBaseUrl().replace(/\/$/, "")}/chat`;
 }
 
 function buildChatStreamUrl(): string {
-  return `${baseUrl.replace(/\/$/, "")}/chat/stream`;
+  return `${getBaseUrl().replace(/\/$/, "")}/chat/stream`;
 }
 
 function buildMemoryUrl(anonymousUserId: string): string {
+  const baseUrl = getBaseUrl();
   const root =
     baseUrl.replace(/\/$/, "") ||
     (typeof window !== "undefined" ? window.location.origin : "http://localhost");
@@ -71,8 +87,12 @@ function buildMemoryUrl(anonymousUserId: string): string {
   return url.toString();
 }
 
+function buildCriticGuidanceUrl(sessionId: string): string {
+  return `${getBaseUrl().replace(/\/$/, "")}/api/critic/guidance/${encodeURIComponent(sessionId)}`;
+}
+
 export async function fetchChat(request: ChatRequest): Promise<FullChatResponse> {
-  if (mode === "mock") {
+  if (getMode() === "mock") {
     return getMockResponse(request) ?? MOCK_SAMPLES[0];
   }
 
@@ -91,6 +111,30 @@ export async function fetchChat(request: ChatRequest): Promise<FullChatResponse>
   return (await response.json()) as FullChatResponse;
 }
 
+export async function fetchCriticGuidance(
+  sessionId: string,
+): Promise<CriticGuidanceStatusResponse> {
+  if (getMode() === "mock") {
+    const sample = getSampleById(sessionId);
+    return {
+      session_id: sessionId,
+      status: "ready",
+      guidance: "Mock guidance uses the bundled sample scores.",
+      scores: sample?.scores ?? [],
+      error: "",
+      updated_at: null,
+    };
+  }
+
+  const response = await fetch(buildCriticGuidanceUrl(sessionId));
+
+  if (!response.ok) {
+    throw new Error(`Critic guidance request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as CriticGuidanceStatusResponse;
+}
+
 export interface StreamChatOptions {
   onEvent?: (event: ChatStreamEvent) => void;
   onDelta?: (text: string) => void;
@@ -100,7 +144,7 @@ export async function fetchStudentChatStream(
   request: ChatRequest,
   options: StreamChatOptions = {},
 ): Promise<StudentChatView> {
-  if (mode === "mock") {
+  if (getMode() === "mock") {
     const response = getMockResponse(request) ?? MOCK_SAMPLES[0];
     const view = toStudentView(response, request.anonymous_user_id ?? null);
     const { reply_text: _replyText, ...metadata } = response;
@@ -174,7 +218,7 @@ export async function fetchStudentChat(
 }
 
 export async function clearAnonymousMemory(anonymousUserId: string): Promise<void> {
-  if (mode === "mock" || !anonymousUserId) {
+  if (getMode() === "mock" || !anonymousUserId) {
     return;
   }
   const response = await fetch(buildMemoryUrl(anonymousUserId), {

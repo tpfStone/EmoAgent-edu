@@ -79,6 +79,15 @@ Postgres: localhost:5432
 Redis: localhost:6379
 ```
 
+Redis can be started with Docker for local live acceptance:
+
+```powershell
+docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
+docker exec emoedu-redis redis-cli ping
+```
+
+Expected Redis response: `PONG`. If Redis is unavailable, the student chat degrades to a no-history single-turn response, while multi-turn history and background F4 guidance are not persisted.
+
 4. 执行迁移：
 
 ```powershell
@@ -117,7 +126,7 @@ pnpm.cmd --dir frontend dev:console
 - Student: `http://127.0.0.1:5173`
 - Console: `http://127.0.0.1:5174`
 
-Vite dev server 会把 `/chat` 代理到 `http://localhost:8000`，本机 live 不需要 CORS。
+Vite dev server 会把 `/chat` 和 `/api/*` 代理到 `http://localhost:8000`，本机 live 不需要 CORS。
 
 ## 验收清单
 

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CRITIC_DASHSCOPE_THINKING: str = "disabled"
     LLM_TIMEOUT: float = 10.0
     LLM_MAX_TOKENS: int = 1000
+    CRITIC_LLM_TIMEOUT: float = 30.0
     CRITIC_LLM_MAX_TOKENS: int = 4096
 
     HISTORY_WINDOW_N: int = 6

@@ -9,10 +9,10 @@ EmoEdu MAS 是一个面向中国初中生（12-15 岁）的中文情感教育多
 ```text
 在线路径：快
 首次对话：F1 本地安全门 -> F2 情境/支持模式/风险兜底 -> F3 单候选流式返回 -> 后台 F4
-后续对话：轻量 CBT 支持 -> 注入最近历史 -> 如 F4 guidance 已完成则注入 -> 流式返回
+后续对话：F1 本地安全门 -> 轻量 CBT 支持 -> 注入最近历史 -> 如 F4 guidance 已完成则注入 -> 流式返回
 
 后台路径：准
-F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺 prompt / 策略表 / DPO 数据
+F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺 prompt / 策略表 / DPO 候选数据准备
 ```
 
 这样保留 generator-critic、多智能体和离线优化的理论依据，也避免让学生在真实交互中等待完整双候选和 critic 链路。
@@ -21,6 +21,7 @@ F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺
 
 - 后端已集成 FastAPI、PostgreSQL、Redis 会话历史、SSE 流式返回和 `/chat` 编排入口。
 - F1 安全门在 `/chat` 中默认使用本地分类器：`bert-base-chinese` 文本特征 + 人工审查关键词特征 + soft rule + 阈值。
+- 后续轮次仍先经过 F1 安全门；为降低延迟，不再每轮同步跑完整 F2 和 F4。
 - F2 使用 LLM 判断情境、支持模式和二次安全兜底；即使 F1 漏判，F2 仍可要求转介。
 - F3 可在本地 `exp/data/psyqa_labelled.json` 存在时使用 PsyQA-derived 策略先验和 support card；数据缺失时 support-card enrichment 为空或退回通用策略，首轮仍按 F2 的 `support_mode` 生成单候选。
 - F4 critic 不再阻塞在线响应，而是在后台生成 `session guidance`，下一轮对话可使用。
@@ -58,15 +59,15 @@ F4 critic -> 写质量标签和 session guidance -> 聚合实验报告 -> 反哺
 ## Figures
 
 <p>
-  <img src="./docs/figures/figure-1-three-phase-lifecycle.svg" alt="EmoEdu MAS 三阶段生命周期" width="760">
+  <img src="./docs/figures/figure-1-runtime-boundary.zh.svg" alt="EmoEdu MAS 运行边界与验证 gate" width="760">
 </p>
 
 <p>
-  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="当前 /chat 快路径与后台/离线路径" width="760">
+  <img src="./docs/figures/figure-2-runtime-pipeline.zh.svg" alt="当前 /chat 快路径与后台/离线路径" width="760">
 </p>
 
 <p>
-  <img src="./docs/figures/figure-3-argument-loop.svg" alt="理论框架到 Pairwise Gate 的证据链" width="760">
+  <img src="./docs/figures/figure-3-argument-loop.zh.svg" alt="理论框架到 Pairwise Gate 的证据链" width="760">
 </p>
 
 ## Quick Start
@@ -219,10 +220,32 @@ Redis 用于聊天历史和后台 F4 guidance：
 REDIS_URL=redis://localhost:6379/0
 ```
 
+本地 live 验收应确保 Redis 可连；如果 Redis 不可用，主聊天会降级为无历史单轮回复，但多轮历史和后台 F4 guidance 不会持久化。
+
+如果本机没有 Redis，可以用 Docker 启动一个本地实例：
+
+```powershell
+docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
+```
+
+后续复用同一个容器：
+
+```powershell
+docker start emoedu-redis
+```
+
+确认 Redis：
+
+```powershell
+docker exec emoedu-redis redis-cli ping
+```
+
+预期返回 `PONG`。
+
 启动后端：
 
 ```powershell
-uvicorn app.main:app --reload
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 访问：
@@ -252,6 +275,8 @@ pnpm --dir frontend dev:console
 $env:VITE_API_MODE="live"
 pnpm --dir frontend dev:student
 ```
+
+学生端每次启动默认进入新的空白对话；左侧仍保留本浏览器中已有消息的历史会话。若需要彻底清空本地记录和匿名记忆，请进入“整理记录”后点击“让我忘记”。
 
 常用检查：
 
@@ -305,7 +330,7 @@ exp/data/psyqa_labelled.json
 - `docs/README_EN.md`：英文文档地图和公开阅读入口。
 - `docs/specs/`：F1-F4、F4 pairwise、F9 的实现规格，以及 `README.md` / `exp-integration-map.md` 中的当前集成边界。
 - `docs/specs/README_EN.md`：英文规格摘要。
-- `docs/plans/`：未完成阶段计划；当前保留 Phase 2B gate。
+- `docs/plans/`：未完成的后续验证 gate；当前入口为 `validation-gates.md`。
 - `docs/overview/`：项目方案、工程拆分和阶段计划。
 - `docs/frontend/`：前端设计、部署和演示说明。
 - `docs/corpus/`：旧合成语料、F9 与 pairwise 试点记录。

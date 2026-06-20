@@ -8,13 +8,16 @@ This workspace contains two physically separated frontends:
 
 ## Safety Boundary
 
-The student app must only import `fetchStudentChat` and render `session_id`, `reply_text`, and `risk_level`.
-It must not render candidates, scores, weighted totals, failure reasons, or preference pairs.
+The student app may import only narrowed student-facing shared APIs: `fetchStudentChat`, `fetchStudentChatStream`, `clearAnonymousMemory`, and student-facing request/view types.
+It may store `session_id` and `anonymous_user_id` for continuity, and render only the student reply/referral state derived from `reply_text` and `risk_level`.
+It must not import or render candidates, scores, weighted totals, trace fields, failure reasons, or preference pairs.
 
 ## Commands
 
+Run these from the repository root:
+
 ```powershell
-pnpm install
+pnpm --dir frontend install
 pnpm --dir frontend dev:student
 pnpm --dir frontend dev:console
 pnpm --dir frontend typecheck
@@ -25,7 +28,10 @@ pnpm --dir frontend build:pages
 ## API Mode
 
 - Mock mode: default.
-- Live mode: set `VITE_API_MODE=live`; Vite proxies `/chat` to `http://localhost:8000`.
+- Live mode: set `VITE_API_MODE=live`; Vite proxies `/chat` and `/api/*` to `http://localhost:8000`.
+- If you bypass the Vite dev server, set `VITE_API_BASE=http://localhost:8000` so `/api/memory` and `/api/critic/guidance/{session_id}` call the FastAPI backend directly.
+- Local live mode expects FastAPI on `127.0.0.1:8000` and Redis on `localhost:6379`. If Redis is unavailable, the backend keeps the student chat usable as a no-history single-turn reply, but multi-turn history and background F4 guidance are disabled.
+- The student app opens a fresh empty session on each startup. Browser-local sessions with messages stay in the sidebar so old runs can be reviewed without becoming the active acceptance session.
 
 ## Motion Contract
 

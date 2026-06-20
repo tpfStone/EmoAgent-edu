@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="760" viewBox="0 0 760 760" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif">
+<style>
+.title{font-size:16px;font-weight:700;fill:#111827}
+.h{font-size:13px;font-weight:700;fill:#111827}
+.t{font-size:11px;fill:#4b5563}
+.small{font-size:10px;fill:#6b7280}
+.box{fill:#f9fafb;stroke:#d1d5db;stroke-width:1}
+.safe{fill:#fef2f2;stroke:#fca5a5;stroke-width:1}
+.route{fill:#ecfeff;stroke:#67e8f9;stroke-width:1}
+.gen{fill:#f0fdf4;stroke:#86efac;stroke-width:1.2}
+.critic{fill:#fff7ed;stroke:#fdba74;stroke-width:1}
+.future{fill:#f5f3ff;stroke:#c4b5fd;stroke-width:1}
+.arr{stroke:#9ca3af;stroke-width:1.6;fill:none}
+</style>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+
+<text class="title" x="24" y="30">当前 /chat 流水线</text>
+
+<rect class="box" x="242" y="54" width="276" height="46" rx="8"/>
+<text class="h" x="380" y="81" text-anchor="middle">输入：消息 + 最近历史</text>
+<line class="arr" x1="380" y1="100" x2="380" y2="130" marker-end="url(#arrow)"/>
+
+<rect class="safe" x="210" y="130" width="340" height="64" rx="8"/>
+<text class="h" x="380" y="154" text-anchor="middle">F1 本地安全分类器</text>
+<text class="t" x="380" y="176" text-anchor="middle">绿色继续；黄/红短路为转介</text>
+<path class="arr" d="M550 162 L628 162" marker-end="url(#arrow)"/>
+<text class="small" x="640" y="158">转介</text>
+<text class="small" x="640" y="174">回应</text>
+
+<line class="arr" x1="380" y1="194" x2="380" y2="224" marker-end="url(#arrow)"/>
+<rect class="route" x="210" y="224" width="340" height="70" rx="8"/>
+<text class="h" x="380" y="249" text-anchor="middle">F2 情境 + 支持模式路由</text>
+<text class="t" x="380" y="270" text-anchor="middle">scenario、CASEL、support_mode、二次安全</text>
+<text class="small" x="380" y="286" text-anchor="middle">二次 red/yellow 也返回转介</text>
+
+<line class="arr" x1="380" y1="294" x2="380" y2="324" marker-end="url(#arrow)"/>
+<rect class="gen" x="210" y="324" width="340" height="78" rx="8"/>
+<text class="h" x="380" y="349" text-anchor="middle">F3 单个路由候选</text>
+<text class="t" x="380" y="370" text-anchor="middle">可选读取 exp/data/psyqa_labelled.json 支持卡</text>
+<text class="small" x="380" y="386" text-anchor="middle">缺失时为空/通用先验，系统仍运行</text>
+
+<line class="arr" x1="380" y1="402" x2="380" y2="432" marker-end="url(#arrow)"/>
+<rect class="gen" x="210" y="432" width="340" height="56" rx="8"/>
+<text class="h" x="380" y="456" text-anchor="middle">流式返回给学生</text>
+<text class="t" x="380" y="476" text-anchor="middle">不等待同步 pairwise 或 F4</text>
+
+<path class="arr" d="M550 460 C626 460 626 520 550 520" marker-end="url(#arrow)"/>
+<rect class="critic" x="210" y="512" width="340" height="72" rx="8"/>
+<text class="h" x="380" y="537" text-anchor="middle">后台 F4 pointwise critic</text>
+<text class="t" x="380" y="558" text-anchor="middle">质量标签 + Redis session guidance</text>
+<text class="small" x="380" y="574" text-anchor="middle">诊断信号，不做阻塞选择器</text>
+
+<line class="arr" x1="380" y1="584" x2="380" y2="622" marker-end="url(#arrow)"/>
+<rect class="box" x="210" y="622" width="340" height="62" rx="8"/>
+<text class="h" x="380" y="647" text-anchor="middle">后续轮次</text>
+<text class="t" x="380" y="668" text-anchor="middle">最近历史 + 就绪的 F4 guidance</text>
+
+<rect class="future" x="38" y="528" width="132" height="96" rx="8"/>
+<text class="h" x="104" y="553" text-anchor="middle">离线/未来</text>
+<text class="small" x="104" y="576" text-anchor="middle">pairwise</text>
+<text class="small" x="104" y="594" text-anchor="middle">F9 / 人工 A/B</text>
+<text class="small" x="104" y="612" text-anchor="middle">DPO 导出</text>
+
+<rect class="future" x="590" y="528" width="132" height="96" rx="8"/>
+<text class="h" x="656" y="553" text-anchor="middle">默认关闭</text>
+<text class="small" x="656" y="576" text-anchor="middle">F6 memory/RAG</text>
+<text class="small" x="656" y="594" text-anchor="middle">通过 gate 前</text>
+<text class="small" x="656" y="612" text-anchor="middle">不注入 prompt</text>
+</svg>

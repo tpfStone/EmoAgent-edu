@@ -126,12 +126,23 @@ GET /api/critic/guidance/{session_id}
   "session_id": "session-1",
   "status": "missing|pending|ready|failed",
   "guidance": "仅 ready 时返回下一轮可用的短提示",
+  "scores": [
+    {
+      "candidate_id": "c1",
+      "epitome": {"ER": 2, "IP": 2, "EX": 1},
+      "casel": {},
+      "boundary_flag": false,
+      "boundary_reason": "",
+      "weighted_total": 5.0,
+      "rationale": "仅 ready 时返回后台质量标签"
+    }
+  ],
   "error": "仅 failed 时返回错误摘要",
   "updated_at": "2026-06-16T00:00:00Z"
 }
 ```
 
-`pending`、`failed` 和 `missing` 都不会阻塞学生侧响应；只有 `ready` guidance 会被下一轮 follow-up 内部使用。
+`pending`、`failed` 和 `missing` 都不会阻塞学生侧响应；只有 `ready` guidance 会被下一轮 follow-up 内部使用。`scores` 只给研究/诊断侧展示后台 F4 质量标签，学生端不渲染。
 
 ---
 

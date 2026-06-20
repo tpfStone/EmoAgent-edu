@@ -116,6 +116,8 @@ function readSessions(): SessionRecord[] {
     return [createSession()];
   }
 
+  const freshSession = createSession();
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
@@ -126,26 +128,28 @@ function readSessions(): SessionRecord[] {
         .filter((session): session is SessionRecord => session !== null);
 
       if (sessions.length > 0) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-        return sessions;
+        const previousSessions = sessions.filter(
+          (session) => session.messages.length > 0,
+        );
+        const next = [freshSession, ...previousSessions];
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(CURRENT_ID_KEY, freshSession.id);
+        return next;
       }
     }
   } catch {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CURRENT_ID_KEY);
   }
 
-  return [createSession()];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([freshSession]));
+  localStorage.setItem(CURRENT_ID_KEY, freshSession.id);
+  return [freshSession];
 }
 
 function readCurrentId(sessions: SessionRecord[]): string {
-  if (typeof localStorage === "undefined") {
-    return sessions[0].id;
-  }
-
-  const stored = localStorage.getItem(CURRENT_ID_KEY);
-  const exists = sessions.some((session) => session.id === stored);
-
-  return exists && stored ? stored : sessions[0].id;
+  return sessions[0].id;
 }
 
 function readAnonymousUserId(): string {

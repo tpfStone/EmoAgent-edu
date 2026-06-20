@@ -17,42 +17,42 @@
 </marker>
 </defs>
 
-<text class="title" x="24" y="30">Evidence chain: frameworks -> runtime diagnostics -> offline gates</text>
+<text class="title" x="24" y="30">证据链：教育框架 -> 运行诊断 -> 离线门控</text>
 
 <rect class="theory" x="42" y="64" width="206" height="82" rx="8"/>
-<text class="h" x="145" y="89" text-anchor="middle">Educational frameworks</text>
-<text class="t" x="64" y="113">CASEL: educational dimensions</text>
-<text class="t" x="64" y="132">EPITOME: ER / IP / EX language</text>
+<text class="h" x="145" y="89" text-anchor="middle">教育框架</text>
+<text class="t" x="64" y="113">CASEL：教育维度</text>
+<text class="t" x="64" y="132">EPITOME：ER / IP / EX 语言</text>
 
 <rect class="runtime" x="278" y="64" width="206" height="82" rx="8"/>
-<text class="h" x="381" y="89" text-anchor="middle">Runtime generation</text>
-<text class="t" x="300" y="113">F2 routes support mode</text>
-<text class="t" x="300" y="132">F3 streams one candidate</text>
+<text class="h" x="381" y="89" text-anchor="middle">运行时生成</text>
+<text class="t" x="300" y="113">F2 路由支持模式</text>
+<text class="t" x="300" y="132">F3 流式返回单候选</text>
 
 <rect class="diag" x="514" y="64" width="206" height="82" rx="8"/>
-<text class="h" x="617" y="89" text-anchor="middle">Background diagnostics</text>
-<text class="t" x="536" y="113">F4 pointwise quality labels</text>
-<text class="t" x="536" y="132">session guidance for later turns</text>
+<text class="h" x="617" y="89" text-anchor="middle">后台诊断</text>
+<text class="t" x="536" y="113">F4 pointwise 质量标签</text>
+<text class="t" x="536" y="132">后续轮次的 session guidance</text>
 
 <line class="arr" x1="248" y1="105" x2="276" y2="105" marker-end="url(#arrow)"/>
 <line class="arr" x1="484" y1="105" x2="512" y2="105" marker-end="url(#arrow)"/>
 
 <rect class="gate" x="88" y="226" width="270" height="86" rx="8"/>
-<text class="h" x="223" y="252" text-anchor="middle">Offline pairwise / F9 gate</text>
-<text class="t" x="110" y="276">Pairwise rerun is inconclusive</text>
-<text class="small" x="110" y="294">requires cleaner package, controls, human A/B</text>
+<text class="h" x="223" y="252" text-anchor="middle">离线 pairwise / F9 gate</text>
+<text class="t" x="110" y="276">pairwise 复跑结论不充分</text>
+<text class="small" x="110" y="294">需要更干净样本、控制项、人工 A/B</text>
 
 <rect class="future" x="402" y="226" width="270" height="86" rx="8"/>
-<text class="h" x="537" y="252" text-anchor="middle">Future optimization</text>
-<text class="t" x="424" y="276">only stable validated preferences</text>
-<text class="small" x="424" y="294">can become DPO training data</text>
+<text class="h" x="537" y="252" text-anchor="middle">未来优化</text>
+<text class="t" x="424" y="276">只使用稳定验证后的偏好</text>
+<text class="small" x="424" y="294">才可进入 DPO 训练数据</text>
 
 <path class="arr" d="M617 146 C617 186 537 186 537 224" marker-end="url(#arrow)"/>
 <line class="arr" x1="358" y1="269" x2="400" y2="269" marker-end="url(#arrow)"/>
 
 <rect class="runtime" x="170" y="370" width="420" height="62" rx="8"/>
-<text class="h" x="380" y="396" text-anchor="middle">Current public claim</text>
-<text class="t" x="380" y="418" text-anchor="middle">runtime stays fast; offline evidence improves prompts, reports, and future gates</text>
+<text class="h" x="380" y="396" text-anchor="middle">当前公开口径</text>
+<text class="t" x="380" y="418" text-anchor="middle">运行保持快速；离线证据改进 prompt、报告和未来 gate</text>
 
 <path class="arr" d="M537 312 C537 350 380 350 380 368" marker-end="url(#arrow)"/>
 <path class="arr" d="M223 312 C223 350 380 350 380 368" marker-end="url(#arrow)"/>
