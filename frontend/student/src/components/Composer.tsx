@@ -61,7 +61,24 @@ export function Composer({
         disabled={!canSend}
         type="submit"
       >
-        <span aria-hidden="true">{loading ? "..." : "↑"}</span>
+        {loading ? (
+          <span aria-hidden="true">...</span>
+        ) : (
+          <svg
+            aria-hidden="true"
+            className={styles.sendIcon}
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 19V5m0 0-5.25 5.25M12 5l5.25 5.25"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3.2"
+            />
+          </svg>
+        )}
       </button>
     </form>
   );

@@ -80,6 +80,12 @@
   transform: translateY(-0.08rem);
 }
 
+.sendIcon {
+  width: 1.82rem;
+  height: 1.82rem;
+  transform: translateY(-0.04rem);
+}
+
 @media (max-width: 520px) {
   .composer {
     gap: 0.5rem;
@@ -95,5 +101,10 @@
     width: 3.1rem;
     height: 3.1rem;
     font-size: 1.7rem;
+  }
+
+  .sendIcon {
+    width: 1.54rem;
+    height: 1.54rem;
   }
 }

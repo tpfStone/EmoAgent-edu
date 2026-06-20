@@ -20,6 +20,7 @@ describe("Composer", () => {
 
     expect((sendButton as HTMLButtonElement).disabled).toBe(false);
     expect(sendButton.getAttribute("data-send-ready")).toBe("true");
+    expect(sendButton.querySelector("svg")).toBeTruthy();
   });
 
   it("does not mark the send button ready while loading", () => {
