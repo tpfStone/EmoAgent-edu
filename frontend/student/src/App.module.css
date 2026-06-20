@@ -72,8 +72,10 @@
 
 .openingState {
   display: grid;
-  max-width: 39rem;
+  width: min(100%, 59rem);
+  max-width: none;
   gap: 1.35rem;
+  margin: 0 auto;
 }
 
 .openingLabel {
