@@ -17,9 +17,15 @@ export interface SessionRecord {
 
 const STORAGE_KEY = "emoagent.student.sessions.v1";
 const CURRENT_ID_KEY = "emoagent.student.currentSessionId.v1";
+const TAB_CURRENT_ID_KEY = "emoagent.student.tabCurrentSessionId.v1";
 const ANONYMOUS_USER_ID_KEY = "emoagent.student.anonymousUserId.v1";
 const DEFAULT_TITLE = "新的对话";
 const TITLE_LIMIT = 20;
+
+interface InitialSessionState {
+  sessions: SessionRecord[];
+  currentId: string;
+}
 
 function createId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -111,9 +117,48 @@ function normalizeSession(value: unknown): SessionRecord | null {
   };
 }
 
-function readSessions(): SessionRecord[] {
+function readTabCurrentId(): string | null {
+  if (typeof sessionStorage === "undefined") {
+    return null;
+  }
+
+  try {
+    return sessionStorage.getItem(TAB_CURRENT_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeCurrentId(currentId: string): void {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(CURRENT_ID_KEY, currentId);
+  }
+
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.setItem(TAB_CURRENT_ID_KEY, currentId);
+    } catch {
+      // Ignore unavailable session storage; local history remains usable.
+    }
+  }
+}
+
+function clearTabCurrentId(): void {
+  if (typeof sessionStorage === "undefined") {
+    return;
+  }
+
+  try {
+    sessionStorage.removeItem(TAB_CURRENT_ID_KEY);
+  } catch {
+    // Ignore unavailable session storage.
+  }
+}
+
+function readInitialSessionState(): InitialSessionState {
   if (typeof localStorage === "undefined") {
-    return [createSession()];
+    const session = createSession();
+    return { sessions: [session], currentId: session.id };
   }
 
   const freshSession = createSession();
@@ -128,28 +173,35 @@ function readSessions(): SessionRecord[] {
         .filter((session): session is SessionRecord => session !== null);
 
       if (sessions.length > 0) {
+        const tabCurrentId = readTabCurrentId();
+
+        if (
+          tabCurrentId &&
+          sessions.some((session) => session.id === tabCurrentId)
+        ) {
+          writeCurrentId(tabCurrentId);
+          return { sessions, currentId: tabCurrentId };
+        }
+
         const previousSessions = sessions.filter(
           (session) => session.messages.length > 0,
         );
         const next = [freshSession, ...previousSessions];
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        localStorage.setItem(CURRENT_ID_KEY, freshSession.id);
-        return next;
+        writeCurrentId(freshSession.id);
+        return { sessions: next, currentId: freshSession.id };
       }
     }
   } catch {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CURRENT_ID_KEY);
+    clearTabCurrentId();
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify([freshSession]));
-  localStorage.setItem(CURRENT_ID_KEY, freshSession.id);
-  return [freshSession];
-}
-
-function readCurrentId(sessions: SessionRecord[]): string {
-  return sessions[0].id;
+  writeCurrentId(freshSession.id);
+  return { sessions: [freshSession], currentId: freshSession.id };
 }
 
 function readAnonymousUserId(): string {
@@ -173,12 +225,19 @@ function persist(sessions: SessionRecord[], currentId: string): void {
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-  localStorage.setItem(CURRENT_ID_KEY, currentId);
+  writeCurrentId(currentId);
 }
 
 export function useStudentSessions() {
-  const [sessions, setSessions] = useState<SessionRecord[]>(() => readSessions());
-  const [currentId, setCurrentId] = useState<string>(() => readCurrentId(sessions));
+  const [initialSessionState] = useState<InitialSessionState>(() =>
+    readInitialSessionState(),
+  );
+  const [sessions, setSessions] = useState<SessionRecord[]>(
+    () => initialSessionState.sessions,
+  );
+  const [currentId, setCurrentId] = useState<string>(
+    () => initialSessionState.currentId,
+  );
   const [anonymousUserId, setAnonymousUserId] = useState<string>(() =>
     readAnonymousUserId(),
   );

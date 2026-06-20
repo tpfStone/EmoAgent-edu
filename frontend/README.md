@@ -31,7 +31,7 @@ pnpm --dir frontend build:pages
 - Live mode: set `VITE_API_MODE=live`; Vite proxies `/chat` and `/api/*` to `http://localhost:8000`.
 - If you bypass the Vite dev server, set `VITE_API_BASE=http://localhost:8000` so `/api/memory` and `/api/critic/guidance/{session_id}` call the FastAPI backend directly.
 - Local live mode expects FastAPI on `127.0.0.1:8000` and Redis on `localhost:6379`. If Redis is unavailable, the backend keeps the student chat usable as a no-history single-turn reply, but multi-turn history and background F4 guidance are disabled.
-- The student app opens a fresh empty session on each startup. Browser-local sessions with messages stay in the sidebar so old runs can be reviewed without becoming the active acceptance session.
+- The student app opens a fresh empty session when the page is first opened in a browser tab. Refreshing the same tab keeps the active conversation; browser-local sessions with messages stay in the sidebar so old runs can be reviewed without becoming the active acceptance session.
 
 ## Motion Contract
 

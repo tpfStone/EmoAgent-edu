@@ -9,6 +9,7 @@ const breathingCopy = "吸气四秒，呼气四秒。";
 describe("student screenshot-style information architecture", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -62,6 +63,45 @@ describe("student screenshot-style information architecture", () => {
     expect(screen.queryByText("old failed user text")).toBeNull();
     expect(screen.queryByText("old fallback text")).toBeNull();
     expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  it("keeps the active conversation on refresh within the same browser tab", () => {
+    localStorage.setItem(
+      "emoagent.student.sessions.v1",
+      JSON.stringify([
+        {
+          id: "active-session",
+          title: "active session",
+          createdAt: 1710000000000,
+          updatedAt: 1710000001000,
+          messages: [
+            {
+              id: "active-user-message",
+              role: "student",
+              text: "please keep this visible after refresh",
+              createdAt: 1710000000000,
+            },
+            {
+              id: "active-agent-message",
+              role: "agent",
+              text: "still here after refresh",
+              createdAt: 1710000001000,
+            },
+          ],
+        },
+      ]),
+    );
+    localStorage.setItem("emoagent.student.currentSessionId.v1", "active-session");
+    sessionStorage.setItem(
+      "emoagent.student.tabCurrentSessionId.v1",
+      "active-session",
+    );
+
+    render(<App />);
+
+    expect(screen.getByText("please keep this visible after refresh")).toBeTruthy();
+    expect(screen.getByText("still here after refresh")).toBeTruthy();
+    expect(screen.queryByText("还没有消息")).toBeNull();
   });
 
   it("uses record management as the only destructive memory action", () => {
