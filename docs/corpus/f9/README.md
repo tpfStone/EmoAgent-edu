@@ -1,5 +1,7 @@
 # F9 产物与验收状态总览
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 > 先读主线：`docs/corpus/f9/f9-mainline.md`。该文档说明 F3、F4、F9 的职责边界、当前阻塞点和下一步决策顺序。
 
 本目录保存 F9 人工信度、错误分析、以及 F3/F4 修订后的自动验收产物。当前核心状态是：**主 validation 包单次 PASS，但稳定性复跑未通过，暂不建议直接进入正式人工 F9**。F4 已收紧 ER/IP 高档定义并完成三次 post-erip validation，但三次仍因 rerun ER/IP=2 超过 32/40 而 FAIL；当前阻塞不再是 fallback 或 hard flags，而是 F4 高分侧仍未稳定。

@@ -1,5 +1,7 @@
 # F4 成对比较择优 Phase A 实施计划
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 > **给自动化执行者：** 必须使用 `superpowers:executing-plans` 按任务逐项执行本计划。步骤使用复选框（`- [x]`）便于追踪。
 
 **目标：** 构建离线 Phase A 成对比较（pairwise）试点工具链，不改变 `/chat` 的运行时默认择优逻辑。

@@ -1,5 +1,7 @@
 # Orchestrator MVP Implementation Plan
 
+> **历史边界**：本文件保留当时规划语境；若与当前 `README.md`、`docs/README.md`、`docs/specs/README.md` 或 `exp/README.md` 冲突，以当前入口文档为准。
+
 > **Archive note:** This 2026-05-21 implementation plan is kept for historical task breakdown and execution context. Current acceptance status lives in `docs/acceptance/orchestrator-mvp/2026-05-21/2026-05-21-orchestrator-mvp-test-summary.md`; current post-MVP planning lives in `docs/overview/emoedu-post-mvp-guide.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -720,6 +722,8 @@ Create the issue note with:
 
 ```markdown
 # Orchestrator Deferred Validation
+
+> **历史边界**：本文件保留当时规划语境；若与当前 `README.md`、`docs/README.md`、`docs/specs/README.md` 或 `exp/README.md` 冲突，以当前入口文档为准。
 
 > Date: 2026-05-21
 

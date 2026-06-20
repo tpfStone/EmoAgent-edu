@@ -1,5 +1,7 @@
 # Backend Infrastructure Smoke Acceptance - 2026-05-26
 
+> **历史验收记录**：本文件记录当时验收口径和实跑结果，不代表当前 `/chat` 默认 runtime。当前主链路以入口 README、`docs/specs/README.md` 和 `exp/README.md` 为准。
+
 ## Scope
 
 This run validates the backend infrastructure gate that was present in the archived 2026-05-21 `/chat` MVP plan but missing from the current post-MVP planning path.

@@ -1,5 +1,7 @@
 # Orchestrator MVP 测试总结
 
+> **历史验收记录**：本文件记录当时验收口径和实跑结果，不代表当前 `/chat` 默认 runtime。当前主链路以入口 README、`docs/specs/README.md` 和 `exp/README.md` 为准。
+
 ## 总体结论
 
 - Step -1 F1 安全门单列验收已通过，最终记录 run 为 `f1-real-llm-20260522-215321`。

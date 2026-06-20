@@ -1,5 +1,7 @@
 # F3 F9 生成器修复实施计划
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 修复 F3 生成器在 F9 validation 中暴露的品质化总结、强行正向重构、样本级事实/动机补全残留，让 F9 automatic gate 对 F3 质量有更有效的判断力。
@@ -909,6 +911,8 @@ Expected:
 
 ```markdown
 # F9 Low-Score Manual Review
+
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
 
 ## Review Scope
 

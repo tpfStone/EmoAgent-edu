@@ -1,22 +1,28 @@
 # F9 信度校验 · 详细执行文档
 
-> **这是什么**：F9 = 用极小规模人工标注，验证 F4 critic 的 LLM 打分与人工判断一致。它是论文里「LLM-judge 在本任务可靠」这句话的**唯一证据**，也是放量与 DPO 的前置闸门。
+> **这是什么**：F9 = 用小规模人工标注，验证 F4 critic 与人工判断的一致性。当前主线是 pairwise/human A/B gate；EPITOME 0/1/2 pointwise 信度只作为诊断线和历史兼容证据。
 > **配套**：上层路线见 `emoedu-post-mvp-guide.md` 的 P1；评分定义见 `f4-critic-epitome-codex-spec.md` §4；理论依据见 `emoedu-mas-plan.md` §十。
-> **一句话**：没有这份校验，DPO 和系统效果的所有结论都站不住（AI 教 AI 无锚点）。
+> **一句话**：没有人工锚点，DPO 和系统效果的结论都站不住（AI 教 AI 无锚点）。正式 DPO 依赖 pairwise/human A/B gate，不由 pointwise EPITOME 单独解锁。
 
 ---
 
-## 0. F9 要回答的唯一问题
+## 0. F9 当前要回答的问题
 
-> **F4 critic 用 EPITOME 0/1/2 给候选回应打的分，可信吗？**
+当前主问题：
 
-「可信」的操作化定义：F4 的打分与人工标注的一致性，达到可接受水平（见 §6 判读线），并对标原论文（Kumar & Groh 2025）报告同类指标。
+> **对同一批候选对，critic pairwise 的偏好判断是否与人工 A/B 偏好达到可接受一致性？**
+
+历史/诊断问题仍可保留：
+
+> **F4 critic 用 EPITOME 0/1/2 给候选回应打的分，是否与人工标注大体一致？**
+
+Pointwise 的操作化定义：F4 的 ER/IP/EX 打分与人工标注的一致性达到可解释水平（见 §6 诊断线），并对标原论文（Kumar & Groh 2025）报告同类指标。它可以支撑后台质量标签、session guidance 和旧记录解释，但不能单独解锁 runtime pairwise selector、production 放量或正式 DPO。
 
 注意 F9 **不是**：不是评回复质量好坏（那是别的事），不是给 45 条逐条打分，不是 MVP 的「回复合理性排雷」。F9 是**信度**（reliability）验证——量的是「标尺准不准」，不是「东西好不好」。
 
 ---
 
-## 1. 抽样：标什么、抽多少、怎么抽
+## 1. Pointwise 诊断抽样：标什么、抽多少、怎么抽
 
 ### 标注对象
 
@@ -81,7 +87,7 @@
 三个要算的 κ：
 
 1. **人人一致性（A vs B）**：两名人工标注者之间。这是「这套锚点人能不能标稳」的证据，也是人机一致性的天花板参照。
-2. **人机一致性（人 vs F4）**：核心指标。用「两人的共识标注」或「两人均值取整」对 F4。**这是论文要报的主数字。**
+2. **人机一致性（人 vs F4）**：pointwise 诊断指标。用「两人的共识标注」或「两人均值取整」对 F4。**这是后台质量标签和旧 pointwise 可靠性要报的数字，不是 DPO 解锁数字。**
 3. **逐维分开**：ER、IP、EX 各算一套上面两个 κ。**不要只报三维合并的总 κ**——因为你预期 EX 高、ER/IP 低（见 §5），合并会掩盖这个结构。
 
 ### 可直接跑的计算代码
@@ -140,12 +146,19 @@ for dim in ["ER", "IP", "EX"]:
 
 weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.4-0.6 moderate，0.6-0.8 substantial，>0.8 almost perfect。
 
-### F9 通过标准（比赛可投档）
+### Pointwise 诊断通过标准（比赛可投档）
 
 - [ ] **EX 维人机 κ ≥ 0.6**（substantial）。EX 是 EPITOME 里最可靠的维，它要是不达标，整个 judge 的可信度存疑。
 - [ ] **ER/IP 维人机 κ ≥ 0.4**（moderate），并在 limitation 诚实讨论。
 - [ ] **人人 κ 不显著低于人机 κ**。如果人人之间都标不一致（人人 κ 很低），说明锚点本身有问题，要回 §2 重新对齐，而不是怪 F4。
 - [ ] 报告时**三维分开 + 附分数分布**，不藏 ER/IP。
+
+以上只说明 pointwise EPITOME 诊断可被引用。正式 DPO 或 runtime pairwise selector 还必须另过 pairwise/human A/B gate：
+
+- [ ] 有效交集数量达到预设下限。
+- [ ] critic-human agreement 达到预设线，且优于或至少不弱于 pointwise baseline。
+- [ ] 位置偏见、hidden label、identical text 和 `c1` 偏斜控制没有失败。
+- [ ] 只导出 `pairwise_stable` 且 `human_validated` 的 winner/loser；tie、invalid、unresolved、orientation default 和 pointwise tiebreak 不进入训练。
 
 ### 如果不达标
 
@@ -153,7 +166,7 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 - **只有 ER/IP 低、EX 达标** → 可投，按 §5 写 limitation。这是预期内的，不算 F9 失败。
 - **人人 κ 低** → 不是 F4 的问题，是你俩没对齐，回 §2。
 
-> **F4 一旦因 F9 修改 → 所有用旧 F4 跑的偏好对作废**（含 probe 433 对）。这就是 F9 必须在放量前的原因。
+> **F4 一旦因 F9 修改 → 所有用旧 F4 跑的诊断分数和未验证偏好对都要重新标注来源**（含 probe 433 对）。正式 DPO 仍以 pairwise/human gate 的稳定偏好对为准。
 
 ---
 
@@ -162,8 +175,8 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 1. **一张 κ 表**：行=ER/IP/EX，列=人人 κ、人机 κ，附每维分数分布。
 2. **一段方法描述**：抽样设计（40 条、分层、盲标、独立标）、加权 κ、对标原论文。
 3. **一段 limitation**：ER/IP 残余局限 + 归因框架。
-4. **一句结论**：「F4 critic 的 EPITOME 打分在本任务上达到与人工可比的一致性（EX substantial，ER/IP moderate），据此其自动产出的偏好对可作为 DPO 训练信号。」
-   - **这句话一出，`judge_unverified_preference_pairs` 就解锁成可用偏好对**，放量与 DPO 才合法启动。
+4. **一句结论**：「F4 critic 的 EPITOME 打分在本任务上达到与人工可比的一致性（EX substantial，ER/IP moderate），可作为后台质量诊断和历史 pointwise 解释证据。」
+   - **这句话不能解锁 `judge_unverified_preference_pairs`**。放量与 DPO 只能在 pairwise/human A/B gate 通过后，使用 `pairwise_stable` / `human_validated` 来源的偏好对。
 
 ---
 
@@ -175,7 +188,8 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 - [ ] 合并三表（A、B、F4）按 sample_no 对齐。
 - [ ] 跑 §4 代码，得三维 × 人人/人机 κ + 分数分布。
 - [ ] 对照 §6 判读：EX≥0.6？ER/IP≥0.4？人人不低于人机？
-- [ ] 达标 → 写 §7 产出，解锁偏好对，启动 P-corpus 放量。
+- [ ] Pointwise 诊断达标 → 写 §7 产出，作为后台质量报告和历史兼容证据。
+- [ ] Pairwise/human gate 达标 → 才允许导出 stable/human_validated preference pairs，启动后续 production/DPO 准备。
 - [ ] 不达标 → 按 §6 分支处理（改 F4 重测 / 重对齐锚点 / 写 limitation）。
 
 ---
@@ -187,5 +201,5 @@ weighted κ 的常用解读（Landis & Koch）：<0.2 slight，0.2-0.4 fair，0.
 - ❌ 标注时能看到 F4 分 —— κ 虚高，证据失效。
 - ❌ 样本分数全是 2 —— κ 失真，必须有梯度。
 - ❌ 把 F9 当质量评估 —— F9 是信度（标尺准不准），不是质量（东西好不好）。
-- ❌ ER/IP 低就判 F9 失败 —— 那是 EPITOME 已知局限，EX 达标即可投 + 写 limitation。
-- ❌ F9 没过就放量 —— 用未验证 F4 铸的币可能全废。
+- ❌ ER/IP 低就判所有 F9 失败 —— 那是 EPITOME 已知局限；pointwise 诊断可分维报告，但不能替代 pairwise gate。
+- ❌ Pairwise/human gate 没过就放量或 DPO —— 用未验证 F4 铸的币可能全废。

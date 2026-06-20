@@ -1,5 +1,7 @@
 # Frontend Rebuild Implementation Plan
 
+> **Historical boundary**: this was the implementation plan for rebuilding the deleted frontend workspace on 2026-05-26. The current frontend already supports the narrowed student stream API (`fetchStudentChatStream`) and `anonymous_user_id`; older `fetchStudentChat`-only examples below are preserved as rebuild history, not the current safety contract. Current contract: `frontend/README.md`, `docs/frontend/frontend-cc-spec.md`, and `frontend/shared/src/api.ts`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild the deleted `frontend/` workspace as two physically separated React/Vite frontends plus a shared API/type layer, following `docs/frontend/emoagent-frontend-design-baseline.md`.

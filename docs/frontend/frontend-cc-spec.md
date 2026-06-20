@@ -2,13 +2,13 @@
 
 > **交付对象**：Claude Code / 编码 agent。本文档自包含，实现前端无需阅读其他文档（后端接口契约见 §3，已与 F1–F4 现有 schema 对齐）。
 > **模块定位**：系统的两个前端入口。学生端是产品；研究分析台是离线工具。二者共享一个后端 `/chat`，但**物理分离、数据通路不同**。
-> **技术栈**：React 18 + Vite + TypeScript（建议）；后端复用现有 FastAPI（`POST /chat`）。无需新增后端端点即可跑通学生端。
+> **技术栈**：React 18 + Vite + TypeScript（建议）；后端复用现有 FastAPI（`POST /chat` 和推荐的 `POST /chat/stream`）。无需新增后端端点即可跑通学生端。
 
 ---
 
 ## 1. 一句话职责
 
-把两个已设计好的 React 原型（`EmoAgentStudent.jsx`、`ResearchConsole.jsx`）接到真实 FastAPI：学生端只渲染 `reply_text` 与危机转介；研究分析台渲染全部分析字段（候选、EPITOME/CASEL 分数、择优、批量统计）。**学生端在代码层禁止 import 或渲染任何分析字段。**
+把两个已设计好的 React 原型（`EmoAgentStudent.jsx`、`ResearchConsole.jsx`）接到真实 FastAPI：学生端只通过 narrowed student API 获取 `StudentChatView` 或 SSE 文本增量，渲染 `reply_text` 与危机转介；研究分析台渲染全部分析字段（候选、EPITOME/CASEL 分数、择优、批量统计）。**学生端在代码层禁止 import 或渲染任何分析字段。**
 
 ---
 
@@ -18,11 +18,11 @@
 |---|---|---|
 | 使用者 | 初中生（12–15） | 研究者 / 开发者 / 评委 |
 | 部署 | 独立前端，面向公网 | 独立前端，内网 / 离线 / 鉴权后 |
-| 渲染字段 | **仅** `reply_text`、`risk_level`（用于触发转介）、`session_id` | 全部：`candidates`、`scores`、`epitome`、`casel`、`weighted_total`、`boundary_flag`、`preference_pair`、批量统计 |
-| 数据通路 | 实时 `POST /chat` | `POST /chat`（单轮）+ 读落库的 `turns/candidates/scores/preference_pairs`（批量） |
+| 可用字段 | **仅** `reply_text`、`risk_level`（用于触发转介）、`session_id`、`anonymous_user_id`（仅用于连续性） | 全部：`candidates`、`scores`、`epitome`、`casel`、`weighted_total`、`boundary_flag`、`preference_pair`、批量统计 |
+| 数据通路 | 推荐 `POST /chat/stream`；`POST /chat` 仅作兼容 | `POST /chat`（单轮）+ 读落库的 `turns/candidates/scores/preference_pairs`（批量） |
 | 路由 | `/`（或独立域名） | `/console`（或独立域名 + 鉴权） |
 
-> **铁律**：学生端的类型定义只允许包含 `reply_text`、`risk_level`、`session_id` 三个字段。即使后端 `/chat` 返回了 `scores` 等字段，学生端也必须在类型层与渲染层双重丢弃，**绝不能有任何代码路径把分析数据带到学生界面**。这是儿童安全约束，不是工程偏好。
+> **铁律**：学生端只能 import `fetchStudentChat` / `fetchStudentChatStream` / `clearAnonymousMemory` 和窄类型；`StudentChatView` 只允许包含 `reply_text`、`risk_level`、`session_id`、`anonymous_user_id`。即使后端 `/chat` 返回了 `scores` 等字段，学生端也必须在类型层与渲染层双重丢弃，**绝不能有任何代码路径把分析数据带到学生界面**。这是儿童安全约束，不是工程偏好。
 
 ---
 
@@ -33,6 +33,7 @@
 POST /chat
 {
   "session_id": "string",       // 同一会话多轮复用同一 id（会话内记忆）
+  "anonymous_user_id": "string | null", // 无登录连续性，可省略
   "current_message": "string"
 }
 ```
@@ -41,6 +42,7 @@ POST /chat
 ```json
 {
   "session_id": "string",
+  "anonymous_user_id": "string | null",
   "status": "answered | blocked_by_safety | all_candidates_blocked | module_failed",
   "reply_text": "string",
   "risk_level": "green | yellow | red",
@@ -68,8 +70,8 @@ POST /chat
 }
 ```
 
-### 3.3 学生端只用三个字段
-学生端从上面的响应里**只取** `reply_text`、`risk_level`、`session_id`。逻辑：
+### 3.3 学生端只用窄字段
+学生端从上面的响应或 stream `done` 事件里**只取** `reply_text`、`risk_level`、`session_id`、`anonymous_user_id`。其中 `anonymous_user_id` 只用于本地连续性和清理请求，不作为可见分析字段。逻辑：
 - `risk_level === "green"` → 把 `reply_text` 作为一条 AI 消息渲染。
 - `risk_level !== "green"`（yellow/red）→ 渲染 `reply_text` 后，弹出固定转介面板（§5.3）。`status` 此时为 `blocked_by_safety`，无候选，正常。
 
@@ -80,7 +82,7 @@ POST /chat
 ```
 frontend/
   shared/
-    api.ts            # fetchChat()，类型见下；MOCK/LIVE 切换
+    api.ts            # fetchChat() + narrowed student wrappers；MOCK/LIVE 切换
     types.ts          # ChatResponse 等共享类型
     samples.ts        # 演示样例（含 syn_0007/0021/0032/crisis）
   student/            # 独立可部署
@@ -104,7 +106,7 @@ frontend/
 - 设计依据见原型注释；改色前先读注释里的研究结论（高饱和暖色升焦虑、低饱和多 pastel + 暖中性为解）。
 
 ### 5.2 会话与记忆
-- **会话内记忆（现在做）**：前端为每个会话生成 `session_id`，同一会话所有轮次复用它；后端 Redis 窗口（`HISTORY_WINDOW_N=6`）自动吃历史。前端把同 `session_id` 的多轮顺序渲染即可。
+- **会话内记忆（现在做）**：前端为每个会话生成 `session_id`，同一会话所有轮次复用它；同一浏览器保留一个 `anonymous_user_id` 用于未登录连续性与清理。后端 Redis 窗口（`HISTORY_WINDOW_N=6`）自动吃历史。前端把同 `session_id` 的多轮顺序渲染即可。
 - **侧边栏历史**：`最近聊过` 列出本设备已有会话（标题取首条用户消息），只用于快速回到对话。「开启新对话」生成新 `session_id`。
 - **整理记录**：底部工具入口，用于说明本地记录边界、展示本地会话摘要，并提供「让我忘记」清除本设备会话文本；不作为第二个历史列表入口。
 - **长期记忆（主动不做）**：不持久化任何跨会话用户画像、情绪轨迹或个性化记忆。学生端只保留本地会话标题与消息文本，并可通过「让我忘记」清除。此决策用于避免诱导情感依赖、避免给波动期青少年固化标签，并最小化未成年人敏感数据留存。
@@ -169,6 +171,7 @@ export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
   return r.json();
 }
 ```
+- 学生端 live 模式优先用 `fetchStudentChatStream()` 连接 `/chat/stream`，只把 `delta` 追加进消息，把 `done` 投影为 `StudentChatView`；不得把 `metadata` 或完整 `done` response 渲染给学生。
 - 演示现场建议 **mock 优先**（DeepSeek + critic 多采样有数秒延迟，断网即崩），或预录真实响应回放。
 - `VITE_API_MODE=live` + `VITE_API_BASE` 指向 FastAPI 即接真后端，前端零改动。
 
@@ -177,7 +180,7 @@ export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
 ## 8. 验收标准（DoD）
 
 学生端：
-- [ ] 仅渲染 `reply_text`；类型层不含任何分析字段（§2 铁律）。
+- [ ] 仅渲染 `reply_text` 和转介所需状态；类型层不含任何分析字段（§2 铁律）。
 - [ ] green 正常回复；yellow/red 触发转介面板并锁输入，号码硬编码正确。
 - [ ] 同 `session_id` 多轮历史正确串联；「新对话」生成新 id。
 - [ ] 侧边栏、本地会话历史、起手式、呼吸工具按 §5 就位。
@@ -199,7 +202,7 @@ export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
 
 ## 9. 不在本模块范围
 
-- 不改后端 F1–F4 逻辑与 `/chat` schema。
+- 不改后端 F1–F4 逻辑与 `/chat` / `/chat/stream` schema。
 - 不在学生端做任何分析/打分展示。
 - 不做跨会话画像/长期记忆的后端存储与删除接口；前端只维护本地会话历史清除能力。
 - 鉴权 / 监护人知情机制属后续，本规格只要求分析台路由可加鉴权中间件。

@@ -103,7 +103,7 @@ def test_docs_record_phase_two_observability_and_f6_boundary():
 def test_exp_integration_map_records_runtime_and_offline_boundaries():
     content = INTEGRATION_MAP_PATH.read_text(encoding="utf-8")
 
-    assert "Phase 2A 已完成事实" in content
+    assert "当前已实现的 runtime 事实" in content
     assert "F3 single routed generation" in content
     assert "F4 pointwise critic" in content
     assert "F4 pairwise selector" in content

@@ -1,5 +1,7 @@
 # F1/F4 开发问题记录
 
+> **历史问题记录**：本文件保留当时发现的问题、修复建议和模块语境，不代表当前 runtime 默认路径。当前主链路以入口 README、`docs/specs/README.md` 和 `exp/README.md` 为准。
+
 > 记录时间：2026-05-20
 > 处理策略：记录并继续开发。以下问题不阻塞 F1/F4 第一版实现。
 
@@ -10,7 +12,7 @@
    - `docs/overview/emoedu-development-framework.md` 与 `docs/specs/f4-critic-epitome-codex-spec.md` 明确要求 EPITOME 使用原框架 `0/1/2`。
    - 本轮实现按 F4 规格执行：`ER/IP/EX = 0/1/2`。
 
-2. `docs/figures/figure-1-three-phase-lifecycle.svg` 中“人在环偏好标注”容易被理解为大量人工标注。
+2. `docs/figures/figure-1-runtime-boundary.svg` 中“人在环偏好标注”容易被理解为大量人工标注。
    - 正文方案强调“小规模人工信度校验 + 经校验 LLM-judge 自动产偏好对”。
    - 本轮实现只保留 critic 运行日志和可用偏好对，不实现人工标注流程。
 

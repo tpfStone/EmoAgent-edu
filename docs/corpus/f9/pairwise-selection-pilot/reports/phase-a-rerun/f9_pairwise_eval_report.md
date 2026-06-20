@@ -1,5 +1,7 @@
 # F9 Pairwise Pilot Evaluation
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 - total_pairs: 24
 - human_valid_pairs: 15
 - critic_valid_pairs: 7

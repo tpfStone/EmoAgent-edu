@@ -1,5 +1,7 @@
 # F4 F9 评分修复完整方案
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 > **给 agentic workers：** 执行本方案时使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans`，逐项完成并在每个阶段运行对应测试。
 
 **目标：** 修复 F4 在 F9 自动验收中的高分饱和问题，让模板化、第三方解释、事实补全、强行积极重构、成人 coaching 式追问等坏模式实际降分，而不是只出现在 rationale 中。

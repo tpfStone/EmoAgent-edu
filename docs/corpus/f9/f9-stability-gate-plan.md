@@ -1,5 +1,7 @@
 # F9 稳定性 Gate 审查计划
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 日期：2026-05-26
 
 > 给后续执行者：本计划按任务清单推进。已完成项用 `[x]` 标记；需要人工判断的步骤不能由脚本、F4 或 Codex 代替。

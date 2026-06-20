@@ -1,5 +1,7 @@
 # MVP 集成规划与后续开发路线图
 
+> **历史边界**：本文件保留当时规划语境；若与当前 `README.md`、`docs/README.md`、`docs/specs/README.md` 或 `exp/README.md` 冲突，以当前入口文档为准。
+
 > **归档说明**：本文是 2026-05-21 的历史路线图，已被 `docs/overview/emoedu-post-mvp-guide.md` 和各模块 `docs/specs/` 替代；仅用于回看当时的规划上下文。
 
 > **用途**：把 F1/F2/F3/F4 四个模块串成一条能跑的最小对话链路（MVP），并规划 MVP 之后的开发顺序。配套各模块 Codex 规格。

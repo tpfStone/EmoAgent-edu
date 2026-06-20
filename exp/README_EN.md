@@ -24,8 +24,10 @@ Do not commit `exp/data/psyqa_labelled.json` or sample JSON exports. See
 
 ## Runtime Boundary
 
-- Runtime: F1 local safety gate, F2 support routing, F3 one routed response, and background F4 guidance.
-- Offline/research: F3 c1/c2 probes, F4 pairwise packages, F9 reliability, and future DPO data preparation.
+- First-turn runtime: F1 local safety gate, F2 support routing, F3 one routed response, and background F4 guidance.
+- Follow-up runtime: F1 still runs first; the turn then uses lightweight support with recent history and completed F4 guidance only when it is ready.
+- Offline/research: F3 c1/c2 probes, F4 pairwise packages, F9 reliability, and future DPO candidate preparation.
+- Current pairwise status: the Phase A rerun is `inconclusive`, with insufficient valid intersection and `c1` skew; pairwise output is not a runtime selector and does not unlock DPO.
 - Default-off/future: F6/RAG prompt injection.
 
 ## Reproduction Notes

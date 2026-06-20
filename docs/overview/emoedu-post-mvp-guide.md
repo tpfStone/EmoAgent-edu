@@ -1,7 +1,7 @@
 # EmoEdu 后续开发指南
 
 > **当前定位**：本文是比赛投稿和应用端更新的工作图，不再沿用“每轮完整同步 F1-F4 再择优”的旧推进口径。
-> **核心判断**：产品在线路径必须保持轻量，当前 `/chat` 已调整为首次 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`，后续轮次走轻量 CBT 支持。F4 pairwise 与 DPO 仍是研究主线，但未通过人工校准前不进入在线阻塞路径。
+> **核心判断**：产品在线路径必须保持轻量，当前 `/chat` 已调整为首次 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`，后续轮次仍先过 F1 安全门，再走轻量 CBT 支持。F4 pairwise 与 DPO 仍是研究主线，但未通过人工校准前不进入在线阻塞路径。
 > **关键路径**：P0 快路径稳定 -> P1 应用端体验更新 -> P2 后台 F4 guidance 与研究台观测 -> P3 pairwise/人工校准 -> P4 DPO + 消融。短期优先把学生端体验做顺，不把完整研究链路压到在线响应里。
 
 ---
@@ -11,7 +11,7 @@
 ### 已经成立的事实
 
 - `/chat` 运行时已改为快慢双路径：首次对话 F1 本地安全门、F2 情境和二次安全兜底、F3 单候选流式返回，F4 在后台生成 session guidance。
-- 后续轮次走轻量 CBT 生成，若后台 F4 guidance 已完成则注入；若未完成不等待。
+- 后续轮次仍先过 F1 本地安全门，再走轻量 CBT 生成；若后台 F4 guidance 已完成则注入，若未完成不等待。
 - F1 已从 LLM prompt 迁移为本地分类器，模型和指标记录在 `exp/README.md`。
 - F3 已接入 PsyQA 标注数据的策略先验和 support card，双候选实验链路保留在 `exp/`。
 - 真实 LLM 45 条验收曾跑通：request_ok 45/45，F2 情境准确率 43/45，落库 candidates=90，旧 pointwise 逻辑生成 preference_pairs=43。
@@ -25,7 +25,7 @@
 - Pointwise 诊断线显示 F3/F4 仍不稳定：旧主包单次 PASS，但 stability rerun 失败；post-erip 多轮仍有 ER/IP 高分饱和。
 - R8 priority 10 条人工复核显示候选质量和 F4 高分判断仍有系统偏差。
 - F4 已切到 `deepseek-v4-pro`、4096 token、JSON mode，但 priority smoke 仅从 10/20 改善到 11/20，不能单靠模型升级解锁 F9。
-- Pairwise Phase A rerun 为 `inconclusive`：有效交集不足、critic-human agreement 不足，且 stable winner 有 `c1` 偏斜。
+- 最近一次 pairwise rerun 为 `inconclusive`：有效交集不足、critic-human agreement 不足，且 stable winner 有 `c1` 偏斜。
 
 ### 当前结论
 

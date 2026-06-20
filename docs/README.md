@@ -12,7 +12,7 @@
 
 截至 2026-06-19，当前实现口径如下：
 
-- `/chat` 和 `/chat/stream` 已接入快慢双路径。首次对话走 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`；后续对话走轻量 CBT 支持，并在 F4 guidance 已完成时注入。
+- `/chat` 和 `/chat/stream` 已接入快慢双路径。首次对话走 `F1 -> F2 -> F3 -> 流式返回 -> 后台 F4`；后续对话仍先过 F1 安全门，再走轻量 CBT 支持，并在 F4 guidance 已完成时注入。
 - F1 在 `/chat` 中默认使用本地分类器，不再依赖 LLM prompt。LLM 版 `/api/safety/evaluate` 保留用于兼容和对照。
 - F2 输出情境、CASEL 维度、`support_mode`、`emotion_intensity`、`help_seeking`，并包含 `secondary_safety` 作为 LLM 兜底安全复核。
 - F3 生产路径按 F2 路由生成单候选；模块接口仍可生成 `c1 共情型` 和 `c2 引导反思型` 双候选用于实验。
@@ -27,7 +27,7 @@ F4 有两个层次：
 - **生产层**：F4 不阻塞学生回复。首次回复完成后后台运行，生成质量标签和 `session guidance`；下一轮若 guidance 已完成，再注入轻量生成。
 - **研究层**：F4 pairwise 仍是后续偏好数据和 DPO 的目标主线，但模型 judge 与人工偏好一致性还不足，不能直接作为权威偏好来源。
 
-当前结论是：F4 可以做后台评估、prompt 反哺和 DPO 候选数据构造；正式 DPO 前仍需要更多人工校准样本和稳定的 pairwise gate。
+当前结论是：F4 可以做后台评估、prompt 反哺和 DPO 候选数据构造；正式 DPO 前仍需要更多人工校准样本和稳定的 pairwise/human A/B gate。
 
 ## 顶层目录
 
@@ -35,7 +35,7 @@ F4 有两个层次：
 |---|---|---|
 | `overview/` | 项目总纲、工程拆分、比赛/论文路径 | `emoedu-mas-plan.md`、`emoedu-development-framework.md`、`emoedu-post-mvp-guide.md` |
 | `specs/` | 面向实现的模块规格 | `f1-*-codex-spec.md`、`f2-*-codex-spec.md`、`f3-*-codex-spec.md`、`f4-*-codex-spec.md`、`f9-reliability-guide.md` |
-| `plans/` | 未完成阶段计划和 gate | `phase-2b-plan.md` |
+| `plans/` | 未完成的后续验证 gate | `validation-gates.md` |
 | `corpus/` | 合成语料方法、probe/production 产物、F9 实验链路 | `emoedu-corpus-synthesis.md`、`f9/README.md`、`f9/f9-mainline.md` |
 | `acceptance/` | 后端/编排层验收流程与实跑证据 | `orchestrator-mvp/2026-05-21/README.md`、`backend-infrastructure/2026-05-26/backend-infrastructure-smoke.md` |
 | `frontend/` | 前端设计基准、接口契约、重建计划、前端 UX 图 | `emoagent-frontend-design-baseline.md`、`frontend-cc-spec.md` |

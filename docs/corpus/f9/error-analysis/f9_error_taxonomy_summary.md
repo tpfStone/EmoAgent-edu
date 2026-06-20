@@ -1,5 +1,7 @@
 # F9 候选文本错误类型汇总
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 这是一份基于 40 条 F9 候选回复的 AI 初标诊断稿。它用于指导 F3 生成器和 F4 评审器的 prompt 修复，不替代人工 ER/IP/EX 标注。
 
 ## 覆盖情况

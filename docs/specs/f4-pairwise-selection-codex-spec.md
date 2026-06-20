@@ -6,7 +6,7 @@
 > **模块定位**：运行时管线第④环（F4 critic 内部）。中文情感教育系统（用户为初中生 12–15 岁）。
 > **技术栈**：FastAPI + PostgreSQL + LLM API（critic 专用 client，模型 `deepseek-v4-pro`）。
 
-> **证据边界**：Phase A rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise，也不能直接作为 runtime 切换依据。本文把 pairwise 定为后续主线，但 runtime 迁移必须先通过新的样本验证和前端/API/数据层联调。
+> **证据边界**：最近一次 pairwise rerun 结论为 `inconclusive`，不能证明当前 pairwise 设置已经优于 pointwise，也不能直接作为 runtime 切换依据。本文把 pairwise 定为后续主线，但 runtime 迁移必须先通过新的样本验证和前端/API/数据层联调。
 
 ---
 

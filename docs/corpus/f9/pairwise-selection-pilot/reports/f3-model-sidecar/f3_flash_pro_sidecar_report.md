@@ -1,5 +1,7 @@
 # F3 Flash/Pro Sidecar
 
+> **F9 当前边界**：本文件属于 F9、pointwise 或 pairwise 历史实验记录。Pointwise ER/IP/EX 仅作诊断和历史兼容；正式 DPO 与 runtime selector 仍依赖 pairwise/human A/B gate，Phase A rerun 当前为 `inconclusive`。
+
 - purpose: compare F3 candidate quality only; not mixed into Phase A rerun metrics
 - compared_pairs: 6
 - sample_nos: 6, 7, 2, 3, 1, 11
