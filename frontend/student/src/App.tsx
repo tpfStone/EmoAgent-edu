@@ -37,6 +37,7 @@ export default function App() {
   const activeSessionIdRef = useRef(currentId);
 
   const messages = currentSession?.messages ?? [];
+  const lastMessageText = messages[messages.length - 1]?.text ?? "";
   const hasMessages = messages.length > 0;
   const chatScrollClassName = referralLocked
     ? `${styles.chatScroll} ${styles.chatScrollReferralLocked}`
@@ -49,7 +50,7 @@ export default function App() {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [currentSession?.messages.length, activeView]);
+  }, [currentSession?.messages.length, lastMessageText, activeView]);
 
   async function handleSend(text: string) {
     const trimmed = text.trim();
@@ -183,7 +184,7 @@ export default function App() {
                 ref={scrollRef}
               >
                 {hasMessages ? (
-                  <MessageList messages={messages} />
+                  <MessageList loading={loading} messages={messages} />
                 ) : (
                   <section className={styles.openingState} aria-label="开始对话">
                     <div className={styles.openingLabel}>
