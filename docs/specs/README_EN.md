@@ -18,7 +18,7 @@ still offline or future work.
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `f1-safety-gate-codex-spec.md` | Runtime implemented | Local classifier safety gate; yellow/red short-circuit generation. |
+| `f1-safety-gate-codex-spec.md` | Runtime implemented | Local classifier safety gate; red short-circuits generation, while yellow is non-blocking support state. |
 | `f2-scenario-analysis-codex-spec.md` | Runtime implemented | Scenario, CASEL, support mode, and secondary safety. |
 | `f3-multi-orientation-generator-codex-spec.md` | Runtime implemented + offline retained | Runtime single candidate; c1/c2 retained for experiments. |
 | `f4-critic-epitome-codex-spec.md` | Background diagnostics | Background quality labels/session guidance. |

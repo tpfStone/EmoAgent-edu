@@ -1,4 +1,4 @@
-# EmoEdu MAS
+# EmoAgent
 
 [中文](README.md) | English
 
@@ -6,11 +6,11 @@
 
 ## Overview
 
-EmoEdu MAS supports emotional expression and social-emotional learning in common middle-school contexts such as academic pressure, peer relationships, and parent-child conflict. It combines a local safety gate, scenario-aware routing, streaming student responses, and a background critic so the student experience stays low-latency while research and quality-improvement evidence remains traceable.
+EmoAgent supports emotional expression and social-emotional learning in common middle-school contexts such as academic pressure, peer relationships, and parent-child conflict. It combines a local safety gate, scenario-aware routing, streaming student responses, and a background critic so the student experience stays low-latency while research and quality-improvement evidence remains traceable.
 
 The project is an educational support system, not a diagnostic, psychotherapy, medical, or emergency service. High-risk inputs leave the ordinary generation path and receive fixed safety referral guidance that encourages the student to contact a trusted adult and appropriate public services.
 
-## Why EmoEdu
+## Why EmoAgent
 
 - **Safety before generation:** every turn passes through the F1 safety gate; the first turn also receives an F2 secondary safety review.
 - **Scenario-aware support:** F2 uses scenario, support mode, and configured CASEL mapping to route the first response.
@@ -57,13 +57,13 @@ The three project figures explain the runtime boundary, the current fast/backgro
 ### 1. Runtime boundary and validation gates
 
 <p align="center">
-  <img src="./docs/figures/figure-1-runtime-boundary.svg" alt="EmoEdu MAS runtime boundary and validation gates" width="760">
+  <img src="./docs/figures/figure-1-runtime-boundary.svg" alt="EmoAgent runtime boundary and validation gates" width="760">
 </p>
 
 ### 2. Current `/chat` fast path and background/offline paths
 
 <p align="center">
-  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="Current EmoEdu MAS runtime, background, and offline paths" width="760">
+  <img src="./docs/figures/figure-2-runtime-pipeline.svg" alt="Current EmoAgent runtime, background, and offline paths" width="760">
 </p>
 
 ### 3. Evidence chain from theory to the pairwise gate
@@ -76,7 +76,7 @@ The three project figures explain the runtime boundary, the current fast/backgro
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| F1 local safety classifier | Implemented | Local model can be preloaded; yellow/red results interrupt ordinary generation. |
+| F1 local safety classifier | Implemented | Local model can be preloaded; red blocks ordinary generation with fixed referral guidance, while yellow is a non-blocking support state. |
 | F2 scenario and support routing | Implemented | Produces scenario, configured CASEL dimensions, support mode, and secondary safety. |
 | F3 streaming student response | Implemented | The runtime first turn generates one routed candidate; two orientations remain available for experiments and debugging. |
 | F4 background critic guidance | Implemented | Runs after the response and does not block the student. |
@@ -194,7 +194,7 @@ F1_SAFETY_REQUIRED=true
 The default database example uses PostgreSQL:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
+DATABASE_URL=postgresql+asyncpg://emoagent_user:password@localhost:5432/emoagent
 ```
 
 For temporary local development, SQLite is also supported:
@@ -218,14 +218,14 @@ REDIS_URL=redis://localhost:6379/0
 If Redis is not installed locally, start one with Docker:
 
 ```powershell
-docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
+docker run --name emoagent-redis -p 6379:6379 -d redis:7-alpine
 ```
 
 Reuse the same container later:
 
 ```powershell
-docker start emoedu-redis
-docker exec emoedu-redis redis-cli ping
+docker start emoagent-redis
+docker exec emoagent-redis redis-cli ping
 ```
 
 Expected output:
@@ -323,7 +323,7 @@ The root README should avoid presenting historical experiment outputs as current
 
 - Do not submit or demonstrate real identifiable conversations from minors.
 - Do not expose API keys, database credentials, internal prompts, or sensitive logs.
-- Yellow/red safety results interrupt ordinary generation and use fixed referral guidance.
+- Red safety results interrupt ordinary generation and use fixed referral guidance; yellow is non-blocking and carries support/referral wording for support handling.
 - Anonymous continuity uses configured identifiers; storage, retention, deletion, and isolation behavior should be checked against the current commit.
 - The public repository does not contain the complete PsyQA-derived labelled dataset. Local absence may reduce support-card enrichment, but it should not silently change the documented API contract.
 - F6 memory/RAG prompt injection remains disabled by default until privacy and quality gates pass.

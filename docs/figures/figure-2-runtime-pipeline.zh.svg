@@ -26,7 +26,7 @@
 
 <rect class="safe" x="210" y="130" width="340" height="64" rx="8"/>
 <text class="h" x="380" y="154" text-anchor="middle">F1 本地安全分类器</text>
-<text class="t" x="380" y="176" text-anchor="middle">绿色继续；黄/红短路为转介</text>
+<text class="t" x="380" y="176" text-anchor="middle">绿色/黄色继续；红色转介短路</text>
 <path class="arr" d="M550 162 L628 162" marker-end="url(#arrow)"/>
 <text class="small" x="640" y="158">转介</text>
 <text class="small" x="640" y="174">回应</text>
@@ -35,7 +35,7 @@
 <rect class="route" x="210" y="224" width="340" height="70" rx="8"/>
 <text class="h" x="380" y="249" text-anchor="middle">F2 情境 + 支持模式路由</text>
 <text class="t" x="380" y="270" text-anchor="middle">scenario、CASEL、support_mode、二次安全</text>
-<text class="small" x="380" y="286" text-anchor="middle">二次 red/yellow 也返回转介</text>
+<text class="small" x="380" y="286" text-anchor="middle">二次 red 转介；yellow 继续生成</text>
 
 <line class="arr" x1="380" y1="294" x2="380" y2="324" marker-end="url(#arrow)"/>
 <rect class="gen" x="210" y="324" width="340" height="78" rx="8"/>

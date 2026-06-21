@@ -16,7 +16,7 @@
 </marker>
 </defs>
 
-<text class="title" x="24" y="30">EmoEdu MAS 生命周期：运行边界与离线门控</text>
+<text class="title" x="24" y="30">EmoAgent 生命周期：运行边界与离线门控</text>
 
 <rect class="setup" x="32" y="62" width="205" height="132" rx="8"/>
 <text class="h" x="134" y="88" text-anchor="middle">数据与产物</text>

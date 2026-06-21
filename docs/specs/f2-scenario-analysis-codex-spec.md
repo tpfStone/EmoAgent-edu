@@ -144,7 +144,7 @@
 | `LLM_TEMPERATURE` | 0 | 分类要确定性 |
 | `SCENARIO_CASEL_MAP` | §4 表 | 硬编码 dict，便于修改 |
 | `support_mode` | LLM 输出 | 仅用于内部路由，不直接展示给学生 |
-| `secondary_safety` | LLM 输出 + 代码补 action | F1 后的风险兜底，命中 yellow/red 则短路 |
+| `secondary_safety` | LLM 输出 + 代码补 action | F1 后的风险兜底；red 短路，yellow 为非阻断支持状态 |
 
 ---
 

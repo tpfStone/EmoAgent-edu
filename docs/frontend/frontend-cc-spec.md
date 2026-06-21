@@ -73,7 +73,8 @@ POST /chat
 ### 3.3 学生端只用窄字段
 学生端从上面的响应或 stream `done` 事件里**只取** `reply_text`、`risk_level`、`session_id`、`anonymous_user_id`。其中 `anonymous_user_id` 只用于本地连续性和清理请求，不作为可见分析字段。逻辑：
 - `risk_level === "green"` → 把 `reply_text` 作为一条 AI 消息渲染。
-- `risk_level !== "green"`（yellow/red）→ 渲染 `reply_text` 后，弹出固定转介面板（§5.3）。`status` 此时为 `blocked_by_safety`，无候选，正常。
+- `risk_level === "yellow"` → 渲染 `reply_text`，同时显示可收起的支持资源卡；输入框保持可用，`status` 通常仍为 `answered`。
+- `risk_level === "red"` → 渲染固定转介回复后，弹出固定转介面板（§5.3）并替换输入框；`status` 此时为 `blocked_by_safety`，无候选，正常。
 
 ---
 
@@ -112,7 +113,8 @@ frontend/
 - **长期记忆（主动不做）**：不持久化任何跨会话用户画像、情绪轨迹或个性化记忆。学生端只保留本地会话标题与消息文本，并可通过「让我忘记」清除。此决策用于避免诱导情感依赖、避免给波动期青少年固化标签，并最小化未成年人敏感数据留存。
 
 ### 5.3 危机转介（安全红线，固定不可改）
-- `risk_level` 为 yellow/red 时，渲染 `reply_text` 后弹出转介面板，**替换输入框**（禁止继续输入，呼应「红色绝不自行展开危机对话」）。
+- `risk_level` 为 yellow 时，渲染 `reply_text` 后弹出可收起支持资源卡，输入框保持可用。
+- `risk_level` 为 red 时，渲染固定转介回复后弹出转介面板，**替换输入框**（禁止继续输入，呼应「红色绝不自行展开危机对话」）。
 - 面板含：标题、共情句、可执行引导（联系可信成年人）、两个可拨打按钮 `tel:12356` / `tel:12355`；red 额外提示 120/110。
 - 文案用原型 `REFERRAL` 常量，**号码硬编码**，不经任何动态生成。
 
@@ -181,7 +183,7 @@ export async function fetchChat(req: ChatRequest): Promise<ChatResponse> {
 
 学生端：
 - [ ] 仅渲染 `reply_text` 和转介所需状态；类型层不含任何分析字段（§2 铁律）。
-- [ ] green 正常回复；yellow/red 触发转介面板并锁输入，号码硬编码正确。
+- [ ] green 正常回复；yellow 显示可收起支持资源卡且输入框可用；red 触发转介面板并锁输入，号码硬编码正确。
 - [ ] 同 `session_id` 多轮历史正确串联；「新对话」生成新 id。
 - [ ] 侧边栏、本地会话历史、起手式、呼吸工具按 §5 就位。
 - [ ] 失败兜底不暴露原始错误。

@@ -16,7 +16,7 @@
 ## 1. 需求功能清单（Functional Requirements）
 
 ### 必做（MVP 范围）
-- **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red），黄红中断生成走转介。**必须读对话历史窗口**（危机信号常跨轮累积），非单条判断。
+- **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red）；red 中断生成走转介，yellow 为非阻断支持状态。**必须读对话历史窗口**（危机信号常跨轮累积），非单条判断。
 - **F2 情境分析**：判定情境类型（学业压力/同伴关系/亲子摩擦）+ 激活的 CASEL 维度子集。对标 CogMAS 的 Q-matrix lookup。
 - **F3 多取向生成器**：≥2 个取向（共情型、引导反思型）并行生成候选。同底座 LLM + 不同 system prompt。
 - **F4 Critic 成对偏好择优**：目标主线为 pairwise 比较候选回应，稳定时产出 winner/loser；EPITOME/CASEL 分数仅作为历史兼容和诊断材料。
@@ -38,8 +38,8 @@
 用户消息 + 对话历史
   │
   ▼
-F1 安全门（输入含历史窗口）──→ 黄/红 ──→ 转介出口（中断，提供 12356/12355 + 引导可信成年人）
-  │ green
+F1 安全门（输入含历史窗口）──→ red ──→ 转介出口（中断，提供 12356/12355 + 引导可信成年人）
+  │ green/yellow
   ▼
 F2 情境分析 ──→ {情境类型, 激活CASEL维度子集}
   │
@@ -163,7 +163,7 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 
 | 模块 | 信息是否齐 | 可否交 Codex |
 |---|---|---|
-| F1 安全门 | ✅ 齐（本地 classifier + yellow/red 转介 + 历史窗口要求） | ✅ 已接入 `/chat`，后续按回归维护 |
+| F1 安全门 | ✅ 齐（本地 classifier + red 转介 + yellow 非阻断支持状态 + 历史窗口要求） | ✅ 已接入 `/chat`，后续按回归维护 |
 | F2 情境分析 | ✅ 齐（scenario、CASEL、support_mode、secondary_safety） | ✅ 已接入 `/chat`，后续按规格维护 |
 | F3 生成器 | ✅ 齐（首轮单候选流式返回；双取向保留给离线实验） | ✅ 已接入 `/chat`，后续重点是体验和回归 |
 | F4 Critic | 🟡 后台 pointwise guidance 已进 `/chat`；pairwise 仍是离线目标规格，需 gate 后再考虑 runtime/DPO | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |

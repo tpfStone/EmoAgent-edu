@@ -68,7 +68,7 @@ Copy-Item .env.example .env
 
 ```env
 LLM_PROVIDER=mock
-DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
+DATABASE_URL=postgresql+asyncpg://emoagent_user:password@localhost:5432/emoagent
 REDIS_URL=redis://localhost:6379/0
 ```
 
@@ -82,8 +82,8 @@ Redis: localhost:6379
 Redis can be started with Docker for local live acceptance:
 
 ```powershell
-docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
-docker exec emoedu-redis redis-cli ping
+docker run --name emoagent-redis -p 6379:6379 -d redis:7-alpine
+docker exec emoagent-redis redis-cli ping
 ```
 
 Expected Redis response: `PONG`. If Redis is unavailable, the student chat degrades to a no-history single-turn response, while multi-turn history and background F4 guidance are not persisted.

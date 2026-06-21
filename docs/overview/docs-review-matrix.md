@@ -35,7 +35,7 @@ rg "scrollIntoView" frontend
 
 | ID | 优先级 | 处理状态 | 文档 / 范围 | 当前表述 | 事实来源 | 问题 | 建议修复 |
 |---|---|---|---|---|---|---|---|
-| D1 | P0 | 待集成后处理 | 根目录 `README.md`、`.env.example`、`app/config.py` | 项目仍被描述为 `EmoEdu F1/F4 FastAPI`，且只列 F1 与 F4。 | `app/main.py` 注册了 F1/F2/F3/F4 和 `/chat`；本地 `master` 还包含前端 workspace。 | 顶层入口过时，遮蔽了当前 MAS、运行时链路和前端实际范围。 | 分支集成后，围绕 `/chat`、F1-F4 runtime、F9/corpus pipeline 和前端重写根 README；API title 建议改为类似 `EmoEdu MAS API`。 |
+| D1 | P0 | 已修（2026-06-21） | 根目录 `README.md`、`.env.example`、`app/config.py` | 入口文档和 API title 已统一为 `EmoAgent`，并覆盖 `/chat`、F1-F4 runtime、F9/corpus pipeline 和前端范围。 | `app/main.py` 注册了 F1/F2/F3/F4 和 `/chat`；当前仓库包含前端 workspace。 | 原顶层入口过时问题已处理；后续仍需在功能边界变化时维护 README。 | 继续保持根 README、英文 README、API title 和架构图同步。 |
 | D2 | P0 | 待分支集成 | 分支结构 / 文档事实源 | 当前 worktree 文档提到前端设计，但当前分支没有前端文件。 | `master` 有 `frontend/`、`.github/workflows/pages-mock.yml`、`docs/frontend/github-pages-mock-local-live.md`；当前分支没有。 | 读者在当前分支 checkout 中无法验证前端实现。 | 将 `master` 的前端合入 corpus 分支，或先创建集成分支再做最终文档清理。集成前先在文档中注明前端事实来自本地 `master`。 |
 | D3 | P0 | 已修 | `docs/overview/emoedu-mas-plan.md` | 原文混合 RAG、三生成器和 F4 分数排序设想。 | 运行时传入 `rag_examples=[]`；F3 当前为单候选流式返回；F4 guidance 在后台产出；pairwise 仍是 offline/target。 | 该文曾混合概念方案、历史设想和当前架构声明，与代码和后续 specs 冲突。 | 已加 2026-05-29 状态补充，并将 F4 改为 pairwise 目标主线；RAG/F8/旧分数均标为规划、历史或诊断线。 |
 | D4 | P0 | 已修 | F4 / pairwise 文档 | `docs/specs/f4-pairwise-selection-codex-spec.md` 把 pairwise 写成可直接进入默认运行时的改造。 | 运行时仍注入 `CriticService`；`app/config.py` 没有 `CRITIC_SELECTION_MODE`；`phase-a-implementation-plan.md` 明确只做离线；最近一次 pairwise rerun 结论是 `inconclusive`。 | pairwise 已成为 F4 目标主线，但还不是运行时默认；具体分数应降级为历史路径和兼容字段。 | 已改为 `目标规格 / 非运行时默认`：当前 `/chat` 是 F3 单候选流式返回，并在后台产出 F4 guidance；下一阶段先补 runtime adapter、API、数据库和前端 trace，再通过 pairwise 验证 gate。 |
@@ -52,7 +52,7 @@ rg "scrollIntoView" frontend
 
 分支集成后，顶层文档可采用以下口径：
 
-> EmoEdu 是面向初中生的中文情感教育多智能体对话系统。当前 `/chat` 运行时已经串起 F1 安全门、F2 情境分析和 F3 单候选流式返回，并在后台产出 F4 guidance trace。前端包含两个物理分离的 React 应用：学生端只渲染公开回应字段，研究分析台展示完整 trace。F4 的目标主线已转为 pairwise preference-pair selection；pointwise 分数只作为历史路径、兼容字段和诊断线。pairwise 尚未成为 `/chat` 默认 runtime，DPO 仍需等待 F9/pairwise 验证 gate 通过。
+> EmoAgent 是面向初中生的中文情感教育多智能体对话系统。当前 `/chat` 运行时已经串起 F1 安全门、F2 情境分析和 F3 单候选流式返回，并在后台产出 F4 guidance trace。前端包含两个物理分离的 React 应用：学生端只渲染公开回应字段，研究分析台展示完整 trace。F4 的目标主线已转为 pairwise preference-pair selection；pointwise 分数只作为历史路径、兼容字段和诊断线。pairwise 尚未成为 `/chat` 默认 runtime，DPO 仍需等待 F9/pairwise 验证 gate 通过。
 
 ## 修复顺序
 

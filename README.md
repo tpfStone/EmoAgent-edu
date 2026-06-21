@@ -1,4 +1,4 @@
-# EmoEdu MAS
+# EmoAgent
 
 中文 | [English](README_EN.md)
 
@@ -6,7 +6,7 @@
 
 ## 项目概览
 
-EmoEdu MAS 支持学生在学业压力、同伴关系和亲子冲突等常见场景中表达情绪，并获得适龄、具体、有社会情感学习价值的回应。系统结合本地安全门、情境感知路由、流式学生回复和后台 critic，把在线交互保持在低延迟路径上，同时为后续研究和质量改进保留可追踪证据。
+EmoAgent 支持学生在学业压力、同伴关系和亲子冲突等常见场景中表达情绪，并获得适龄、具体、有社会情感学习价值的回应。系统结合本地安全门、情境感知路由、流式学生回复和后台 critic，把在线交互保持在低延迟路径上，同时为后续研究和质量改进保留可追踪证据。
 
 本项目是教育支持系统，不是诊断、心理治疗、医疗或紧急服务。高风险输入会离开普通生成路径，转向固定的安全转介提示，鼓励学生立即联系可信任成年人和适当公共服务。
 
@@ -57,13 +57,13 @@ EmoEdu MAS 支持学生在学业压力、同伴关系和亲子冲突等常见场
 ### 1. 运行边界与验证 gate
 
 <p align="center">
-  <img src="./docs/figures/figure-1-runtime-boundary.zh.svg" alt="EmoEdu MAS 运行边界与验证 gate" width="760">
+  <img src="./docs/figures/figure-1-runtime-boundary.zh.svg" alt="EmoAgent 运行边界与验证 gate" width="760">
 </p>
 
 ### 2. 当前 `/chat` 快路径与后台/离线路径
 
 <p align="center">
-  <img src="./docs/figures/figure-2-runtime-pipeline.zh.svg" alt="当前 EmoEdu MAS 运行、后台与离线路径" width="760">
+  <img src="./docs/figures/figure-2-runtime-pipeline.zh.svg" alt="当前 EmoAgent 运行、后台与离线路径" width="760">
 </p>
 
 ### 3. 理论框架到 pairwise 验证 gate 的证据链
@@ -76,7 +76,7 @@ EmoEdu MAS 支持学生在学业压力、同伴关系和亲子冲突等常见场
 
 | 能力 | 状态 | 说明 |
 | --- | --- | --- |
-| F1 本地安全分类器 | 已实现 | 本地模型可预加载；`yellow`/`red` 会中断普通生成。 |
+| F1 本地安全分类器 | 已实现 | 本地模型可预加载；`red` 会中断普通生成并返回固定转介提示；`yellow` 是非阻断支持状态。 |
 | F2 情境和支持路由 | 已实现 | 输出 scenario、配置化 CASEL 维度、support mode 和 secondary safety。 |
 | F3 学生端流式回复 | 已实现 | 在线首轮生成一个路由后的候选；双取向候选保留给实验和调试。 |
 | F4 后台 critic 会话指导 | 已实现 | 回复后后台运行，不阻塞学生端。 |
@@ -194,7 +194,7 @@ F1_SAFETY_REQUIRED=true
 默认数据库示例使用 PostgreSQL：
 
 ```env
-DATABASE_URL=postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu
+DATABASE_URL=postgresql+asyncpg://emoagent_user:password@localhost:5432/emoagent
 ```
 
 本地临时开发也可以使用 SQLite：
@@ -218,14 +218,14 @@ REDIS_URL=redis://localhost:6379/0
 如果本机没有 Redis，可用 Docker 启动：
 
 ```powershell
-docker run --name emoedu-redis -p 6379:6379 -d redis:7-alpine
+docker run --name emoagent-redis -p 6379:6379 -d redis:7-alpine
 ```
 
 后续复用同一个容器：
 
 ```powershell
-docker start emoedu-redis
-docker exec emoedu-redis redis-cli ping
+docker start emoagent-redis
+docker exec emoagent-redis redis-cli ping
 ```
 
 预期输出：
@@ -323,7 +323,7 @@ python -m pytest tests/test_exp/test_exp_smoke.py -q
 
 - 不提交或演示来自未成年人的真实可识别对话。
 - 不暴露 API key、数据库凭据、内部 prompt 或敏感日志。
-- `yellow`/`red` 安全结果会中断普通生成，并使用固定转介提示。
+- `red` 安全结果会中断普通生成，并使用固定转介提示；`yellow` 不阻断生成，但会保留支持提示和风险状态。
 - 匿名连续性使用配置化标识符；存储、保留、删除和隔离行为应以当前提交代码为准。
 - 公开仓库不包含完整 PsyQA-derived labelled data；本地缺失可能降低 support-card enrichment，但不应悄悄改变 API 约定。
 - F6 memory/RAG prompt injection 默认关闭，直到隐私和质量 gate 通过。

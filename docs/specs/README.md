@@ -16,7 +16,7 @@
 
 | 文件 | 状态 | 说明 |
 | --- | --- | --- |
-| `f1-safety-gate-codex-spec.md` | runtime implemented | `/chat` 默认使用本地 classifier；yellow/red 短路生成。 |
+| `f1-safety-gate-codex-spec.md` | runtime implemented | `/chat` 默认使用本地 classifier；red 短路生成，yellow 为非阻断支持状态。 |
 | `f2-scenario-analysis-codex-spec.md` | runtime implemented | 输出 scenario、CASEL、support_mode 和 secondary_safety。 |
 | `f3-multi-orientation-generator-codex-spec.md` | runtime implemented + offline retained | 生产单候选；双取向保留给实验和 pairwise。 |
 | `f4-critic-epitome-codex-spec.md` | background diagnostics | 后台 quality labels/session guidance；pointwise 不再做在线阻塞择优。 |
@@ -43,9 +43,9 @@
 
 ```text
 F1 ClassifierSafetyGateService
--> 若 yellow/red：直接返回转介
+-> 若 red：直接返回转介；若 yellow：保留支持状态并继续
 -> F2 ScenarioService
--> 若 secondary_safety yellow/red：直接返回转介
+-> 若 secondary_safety red：直接返回转介；secondary_safety yellow 不短路
 -> F3 GeneratorService.stream_one_text()
 -> SSE 流式返回
 -> 后台 F4 CriticService 写 session guidance
@@ -62,7 +62,7 @@ F3 的候选方向由 F2 决定：
 ```text
 Redis 读取最近历史
 F1 ClassifierSafetyGateService
--> 若 yellow/red：直接返回转介
+-> 若 red：直接返回转介；若 yellow：保留支持状态并继续
 -> Redis 读取最近历史
 -> 如后台 F4 guidance 已完成则读取
 -> GeneratorService.stream_followup_text()

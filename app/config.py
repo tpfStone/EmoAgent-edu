@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://emoedu_user:password@localhost:5432/emoedu"
+    DATABASE_URL: str = "postgresql+asyncpg://emoagent_user:password@localhost:5432/emoagent"
 
     LLM_PROVIDER: str = "mock"
     DEEPSEEK_API_KEY: str = ""
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     CRITIC_SAMPLE_COUNT: int = Field(default=3, ge=1)
     ROUTE_SELECTOR_MIN_WEIGHTED_TOTAL: float = Field(default=3.0, ge=0.0)
 
-    API_TITLE: str = "EmoEdu F1/F4 API"
+    API_TITLE: str = "EmoAgent API"
     API_VERSION: str = "0.1.0"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}

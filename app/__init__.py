@@ -1,1 +1,1 @@
-"""EmoEdu FastAPI backend."""
+"""EmoAgent FastAPI backend."""
