@@ -46,29 +46,33 @@ backend and frontend jobs.
 ## CI Status
 
 - Local CI-equivalent verification: PASS on 2026-06-21.
-- GitHub Actions CI: pending external confirmation after the final branch/tag
-  push. At local finalization time, this environment could not query GitHub
-  Actions because `gh` was not authenticated, and HTTPS access to GitHub failed
-  with connection reset / timeout errors.
-- GitHub Release note requirement: record the final tag target commit and the
-  GitHub Actions run status in the Release notes after `competition-submission-v1`
-  is published.
+- GitHub Actions CI: PASS on 2026-06-21 for run
+  `CI #2 / docs: finalize competition submission record`.
+- CI run URL:
+  <https://github.com/tpfStone/EmoAgent-edu/actions/runs/27904174192>
+- CI commit: `e146527d8add62a2f127f08d22402ef8babec285`
+- CI jobs:
+  - `backend`: PASS, 2m04s.
+  - `frontend`: PASS, 42s.
+- CI notes: GitHub reported Node.js 20 deprecation annotations from upstream
+  Actions, but the workflow conclusion was success.
+- GitHub Release note status: not created from this environment because `gh` is
+  not authenticated. If a GitHub Release is created later, copy the final tag
+  target and CI result from this record.
 
 ## Finalization
 
-Create the immutable submission tag only after the final commit is made and the
-verification commands above pass on that commit. Because a commit cannot
-reliably contain its own final hash, the exact final commit hash is recorded in
-the annotated tag object and should also be copied into the GitHub Release notes
-after publication.
+The immutable submission tag was published after the verification commands above
+passed locally and GitHub Actions CI passed remotely.
+
+Final submission tag:
+
+- Tag: `competition-submission-v1`
+- Tag type: annotated
+- Final tag target commit: `e146527d8add62a2f127f08d22402ef8babec285`
+- Final tag target subject: `docs: finalize competition submission record`
 
 ```powershell
 git rev-parse competition-submission-v1^{}
 git show --no-patch --format=fuller competition-submission-v1
 ```
-
-Expected local finalization state:
-
-- Tag: `competition-submission-v1`
-- Tag type: annotated
-- Tag message includes the final commit hash and local CI-equivalent results.
