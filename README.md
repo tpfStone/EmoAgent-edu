@@ -323,7 +323,7 @@ python -m pytest tests/test_exp/test_exp_smoke.py -q
 
 - 不提交或演示来自未成年人的真实可识别对话。
 - 不暴露 API key、数据库凭据、内部 prompt 或敏感日志。
-- `red` 安全结果会中断普通生成，并使用固定转介提示；`yellow` 不阻断生成，但会保留支持提示和风险状态。
+- `red` 安全结果会中断普通生成，并使用固定转介提示；`yellow` 不阻断生成，但会保留支持提示和风险状态；安全模块不可用时使用 `safety_status=unavailable`，中断普通生成并返回中性不可用提示。
 - 匿名连续性使用配置化标识符；存储、保留、删除和隔离行为应以当前提交代码为准。
 - 公开仓库不包含完整 PsyQA-derived labelled data；本地缺失可能降低 support-card enrichment，但不应悄悄改变 API 约定。
 - F6 memory/RAG prompt injection 默认关闭，直到隐私和质量 gate 通过。

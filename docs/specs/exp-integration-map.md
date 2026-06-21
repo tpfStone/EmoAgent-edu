@@ -19,7 +19,7 @@
 | 资产/能力 | 当前位置 | 集成状态 | 说明 |
 | --- | --- | --- | --- |
 | F1 local safety classifier | `app/services/f1_safety_classifier.py`、`exp/models/f1_safety_gate/` | runtime | 模型从 HuggingFace 本地恢复；不提交 GitHub。 |
-| F2 scenario/support routing | `app/services/scenario_service.py` | runtime | 输出 `support_mode` 和 `secondary_safety`。 |
+| F2 scenario/support routing | `app/services/scenario_service.py` | runtime | 输出 `support_mode` 和 `secondary_safety`；缺失或非法二次安全值按 `safety_status=unavailable` 阻断普通生成。 |
 | F3 single routed generation | `app/services/generator_service.py` | runtime | 首轮按 F2 `support_mode` 生成一个候选并流式返回。 |
 | F3 support-card enrichment | `app/services/f3_support_service.py`、`exp/data/psyqa_labelled.json` | runtime_reference | 完整数据不随仓库发布；缺失时 enrichment 为空或通用化，系统仍可运行。 |
 | F4 pointwise critic | `app/services/critic_service.py` | background diagnostics | 首轮回复后异步运行，写 Redis guidance；不阻塞学生回复。 |
@@ -61,14 +61,14 @@
 
 ```text
 First turn:
-F1 local classifier
+F1 local classifier (`risk_level` + `safety_status`)
 -> F2 scenario/support routing and secondary safety
 -> F3 one routed candidate with optional PsyQA support reference
 -> stream student-facing response
 -> schedule background F4
 
 Follow-up turns:
-F1 local classifier
+F1 local classifier (`risk_level` + `safety_status`)
 -> recent Redis history
 -> optional completed F4 guidance
 -> lightweight follow-up generation

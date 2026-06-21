@@ -16,8 +16,8 @@
 
 | 文件 | 状态 | 说明 |
 | --- | --- | --- |
-| `f1-safety-gate-codex-spec.md` | runtime implemented | `/chat` 默认使用本地 classifier；red 短路生成，yellow 为非阻断支持状态。 |
-| `f2-scenario-analysis-codex-spec.md` | runtime implemented | 输出 scenario、CASEL、support_mode 和 secondary_safety。 |
+| `f1-safety-gate-codex-spec.md` | runtime implemented | `/chat` 默认使用本地 classifier；red 短路生成，yellow 为非阻断支持状态，`safety_status=unavailable` 暂停普通生成。 |
+| `f2-scenario-analysis-codex-spec.md` | runtime implemented | 输出 scenario、CASEL、support_mode 和 secondary_safety；缺失/非法二次安全值按 unavailable 处理。 |
 | `f3-multi-orientation-generator-codex-spec.md` | runtime implemented + offline retained | 生产单候选；双取向保留给实验和 pairwise。 |
 | `f4-critic-epitome-codex-spec.md` | background diagnostics | 后台 quality labels/session guidance；pointwise 不再做在线阻塞择优。 |
 | `f4-pairwise-selection-codex-spec.md` | validation target | pairwise 是离线目标主线，需 gate 后才能考虑 runtime/DPO。 |
@@ -28,7 +28,7 @@
 
 | 模块 | 当前状态 | 关联代码 | 主要测试 / 证据入口 |
 | --- | --- | --- | --- |
-| F1 安全门 | `/chat` 默认使用本地分类器；LLM 版 `/api/safety/evaluate` 保留兼容 | `app/services/f1_safety_classifier.py`, `app/services/classifier_safety_gate_service.py` | `tests/test_services/test_safety_gate_service.py`, `exp/README.md` |
+| F1 安全门 | `/chat` 默认使用本地分类器；当前本地分类器只评估 `current_message`；LLM 版 `/api/safety/evaluate` 保留兼容 | `app/services/f1_safety_classifier.py`, `app/services/classifier_safety_gate_service.py` | `tests/test_services/test_safety_gate_service.py`, `tests/test_services/test_classifier_safety_gate_service.py`, `exp/README.md` |
 | F2 情境分析 | LLM 输出 scenario、CASEL lookup、`support_mode` 和 `secondary_safety` | `app/services/scenario_service.py`, `app/schemas/scenario.py` | `tests/test_services/test_scenario_service.py`, `exp/README.md` |
 | F3 生成器 | 模块接口保留 c1/c2；`/chat` 首轮按 F2 路由只生成一个候选 | `app/services/generator_service.py`, `app/services/f3_support_service.py` | `tests/test_services/test_generator_service.py`, `tests/test_services/test_f3_support_service.py` |
 | F4 pointwise critic | 模块接口可同步调用；`/chat` 中改为后台任务，写 session guidance | `app/services/critic_service.py`, `app/services/orchestrator_service.py`, `app/schemas/critic.py` | `tests/test_services/test_critic_service.py`, `tests/test_handlers/test_critic_handler.py` |
@@ -43,9 +43,9 @@
 
 ```text
 F1 ClassifierSafetyGateService
--> 若 red：直接返回转介；若 yellow：保留支持状态并继续
+-> 若 red：直接返回转介；若 unavailable：返回安全评估不可用；若 yellow：保留支持状态并继续
 -> F2 ScenarioService
--> 若 secondary_safety red：直接返回转介；secondary_safety yellow 不短路
+-> 若 secondary_safety red：直接返回转介；若 unavailable：返回安全评估不可用；secondary_safety yellow 不短路
 -> F3 GeneratorService.stream_one_text()
 -> SSE 流式返回
 -> 后台 F4 CriticService 写 session guidance
@@ -62,7 +62,7 @@ F3 的候选方向由 F2 决定：
 ```text
 Redis 读取最近历史
 F1 ClassifierSafetyGateService
--> 若 red：直接返回转介；若 yellow：保留支持状态并继续
+-> 若 red：直接返回转介；若 unavailable：返回安全评估不可用；若 yellow：保留支持状态并继续
 -> Redis 读取最近历史
 -> 如后台 F4 guidance 已完成则读取
 -> GeneratorService.stream_followup_text()

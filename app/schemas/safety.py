@@ -21,6 +21,7 @@ class SafetyAction(BaseModel):
 
 class SafetyGateResponse(BaseModel):
     risk_level: Literal["green", "yellow", "red"]
+    safety_status: Literal["ok", "degraded", "unavailable"] = "ok"
     matched_signals: list[str] = Field(default_factory=list)
     rationale: str
     action: SafetyAction

@@ -16,7 +16,7 @@
 ## 1. 需求功能清单（Functional Requirements）
 
 ### 必做（MVP 范围）
-- **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red）；red 中断生成走转介，yellow 为非阻断支持状态。**必须读对话历史窗口**（危机信号常跨轮累积），非单条判断。
+- **F1 安全门**：每轮输入做自伤/危机分级（green/yellow/red）并区分安全模块状态（ok/degraded/unavailable）；red 中断生成走转介，yellow 为非阻断支持状态，unavailable 暂停普通生成。当前本地分类器按单条 PsyQA 输入训练，只评估 `current_message`；多轮风险聚合是后续升级目标，不能直接拼接历史文本上线。
 - **F2 情境分析**：判定情境类型（学业压力/同伴关系/亲子摩擦）+ 激活的 CASEL 维度子集。对标 CogMAS 的 Q-matrix lookup。
 - **F3 多取向生成器**：≥2 个取向（共情型、引导反思型）并行生成候选。同底座 LLM + 不同 system prompt。
 - **F4 Critic 成对偏好择优**：目标主线为 pairwise 比较候选回应，稳定时产出 winner/loser；EPITOME/CASEL 分数仅作为历史兼容和诊断材料。
@@ -85,7 +85,7 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 ## 4. 各模块问题与注意点（重点）
 
 ### F1 安全门
-- **⚠️ 历史窗口**：必须读最近 N 轮，非单条。危机常渐进升级。N 值与窗口策略 🚧 后续盘。
+- **⚠️ 历史窗口**：编排器保留最近 N 轮并传入 F1 请求；当前本地 classifier 只使用当前学生消息。危机信号可能跨轮渐进升级，后续应以“逐条评估 + 聚合概率”的方式实现多轮风险聚合，不能把历史直接拼成一条输入。
 - **⚠️ 分级而非一刀切**：C-SSRS 原则——中低风险（黄）给转介即可，不可当高风险（红）过度反应。
 - **⚠️ 红色绝不自行干预**：只转介，不展开危机对话。AI 不是危机干预者。
 - **⚠️ 转介含可信成年人**：呼应未成年人红线，引导联系家长/老师/辅导员 + 12356/12355。
@@ -163,7 +163,7 @@ F7 DPO：只取已验证的稳定偏好对 → 训练 → 更新 F3 生成器
 
 | 模块 | 信息是否齐 | 可否交 Codex |
 |---|---|---|
-| F1 安全门 | ✅ 齐（本地 classifier + red 转介 + yellow 非阻断支持状态 + 历史窗口要求） | ✅ 已接入 `/chat`，后续按回归维护 |
+| F1 安全门 | ✅ 齐（本地 classifier + red 转介 + yellow 非阻断支持状态 + unavailable 故障阻断；当前 classifier 为 current-message-only） | ✅ 已接入 `/chat`，后续按回归维护 |
 | F2 情境分析 | ✅ 齐（scenario、CASEL、support_mode、secondary_safety） | ✅ 已接入 `/chat`，后续按规格维护 |
 | F3 生成器 | ✅ 齐（首轮单候选流式返回；双取向保留给离线实验） | ✅ 已接入 `/chat`，后续重点是体验和回归 |
 | F4 Critic | 🟡 后台 pointwise guidance 已进 `/chat`；pairwise 仍是离线目标规格，需 gate 后再考虑 runtime/DPO | 🟡 可按 `f4-pairwise-selection-codex-spec.md` 分阶段做 |

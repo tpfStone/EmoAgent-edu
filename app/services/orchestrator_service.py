@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Protocol
@@ -25,9 +26,11 @@ from app.services.generator_service import (
 )
 from app.services.history_store import HistoryStoreProtocol
 from app.services.scenario_service import ScenarioService
+from app.services.safety_gate_service import SAFETY_UNAVAILABLE_MESSAGE
 
 
 AUDIT_TAGS_RE = re.compile(r"audit_tags=([A-Za-z0-9_,\-]+)")
+LOGGER = logging.getLogger(__name__)
 
 
 class SafetyGateProtocol(Protocol):
@@ -64,6 +67,7 @@ class OrchestratorService:
         self.history_store = history_store
         self.chat_turn_dao = chat_turn_dao
         self.settings = settings
+        self._background_tasks: set[asyncio.Task[None]] = set()
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         max_messages = self.settings.HISTORY_WINDOW_N * 2
@@ -110,6 +114,19 @@ class OrchestratorService:
                 failed_module="safety",
                 exc=exc,
                 risk_level="yellow",
+                safety_status="unavailable",
+                reply_text=SAFETY_UNAVAILABLE_MESSAGE,
+                history_window=max_messages,
+            )
+            async for event in self._buffered_response_events(response):
+                yield event
+            return
+
+        if safety.safety_status == "unavailable":
+            response = await self._safety_unavailable_response(
+                request=request,
+                safety=safety,
+                failed_module="safety",
                 history_window=max_messages,
             )
             async for event in self._buffered_response_events(response):
@@ -156,6 +173,22 @@ class OrchestratorService:
                 failed_module="scenario",
                 exc=exc,
                 risk_level=safety.risk_level,
+                history_window=max_messages,
+            )
+            async for event in self._buffered_response_events(response):
+                yield event
+            return
+
+        if scenario.secondary_safety.safety_status == "unavailable":
+            response = await self._safety_unavailable_response(
+                request=request,
+                safety=scenario.secondary_safety,
+                failed_module="scenario",
+                scenario=scenario.scenario,
+                activated_casel=scenario.activated_casel,
+                support_mode=scenario.support_mode,
+                emotion_intensity=scenario.emotion_intensity,
+                help_seeking=scenario.help_seeking,
                 history_window=max_messages,
             )
             async for event in self._buffered_response_events(response):
@@ -285,6 +318,19 @@ class OrchestratorService:
                 failed_module="safety",
                 exc=exc,
                 risk_level="yellow",
+                safety_status="unavailable",
+                reply_text=SAFETY_UNAVAILABLE_MESSAGE,
+                history_window=max_messages,
+            )
+            async for event in self._buffered_response_events(response):
+                yield event
+            return
+
+        if safety.safety_status == "unavailable":
+            response = await self._safety_unavailable_response(
+                request=request,
+                safety=safety,
+                failed_module="safety",
                 history_window=max_messages,
             )
             async for event in self._buffered_response_events(response):
@@ -409,6 +455,16 @@ class OrchestratorService:
                 failed_module="safety",
                 exc=exc,
                 risk_level="yellow",
+                safety_status="unavailable",
+                reply_text=SAFETY_UNAVAILABLE_MESSAGE,
+                history_window=max_messages,
+            )
+
+        if safety.safety_status == "unavailable":
+            return await self._safety_unavailable_response(
+                request=request,
+                safety=safety,
+                failed_module="safety",
                 history_window=max_messages,
             )
 
@@ -449,6 +505,19 @@ class OrchestratorService:
                 failed_module="scenario",
                 exc=exc,
                 risk_level=safety.risk_level,
+                history_window=max_messages,
+            )
+
+        if scenario.secondary_safety.safety_status == "unavailable":
+            return await self._safety_unavailable_response(
+                request=request,
+                safety=scenario.secondary_safety,
+                failed_module="scenario",
+                scenario=scenario.scenario,
+                activated_casel=scenario.activated_casel,
+                support_mode=scenario.support_mode,
+                emotion_intensity=scenario.emotion_intensity,
+                help_seeking=scenario.help_seeking,
                 history_window=max_messages,
             )
 
@@ -561,6 +630,16 @@ class OrchestratorService:
                 failed_module="safety",
                 exc=exc,
                 risk_level="yellow",
+                safety_status="unavailable",
+                reply_text=SAFETY_UNAVAILABLE_MESSAGE,
+                history_window=max_messages,
+            )
+
+        if safety.safety_status == "unavailable":
+            return await self._safety_unavailable_response(
+                request=request,
+                safety=safety,
+                failed_module="safety",
                 history_window=max_messages,
             )
 
@@ -640,12 +719,15 @@ class OrchestratorService:
         support_mode: str | None = None,
         emotion_intensity: str | None = None,
         help_seeking: bool | None = None,
+        safety_status: str = "ok",
+        reply_text: str | None = None,
     ) -> ChatResponse:
         fallback_message = self.settings.CHAT_FALLBACK_MESSAGE
+        student_reply = reply_text or fallback_message
         return await self._finalize(
             request=request,
             status="module_failed",
-            reply_text=fallback_message,
+            reply_text=student_reply,
             risk_level=risk_level,
             scenario=scenario,
             activated_casel=activated_casel or [],
@@ -661,6 +743,42 @@ class OrchestratorService:
             failure_reason=str(exc),
             fallback_message=fallback_message,
             history_window=history_window,
+            safety_status=safety_status,
+        )
+
+    async def _safety_unavailable_response(
+        self,
+        *,
+        request: ChatRequest,
+        safety: SafetyGateResponse,
+        failed_module: str,
+        history_window: int,
+        scenario: ScenarioLabel | None = None,
+        activated_casel: list[str] | None = None,
+        support_mode: str | None = None,
+        emotion_intensity: str | None = None,
+        help_seeking: bool | None = None,
+    ) -> ChatResponse:
+        return await self._finalize(
+            request=request,
+            status="module_failed",
+            reply_text=safety.action.referral_message or SAFETY_UNAVAILABLE_MESSAGE,
+            risk_level=safety.risk_level,
+            scenario=scenario,
+            activated_casel=activated_casel or [],
+            candidates=[],
+            scores=[],
+            best_candidate_id=None,
+            preference_pair=None,
+            support_mode=support_mode,
+            emotion_intensity=emotion_intensity,
+            help_seeking=help_seeking,
+            selected_by=None,
+            failed_module=failed_module,
+            failure_reason=safety.rationale,
+            fallback_message=self.settings.CHAT_FALLBACK_MESSAGE,
+            history_window=history_window,
+            safety_status=safety.safety_status,
         )
 
     async def _finalize(
@@ -683,6 +801,7 @@ class OrchestratorService:
         failure_reason: str,
         fallback_message: str,
         history_window: int,
+        safety_status: str = "ok",
     ) -> ChatResponse:
         await self.chat_turn_dao.create_turn(
             session_id=request.session_id,
@@ -717,6 +836,7 @@ class OrchestratorService:
             status=status,
             reply_text=reply_text,
             risk_level=risk_level,
+            safety_status=safety_status,  # type: ignore[arg-type]
             scenario=scenario,
             support_mode=support_mode,
             emotion_intensity=emotion_intensity,
@@ -740,7 +860,7 @@ class OrchestratorService:
         activated_casel: list[str],
         candidates: list[GeneratorCandidate],
     ) -> None:
-        task = self._run_background_critic(
+        background_task = self._run_background_critic(
             session_id=session_id,
             user_message=user_message,
             history=history,
@@ -748,9 +868,36 @@ class OrchestratorService:
             candidates=candidates,
         )
         try:
-            asyncio.create_task(task)
+            task = asyncio.create_task(background_task)
         except RuntimeError:
-            pass
+            background_task.close()
+            LOGGER.exception("Failed to schedule F4 background critic.")
+            return
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        task.add_done_callback(self._log_background_task_exception)
+
+    async def shutdown_background_tasks(self) -> None:
+        tasks = list(self._background_tasks)
+        if not tasks:
+            return
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        self._background_tasks.clear()
+
+    @staticmethod
+    def _log_background_task_exception(task: asyncio.Task[None]) -> None:
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError:
+            return
+        if exc is None:
+            return
+        LOGGER.error(
+            "F4 background critic task failed.",
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
 
     async def _run_background_critic(
         self,
@@ -797,6 +944,10 @@ class OrchestratorService:
                 },
             )
         except Exception as exc:
+            LOGGER.exception(
+                "F4 background critic evaluation failed for session %s.",
+                session_id,
+            )
             await self._save_f4_guidance(
                 session_id,
                 {

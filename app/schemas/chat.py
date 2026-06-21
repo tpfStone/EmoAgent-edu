@@ -27,6 +27,7 @@ class ChatResponse(BaseModel):
     status: ChatStatus
     reply_text: str
     risk_level: Literal["green", "yellow", "red"]
+    safety_status: Literal["ok", "degraded", "unavailable"] = "ok"
     scenario: ScenarioLabel | None = None
     support_mode: SupportMode | None = None
     emotion_intensity: EmotionIntensity | None = None

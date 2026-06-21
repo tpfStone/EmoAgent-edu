@@ -15,7 +15,7 @@
 - F1 已从 LLM prompt 迁移为本地分类器，模型和指标记录在 `exp/README.md`。
 - F3 已接入 PsyQA 标注数据的策略先验和 support card，双候选实验链路保留在 `exp/`。
 - 真实 LLM 45 条验收曾跑通：request_ok 45/45，F2 情境准确率 43/45，落库 candidates=90，旧 pointwise 逻辑生成 preference_pairs=43。
-- F1 单列验收已补齐，异常/解析失败按 yellow 保守转介。
+- F1 单列验收已补齐；异常、解析失败或安全模块不可用时返回 `safety_status=unavailable` 并暂停普通生成，真实 yellow 仍是非阻断支持状态。
 - 合成语料 probe-001 已完成 3 个代表格：raw=480、accepted=479、旧 pointwise 口径下 `judge_unverified_preference_pairs=433`。
 - F4 pairwise 离线工具链已存在：候选包生成、pairwise judge、pointwise baseline、人工 A/B 表和评估脚本均已落地；新的实验入口以 `exp/README.md` 为准。
 
@@ -38,7 +38,7 @@
 P0 只保留为回归维护，不再作为当前阻塞项。
 
 - [x] F1 八用例实测与安全门单列验收。
-- [x] F1 异常兜底语义：解析失败或调用失败均按 yellow 保守转介。
+- [x] F1 异常兜底语义：解析失败或调用失败均返回 `safety_status=unavailable`，暂停普通生成并使用中性不可用提示。
 - [x] `/chat` mock 与真实 LLM 主链路验收已完成。
 - [x] PostgreSQL/Alembic、Redis history store 和 `/chat` mock orchestrator integration 已在 2026-05-26 复验。
 

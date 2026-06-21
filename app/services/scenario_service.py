@@ -10,7 +10,11 @@ from app.schemas.scenario import (
 )
 from app.schemas.safety import SafetyAction, SafetyGateResponse
 from app.services.llm_client import LLMClientProtocol
-from app.services.safety_gate_service import RED_REFERRAL_MESSAGE, YELLOW_REFERRAL_MESSAGE
+from app.services.safety_gate_service import (
+    RED_REFERRAL_MESSAGE,
+    SAFETY_UNAVAILABLE_MESSAGE,
+    YELLOW_REFERRAL_MESSAGE,
+)
 
 
 SCENARIO_CASEL_MAP: dict[ScenarioLabel, list[str]] = {
@@ -75,7 +79,7 @@ class ScenarioService:
 情绪强度判断：
 - low：轻微困扰、普通抱怨、信息不足。
 - medium：明显难受、焦虑、烦躁、委屈，但仍能较清楚描述。
-- high：强烈消极情绪、反复失控、强烈自责/恐惧/绝望感；但如果达到 yellow/red 风险，仍按安全复核转介。
+- high：强烈消极情绪、反复失控、强烈自责/恐惧/绝望感；但如果达到安全风险，red 会转介并停止普通生成，yellow 仅作为非阻断支持状态保留。
 
 help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 true。不要把普通倾诉误判成求助。
 
@@ -136,8 +140,9 @@ help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 
             confidence=0.0,
             secondary_safety=self._safety_response(
                 risk_level="yellow",
+                safety_status="unavailable",
                 matched_signals=["f2_fallback"],
-                rationale="F2 调用失败，暂停生成以避免漏过潜在风险。",
+                rationale="F2 调用失败，安全评估暂不可用。",
             ),
             support_mode="balanced",
             emotion_intensity="medium",
@@ -174,13 +179,19 @@ help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 
     def _parse_secondary_safety(self, raw_safety) -> SafetyGateResponse:
         if not isinstance(raw_safety, dict):
             return self._safety_response(
-                risk_level="green",
-                matched_signals=[],
-                rationale="F2 响应未包含 secondary_safety，按 green 兼容处理。",
+                risk_level="yellow",
+                safety_status="unavailable",
+                matched_signals=["secondary_safety_missing"],
+                rationale="F2 响应未包含 secondary_safety，安全评估暂不可用。",
             )
         risk_level = str(raw_safety.get("risk_level", "")).strip()
         if risk_level not in {"green", "yellow", "red"}:
-            risk_level = "green"
+            return self._safety_response(
+                risk_level="yellow",
+                safety_status="unavailable",
+                matched_signals=["secondary_safety_invalid"],
+                rationale="F2 secondary_safety.risk_level 非法，安全评估暂不可用。",
+            )
         matched_signals = raw_safety.get("matched_signals", [])
         if not isinstance(matched_signals, list):
             matched_signals = []
@@ -193,9 +204,17 @@ help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 
 
     @staticmethod
     def _safety_response(
-        risk_level: str, matched_signals: list[str], rationale: str
+        risk_level: str,
+        matched_signals: list[str],
+        rationale: str,
+        safety_status: str = "ok",
     ) -> SafetyGateResponse:
-        if risk_level == "green":
+        if safety_status == "unavailable":
+            action = SafetyAction(
+                block_generation=True,
+                referral_message=SAFETY_UNAVAILABLE_MESSAGE,
+            )
+        elif risk_level == "green":
             action = SafetyAction(block_generation=False, referral_message="")
         elif risk_level == "yellow":
             action = SafetyAction(
@@ -209,6 +228,7 @@ help_seeking 只在用户明确寻求办法、改变、判断或下一步时为 
             )
         return SafetyGateResponse(
             risk_level=risk_level,
+            safety_status=safety_status,  # type: ignore[arg-type]
             matched_signals=matched_signals,
             rationale=rationale,
             action=action,

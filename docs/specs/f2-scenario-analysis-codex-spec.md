@@ -12,7 +12,7 @@
 **已完成**：
 - 四类情境分类 prompt 已实现，LLM temperature 为 `SCENARIO_LLM_TEMPERATURE=0.0`。
 - `SCENARIO_CASEL_MAP` 已硬编码，`activated_casel` 不由 LLM 即兴生成。
-- `secondary_safety` 已加入 F2 schema。若 F2 发现明显危机或不适合继续普通教育支持，`/chat` 会直接返回转介话术。
+- `secondary_safety` 已加入 F2 schema。若 F2 发现 red 风险，`/chat` 会直接返回转介话术；yellow 作为非阻断支持状态保留；安全复核缺失或非法时返回 `safety_status=unavailable` 并暂停普通生成。
 - `support_mode` 已接入 F3 首轮路由：强情绪优先 c1，明确求助优先 c2，其他走 balanced。
 - JSON 包裹解析、非法情境和调用异常均默认归为“其他”。
 - 服务与接口测试覆盖 `tests/test_services/test_scenario_service.py`、`tests/test_handlers/test_scenario_handler.py`、`tests/test_services/test_orchestrator_service.py`。
@@ -58,6 +58,7 @@
   "activated_casel": ["自我觉察引导", "自我管理引导", "负责任决策引导"],
   "secondary_safety": {
     "risk_level": "green | yellow | red",
+    "safety_status": "ok | degraded | unavailable",
     "matched_signals": [],
     "rationale": "一句中文判定理由",
     "action": {
@@ -72,7 +73,7 @@
 }
 ```
 
-> `activated_casel` 直接传给 F3 和后台 F4。`support_mode` 决定首轮 F3 生成方向；`secondary_safety` 是 F1 之后的兜底安全复核。若 `secondary_safety.action.block_generation=true`，编排层直接返回转介，不进入 F3。
+> `activated_casel` 直接传给 F3 和后台 F4。`support_mode` 决定首轮 F3 生成方向；`secondary_safety` 是 F1 之后的兜底安全复核。若 `secondary_safety.action.block_generation=true` 或 `secondary_safety.safety_status=unavailable`，编排层不进入 F3；red 返回固定转介，unavailable 返回“当前安全评估暂不可用”提示。yellow 是非阻断支持状态。
 
 ---
 
@@ -124,7 +125,7 @@
 【当前消息】{current_message}
 ```
 
-> 代码拿到 `scenario` 后，用 §4 映射表查出 `activated_casel`。`secondary_safety` 由代码补全固定转介 action，避免让 LLM 即兴生成安全话术。
+> 代码拿到 `scenario` 后，用 §4 映射表查出 `activated_casel`。LLM 只需给出 `secondary_safety.risk_level` 等判定字段；`safety_status` 与固定转介 action 由代码补全，避免让 LLM 即兴生成安全话术。缺失或非法 `secondary_safety` 会被代码转为 `safety_status=unavailable`。
 
 ---
 
@@ -144,7 +145,7 @@
 | `LLM_TEMPERATURE` | 0 | 分类要确定性 |
 | `SCENARIO_CASEL_MAP` | §4 表 | 硬编码 dict，便于修改 |
 | `support_mode` | LLM 输出 | 仅用于内部路由，不直接展示给学生 |
-| `secondary_safety` | LLM 输出 + 代码补 action | F1 后的风险兜底；red 短路，yellow 为非阻断支持状态 |
+| `secondary_safety` | LLM 输出 + 代码补 action/status | F1 后的风险兜底；red 短路，yellow 为非阻断支持状态；缺失或非法值返回 `safety_status=unavailable` 并阻断普通生成 |
 
 ---
 

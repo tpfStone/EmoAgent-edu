@@ -323,7 +323,7 @@ The root README should avoid presenting historical experiment outputs as current
 
 - Do not submit or demonstrate real identifiable conversations from minors.
 - Do not expose API keys, database credentials, internal prompts, or sensitive logs.
-- Red safety results interrupt ordinary generation and use fixed referral guidance; yellow is non-blocking and carries support/referral wording for support handling.
+- Red safety results interrupt ordinary generation and use fixed referral guidance; yellow is non-blocking and carries support/referral wording for support handling; safety module failures use `safety_status=unavailable`, stop ordinary generation, and return a neutral unavailable message.
 - Anonymous continuity uses configured identifiers; storage, retention, deletion, and isolation behavior should be checked against the current commit.
 - The public repository does not contain the complete PsyQA-derived labelled dataset. Local absence may reduce support-card enrichment, but it should not silently change the documented API contract.
 - F6 memory/RAG prompt injection remains disabled by default until privacy and quality gates pass.

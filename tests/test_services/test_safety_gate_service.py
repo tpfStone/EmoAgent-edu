@@ -138,9 +138,10 @@ async def test_invalid_llm_json_defaults_to_yellow(fake_llm_client):
     response = await service.evaluate(_request("你好"))
 
     assert response.risk_level == "yellow"
+    assert response.safety_status == "unavailable"
     assert response.matched_signals == ["llm_parse_failure"]
-    assert response.action.block_generation is False
-    assert "下面的支持资源" in response.action.referral_message
+    assert response.action.block_generation is True
+    assert response.action.referral_message
 
 
 @pytest.mark.asyncio
@@ -151,5 +152,7 @@ async def test_llm_exception_defaults_to_yellow(fake_llm_client):
     response = await service.evaluate(_request("你好"))
 
     assert response.risk_level == "yellow"
+    assert response.safety_status == "unavailable"
     assert response.matched_signals == ["llm_failure"]
-    assert response.action.block_generation is False
+    assert response.action.block_generation is True
+    assert response.action.referral_message

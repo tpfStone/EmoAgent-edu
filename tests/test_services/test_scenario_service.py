@@ -115,5 +115,29 @@ async def test_invalid_or_failed_scenario_defaults_to_other(
     assert response.scenario_confidence == 0.0
     assert response.activated_casel == ["自我觉察引导"]
     assert response.secondary_safety.risk_level == "yellow"
-    assert response.secondary_safety.action.block_generation is False
+    assert response.secondary_safety.safety_status == "unavailable"
+    assert response.secondary_safety.action.block_generation is True
     assert response.rationale
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("secondary_safety", [None, {"risk_level": "purple"}])
+async def test_missing_or_invalid_secondary_safety_is_unavailable(
+    fake_llm_client, secondary_safety
+):
+    payload = {
+        "secondary_safety": secondary_safety,
+        "scenario": "学业压力",
+        "scenario_confidence": 0.7,
+        "rationale": "判断为学业压力。",
+    }
+    llm = fake_llm_client([json.dumps(payload, ensure_ascii=False)])
+    service = ScenarioService(llm, Settings())
+
+    response = await service.analyze(_request("作业太多了"))
+
+    assert response.scenario == "学业压力"
+    assert response.secondary_safety.risk_level == "yellow"
+    assert response.secondary_safety.safety_status == "unavailable"
+    assert response.secondary_safety.action.block_generation is True
+    assert response.secondary_safety.action.referral_message

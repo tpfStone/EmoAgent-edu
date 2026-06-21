@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import json
 from pathlib import Path
 
@@ -179,6 +180,19 @@ class RecordingCriticService:
         self.requests.append(request)
         if self.exc is not None:
             raise self.exc
+        return self.response
+
+
+class BlockingCriticService(RecordingCriticService):
+    def __init__(self):
+        super().__init__()
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def evaluate(self, request):
+        self.requests.append(request)
+        self.started.set()
+        await self.release.wait()
         return self.response
 
 
@@ -412,6 +426,42 @@ async def test_save_f4_guidance_adds_updated_at_for_observability():
     status = await service.get_f4_guidance_status("s1")
     assert status.status == "pending"
     assert status.updated_at == payload["updated_at"]
+
+
+@pytest.mark.asyncio
+async def test_schedule_background_critic_tracks_task_until_done():
+    history_store = InMemoryHistoryStoreWithRedis()
+    critic = BlockingCriticService()
+    service = _service(history_store=history_store, critic=critic)
+
+    service._schedule_background_critic(
+        session_id="s1",
+        user_message="我最近作业很多。",
+        history=[],
+        activated_casel=["自我管理引导"],
+        candidates=[
+            GeneratorCandidate(
+                candidate_id="c2",
+                orientation="引导反思型",
+                text="我们先找一个最小步骤。",
+            )
+        ],
+    )
+
+    await asyncio.wait_for(critic.started.wait(), timeout=1)
+
+    assert len(service._background_tasks) == 1
+    task = next(iter(service._background_tasks))
+    assert not task.done()
+    pending = await service.get_f4_guidance_status("s1")
+    assert pending.status == "pending"
+
+    critic.release.set()
+    await task
+
+    assert service._background_tasks == set()
+    ready = await service.get_f4_guidance_status("s1")
+    assert ready.status == "ready"
 
 
 @pytest.mark.asyncio
@@ -844,6 +894,47 @@ async def test_yellow_safety_that_allows_generation_reaches_generator():
     assert history[-1].text == response.reply_text
     assert dao.calls[0]["status"] == "answered"
     assert dao.calls[0]["risk_level"] == "yellow"
+
+
+@pytest.mark.asyncio
+async def test_unavailable_safety_stops_without_running_scenario_or_generator():
+    safety = RecordingSafetyService(
+        SafetyGateResponse(
+            risk_level="yellow",
+            safety_status="unavailable",
+            matched_signals=["classifier_failure"],
+            rationale="safety unavailable",
+            action=SafetyAction(
+                block_generation=True,
+                referral_message="safety unavailable message",
+            ),
+        )
+    )
+    scenario = RecordingScenarioService()
+    generator = RecordingGeneratorService()
+    critic = RecordingCriticService()
+    history_store = InMemoryHistoryStore()
+    dao = RecordingChatTurnDAO()
+    service = _service(
+        safety=safety,
+        scenario=scenario,
+        generator=generator,
+        critic=critic,
+        history_store=history_store,
+        dao=dao,
+    )
+
+    response = await service.chat(ChatRequest(session_id="s1", current_message="你好"))
+
+    assert response.status == "module_failed"
+    assert response.safety_status == "unavailable"
+    assert response.failed_module == "safety"
+    assert response.reply_text == "safety unavailable message"
+    assert scenario.requests == []
+    assert generator.requests == []
+    assert critic.requests == []
+    assert dao.calls[0]["status"] == "module_failed"
+    assert dao.calls[0]["failed_module"] == "safety"
 
 
 @pytest.mark.asyncio

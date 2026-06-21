@@ -4,7 +4,11 @@ from typing import Protocol
 from app.config import Settings
 from app.schemas.safety import SafetyAction, SafetyGateRequest, SafetyGateResponse
 from app.services.f1_safety_classifier import F1SafetyPrediction
-from app.services.safety_gate_service import RED_REFERRAL_MESSAGE, YELLOW_REFERRAL_MESSAGE
+from app.services.safety_gate_service import (
+    RED_REFERRAL_MESSAGE,
+    SAFETY_UNAVAILABLE_MESSAGE,
+    YELLOW_REFERRAL_MESSAGE,
+)
 
 
 class SafetyClassifierProtocol(Protocol):
@@ -33,8 +37,9 @@ class ClassifierSafetyGateService:
         except Exception:
             response = self._response(
                 risk_level="yellow",
+                safety_status="unavailable",
                 matched_signals=["classifier_failure"],
-                rationale="本地 F1 安全分类器调用失败，按 yellow 保守处理。",
+                rationale="本地 F1 安全分类器调用失败，安全评估暂不可用。",
             )
 
         if self.safety_log_dao is not None:
@@ -77,9 +82,17 @@ class ClassifierSafetyGateService:
 
     @staticmethod
     def _response(
-        risk_level: str, matched_signals: list[str], rationale: str
+        risk_level: str,
+        matched_signals: list[str],
+        rationale: str,
+        safety_status: str = "ok",
     ) -> SafetyGateResponse:
-        if risk_level == "green":
+        if safety_status == "unavailable":
+            action = SafetyAction(
+                block_generation=True,
+                referral_message=SAFETY_UNAVAILABLE_MESSAGE,
+            )
+        elif risk_level == "green":
             action = SafetyAction(block_generation=False, referral_message="")
         elif risk_level == "yellow":
             action = SafetyAction(
@@ -93,6 +106,7 @@ class ClassifierSafetyGateService:
             )
         return SafetyGateResponse(
             risk_level=risk_level,
+            safety_status=safety_status,  # type: ignore[arg-type]
             matched_signals=matched_signals,
             rationale=rationale,
             action=action,

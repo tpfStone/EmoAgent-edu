@@ -134,5 +134,7 @@ async def test_classifier_exception_defaults_to_yellow():
     response = await service.evaluate(_request("你好"))
 
     assert response.risk_level == "yellow"
+    assert response.safety_status == "unavailable"
     assert response.matched_signals == ["classifier_failure"]
-    assert response.action.block_generation is False
+    assert response.action.block_generation is True
+    assert response.action.referral_message

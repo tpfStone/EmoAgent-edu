@@ -15,6 +15,9 @@ RED_REFERRAL_MESSAGE = """我很担心你现在的安全，你的生命非常重
 下面的紧急资源现在就可以使用。
 你不是一个人，有人愿意帮你。请现在就找一个大人陪你一起处理。"""
 
+SAFETY_UNAVAILABLE_MESSAGE = """当前安全评估暂不可用。为了稳妥，我先不继续生成普通回复。
+你可以稍后再试；如果你现在担心自己可能会伤害自己，或无法保证安全，请立刻联系身边可信任的大人、学校老师，或当地紧急服务。"""
+
 
 class SafetyGateService:
     def __init__(
@@ -40,12 +43,12 @@ class SafetyGateService:
         except ValueError:
             response = self._fallback_response(
                 matched_signal="llm_parse_failure",
-                rationale="安全门模型输出无法解析，按 yellow 保守处理。",
+                rationale="安全门模型输出无法解析，安全评估暂不可用。",
             )
         except Exception:
             response = self._fallback_response(
                 matched_signal="llm_failure",
-                rationale="安全门模型调用失败，按 yellow 保守处理。",
+                rationale="安全门模型调用失败，安全评估暂不可用。",
             )
 
         if self.safety_log_dao is not None:
@@ -118,15 +121,24 @@ class SafetyGateService:
     def _fallback_response(self, matched_signal: str, rationale: str) -> SafetyGateResponse:
         return self._response(
             risk_level="yellow",
+            safety_status="unavailable",
             matched_signals=[matched_signal],
             rationale=rationale,
         )
 
     @staticmethod
     def _response(
-        risk_level: str, matched_signals: list[str], rationale: str
+        risk_level: str,
+        matched_signals: list[str],
+        rationale: str,
+        safety_status: str = "ok",
     ) -> SafetyGateResponse:
-        if risk_level == "green":
+        if safety_status == "unavailable":
+            action = SafetyAction(
+                block_generation=True,
+                referral_message=SAFETY_UNAVAILABLE_MESSAGE,
+            )
+        elif risk_level == "green":
             action = SafetyAction(block_generation=False, referral_message="")
         elif risk_level == "yellow":
             action = SafetyAction(
@@ -140,6 +152,7 @@ class SafetyGateService:
             )
         return SafetyGateResponse(
             risk_level=risk_level,
+            safety_status=safety_status,  # type: ignore[arg-type]
             matched_signals=matched_signals,
             rationale=rationale,
             action=action,
